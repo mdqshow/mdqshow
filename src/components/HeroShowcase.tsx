@@ -11,16 +11,12 @@ interface HeroShowcaseProps {
 /**
  * Head Principal MDQSHOW:
  * Muestra las "NOVEDADES" (pasan solas automáticamente cada 7 segundos, sin flechitas).
- * - Arriba a la izquierda: Insignia NOVEDADES idéntica al botón no seleccionado (como el de "Cartelera" en la imagen del usuario):
- *   fondo oscuro azulado translúcido (bg-slate-900/90 border border-slate-800) con texto slate-400 suave e ícono a tono, con buen ancho.
+ * - Franja superior de extremo a extremo (borde a borde completo de la foto) con la estética exacta:
+ *   bg-slate-900/90 con border-b border-slate-800, texto slate-300 centrado o distribuido prolijo con destello.
  * - Abajo a la izquierda: Nombre de la Banda y Fecha del recital (destacados y prioritarios).
- * - Abajo a la derecha: Lugar / Teatro en tamaño compacto y balanceado para no competir con la fecha.
+ * - Abajo a la derecha: Lugar / Teatro en tamaño compacto y balanceado.
  */
 export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelectShow }) => {
-  // Obtenemos los shows de NOVEDADES:
-  // 1. Primero los marcados explícitamente como Novedad por el administrador (isNewBadge === true).
-  // 2. Si no hay suficientes, completamos con los que tienen createdAt más reciente.
-  // 3. Fallback: los shows más recientes de la cartelera (máximo 5).
   const displayShows = React.useMemo(() => {
     if (!shows || shows.length === 0) return [];
     
@@ -48,14 +44,12 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
   const [isFading, setIsFading] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
-  // Si cambia la lista de shows y el índice queda fuera de rango, lo reseteamos
   useEffect(() => {
     if (currentIndex >= displayShows.length && displayShows.length > 0) {
       setCurrentIndex(0);
     }
   }, [displayShows.length, currentIndex]);
 
-  // Rotación automática continua cada 7 segundos (pasan solas)
   useEffect(() => {
     if (isPaused || displayShows.length <= 1) return;
 
@@ -123,20 +117,24 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
             className="w-full h-full object-cover object-center transform scale-105 group-hover:scale-110 transition-transform duration-700"
           />
 
-          {/* Degradé superior para destacar la insignia de NOVEDADES */}
-          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-slate-950/90 via-slate-950/40 to-transparent pointer-events-none" />
+          {/* FRANJA DE ANCHO COMPLETO EN LA PARTE SUPERIOR (Borde a Borde) */}
+          <div className="absolute top-0 inset-x-0 z-20 pointer-events-none">
+            <div className="w-full py-2 px-5 bg-slate-900/85 backdrop-blur-md border-b border-slate-700/60 flex items-center justify-between shadow-md">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
+                <span className="text-xs sm:text-sm font-black tracking-widest text-slate-200 uppercase">
+                  NOVEDADES
+                </span>
+              </div>
+              <span className="text-[10px] sm:text-xs font-semibold text-rose-400/90 tracking-wide">
+                MDQSHOW
+              </span>
+            </div>
+          </div>
 
           {/* Degradé lateral y degradé inferior para nombre, fecha y lugar */}
           <div className="absolute inset-y-0 left-0 w-32 sm:w-48 bg-gradient-to-r from-slate-950/90 via-slate-950/50 to-transparent pointer-events-none" />
           <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent pointer-events-none" />
-
-          {/* PARTE DE ARRIBA (IZQUIERDA): Insignia NOVEDADES tal como el botón no seleccionado (como en la foto de Cartelera) */}
-          <div className="absolute top-4 left-4 sm:top-5 sm:left-5 z-20 pointer-events-none">
-            <div className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-1.5 sm:py-2 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 font-semibold text-xs sm:text-sm tracking-wide shadow-md backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span>Novedades</span>
-            </div>
-          </div>
 
           {/* PARTE DE ABAJO: Nombre de la Banda y Fecha a la IZQUIERDA | Lugar a la DERECHA */}
           <div className="absolute bottom-0 inset-x-0 p-5 sm:p-6 z-20 flex flex-col sm:flex-row sm:items-end justify-between gap-2.5 pointer-events-none">
