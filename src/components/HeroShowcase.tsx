@@ -12,11 +12,11 @@ interface HeroShowcaseProps {
  * Head Principal MDQSHOW:
  * Muestra las "NOVEDADES" (pasan solas automáticamente cada 7 segundos).
  * - Encabezado FIJO superior:
- *   * Nunca se difumina ni parpadea cuando cambia el recital de abajo.
- *   * Ocupa todo el ancho superior con esquinas redondeadas coincidentes (rounded-t-3xl) y overflow-hidden.
- *   * Solo dice "NOVEDADES" en fuente más grande, en tono sobrio slate-200/slate-300 y CENTRADA con icono Sparkles.
- *   * Sin texto "MDQSHOW" a la derecha.
- * - Abajo: La foto y datos del show rotan suavemente.
+ *   * Misma tipografía, impacto y presencia que el título principal ("Recitales y shows"):
+ *     font-black, tracking-widest, tamaño ampliado para ocupar armónicamente el ancho superior.
+ *   * 100% fijo (no se difumina al cambiar de recital).
+ *   * Curvas perfectas redondeadas en las esquinas superiores.
+ * - Abajo: La foto y datos del recital rotan suavemente.
  */
 export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelectShow }) => {
   const displayShows = React.useMemo(() => {
@@ -107,7 +107,7 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
           className="relative z-10 w-full sm:w-[94%] h-full rounded-3xl overflow-hidden cursor-pointer shadow-2xl border border-white/15 hover:border-rose-500/60 group bg-slate-950"
           title={`Ver cartelera de ${currentShow.band}`}
         >
-          {/* FOTO Y CONTENIDO QUE CAMBIAN SUAVEMENTE (isFading afecta solo a este bloque, nunca al encabezado) */}
+          {/* FOTO Y CONTENIDO QUE CAMBIAN SUAVEMENTE (el encabezado queda intacto arriba) */}
           <div className="absolute inset-0 w-full h-full">
             <img 
               src={currentShow.image} 
@@ -156,13 +156,14 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
             </div>
           </div>
 
-          {/* ENCABEZADO FIJO DE NOVEDADES (100% ESTABLE: NO SE DIFUMINA NUNCA, CENTRADO, FUENTE MÁS GRANDE Y CURVAS LIMPIAS) */}
+          {/* ENCABEZADO FIJO DE NOVEDADES: CON EL ESTILO DEL TÍTULO PRINCIPAL (FUENTE MÁS GRANDE, TRACKING AMPLIO Y CENTRADO) */}
           <div className="absolute top-0 inset-x-0 z-30 pointer-events-none">
-            <div className="w-full py-2.5 px-4 bg-slate-900/90 backdrop-blur-md border-b border-slate-700/60 flex items-center justify-center gap-2 shadow-md rounded-t-3xl">
-              <Sparkles className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
-              <span className="text-sm sm:text-base font-black tracking-widest text-slate-200 uppercase text-center">
+            <div className="w-full py-2.5 sm:py-3 px-4 bg-slate-900/90 backdrop-blur-md border-b border-slate-700/60 flex items-center justify-center gap-3 shadow-md rounded-t-3xl">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0 animate-pulse" />
+              <span className="text-base sm:text-lg md:text-xl font-black tracking-[0.25em] text-white uppercase text-center drop-shadow-md">
                 NOVEDADES
               </span>
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0 animate-pulse" />
             </div>
           </div>
         </div>
