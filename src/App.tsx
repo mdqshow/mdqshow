@@ -84,7 +84,9 @@ export default function App() {
 
   const handleAdminLogout = () => {
     setIsAdmin(false);
+    setIsPreviewUnlocked(false);
     localStorage.removeItem(LOCAL_STORAGE_ADMIN);
+    localStorage.removeItem('mdqshow_preview_access');
   };
 
   // Modo Próximamente / Vista previa privada
