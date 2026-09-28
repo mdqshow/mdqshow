@@ -10,11 +10,13 @@ interface HeroShowcaseProps {
 
 /**
  * Head Principal MDQSHOW:
- * Muestra las "NOVEDADES" (pasan solas automáticamente cada 7 segundos, sin flechitas).
- * - Franja superior de extremo a extremo (borde a borde completo de la foto) con la estética exacta:
- *   bg-slate-900/90 con border-b border-slate-800, texto slate-300 centrado o distribuido prolijo con destello.
- * - Abajo a la izquierda: Nombre de la Banda y Fecha del recital (destacados y prioritarios).
- * - Abajo a la derecha: Lugar / Teatro en tamaño compacto y balanceado.
+ * Muestra las "NOVEDADES" (pasan solas automáticamente cada 7 segundos).
+ * - Encabezado FIJO superior:
+ *   * Nunca se difumina ni parpadea cuando cambia el recital de abajo.
+ *   * Ocupa todo el ancho superior con esquinas redondeadas coincidentes (rounded-t-3xl) y overflow-hidden.
+ *   * Solo dice "NOVEDADES" en fuente más grande, en tono sobrio slate-200/slate-300 y CENTRADA con icono Sparkles.
+ *   * Sin texto "MDQSHOW" a la derecha.
+ * - Abajo: La foto y datos del show rotan suavemente.
  */
 export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelectShow }) => {
   const displayShows = React.useMemo(() => {
@@ -87,7 +89,7 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
       <div className="absolute inset-0 bg-gradient-to-tr from-rose-600/25 via-amber-500/15 to-transparent rounded-full blur-3xl pointer-events-none transform -rotate-3 scale-110" />
 
       <div className="relative w-full h-full flex items-center justify-end">
-        {/* Tarjeta decorativa de fondo (próximo recital que asoma sutilmente en perspectiva si hay más de 1) */}
+        {/* Tarjeta decorativa de fondo (próximo recital que asoma sutilmente en perspectiva) */}
         {displayShows.length > 1 && nextShow && (
           <div className="hidden sm:block absolute right-2 top-2 w-[90%] h-[92%] rounded-3xl overflow-hidden opacity-25 transform rotate-3 scale-95 pointer-events-none blur-[0.5px]">
             <img 
@@ -99,72 +101,68 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
           </div>
         )}
 
-        {/* Tarjeta principal del show con transición suave */}
+        {/* CONTENEDOR PRINCIPAL ESTABLE CON BORDES REDONDEADOS CURVOS PERFECTOS */}
         <div 
           onClick={handleCardClick}
-          className={`relative z-10 w-full sm:w-[94%] h-full rounded-3xl overflow-hidden cursor-pointer transition-all duration-700 ease-out shadow-2xl border border-white/15 hover:border-rose-500/60 group ${
-            isFading ? 'opacity-20 scale-[0.98] blur-xs' : 'opacity-100 scale-100 blur-0'
-          }`}
-          style={{
-            background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.5))'
-          }}
+          className="relative z-10 w-full sm:w-[94%] h-full rounded-3xl overflow-hidden cursor-pointer shadow-2xl border border-white/15 hover:border-rose-500/60 group bg-slate-950"
           title={`Ver cartelera de ${currentShow.band}`}
         >
-          {/* Foto del Show */}
-          <img 
-            src={currentShow.image} 
-            alt={currentShow.band} 
-            className="w-full h-full object-cover object-center transform scale-105 group-hover:scale-110 transition-transform duration-700"
-          />
+          {/* FOTO Y CONTENIDO QUE CAMBIAN SUAVEMENTE (isFading afecta solo a este bloque, nunca al encabezado) */}
+          <div className="absolute inset-0 w-full h-full">
+            <img 
+              src={currentShow.image} 
+              alt={currentShow.band} 
+              className={`w-full h-full object-cover object-center transform scale-105 group-hover:scale-110 transition-all duration-700 ${
+                isFading ? 'opacity-20 scale-[0.98] blur-xs' : 'opacity-100 scale-105 blur-0'
+              }`}
+            />
 
-          {/* FRANJA DE ANCHO COMPLETO EN LA PARTE SUPERIOR (Borde a Borde) */}
-          <div className="absolute top-0 inset-x-0 z-20 pointer-events-none">
-            <div className="w-full py-2 px-5 bg-slate-900/85 backdrop-blur-md border-b border-slate-700/60 flex items-center justify-between shadow-md">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
-                <span className="text-xs sm:text-sm font-black tracking-widest text-slate-200 uppercase">
-                  NOVEDADES
-                </span>
+            {/* Degradé lateral y degradé inferior para lectura óptima de nombre, fecha y lugar */}
+            <div className="absolute inset-y-0 left-0 w-36 sm:w-52 bg-gradient-to-r from-slate-950/95 via-slate-950/60 to-transparent pointer-events-none" />
+            <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent pointer-events-none" />
+
+            {/* PARTE DE ABAJO: Nombre de la Banda y Fecha a la IZQUIERDA | Lugar a la DERECHA */}
+            <div className={`absolute bottom-0 inset-x-0 p-5 sm:p-6 z-20 flex flex-col sm:flex-row sm:items-end justify-between gap-2.5 pointer-events-none transition-opacity duration-500 ${
+              isFading ? 'opacity-0' : 'opacity-100'
+            }`}>
+              {/* LADO IZQUIERDO: Banda y Fecha */}
+              <div className="space-y-1 min-w-0 flex-1">
+                <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-xl group-hover:text-rose-200 transition-colors line-clamp-1">
+                  {currentShow.band}
+                </h3>
+
+                <div className="flex items-center gap-2 pt-0.5 text-xs sm:text-sm font-bold text-amber-300 drop-shadow">
+                  <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span className="capitalize">
+                    {currentShow.dates && currentShow.dates.length > 0 
+                      ? formatSingleDate(currentShow.dates[0])
+                      : 'Fecha a confirmar'}
+                  </span>
+                  {currentShow.time && (
+                    <span className="text-slate-300 text-xs font-normal">
+                      • {currentShow.time}
+                    </span>
+                  )}
+                </div>
               </div>
-              <span className="text-[10px] sm:text-xs font-semibold text-rose-400/90 tracking-wide">
-                MDQSHOW
-              </span>
+
+              {/* LADO DERECHO: Nombre del Lugar / Teatro */}
+              <div className="shrink-0 sm:text-right">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] sm:text-xs font-medium text-slate-300 backdrop-blur-md shadow-sm">
+                  <MapPin className="w-3 h-3 text-rose-400 shrink-0" />
+                  <span className="truncate max-w-[170px] sm:max-w-[200px]">{currentShow.venue}</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Degradé lateral y degradé inferior para nombre, fecha y lugar */}
-          <div className="absolute inset-y-0 left-0 w-32 sm:w-48 bg-gradient-to-r from-slate-950/90 via-slate-950/50 to-transparent pointer-events-none" />
-          <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent pointer-events-none" />
-
-          {/* PARTE DE ABAJO: Nombre de la Banda y Fecha a la IZQUIERDA | Lugar a la DERECHA */}
-          <div className="absolute bottom-0 inset-x-0 p-5 sm:p-6 z-20 flex flex-col sm:flex-row sm:items-end justify-between gap-2.5 pointer-events-none">
-            {/* LADO IZQUIERDO: Banda y Fecha */}
-            <div className="space-y-1 min-w-0 flex-1">
-              <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-xl group-hover:text-rose-200 transition-colors line-clamp-1">
-                {currentShow.band}
-              </h3>
-
-              <div className="flex items-center gap-2 pt-0.5 text-xs sm:text-sm font-bold text-amber-300 drop-shadow">
-                <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
-                <span className="capitalize">
-                  {currentShow.dates && currentShow.dates.length > 0 
-                    ? formatSingleDate(currentShow.dates[0])
-                    : 'Fecha a confirmar'}
-                </span>
-                {currentShow.time && (
-                  <span className="text-slate-300 text-xs font-normal">
-                    • {currentShow.time}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* LADO DERECHO: Nombre del Lugar / Teatro */}
-            <div className="shrink-0 sm:text-right">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] sm:text-xs font-medium text-slate-300 backdrop-blur-md shadow-sm">
-                <MapPin className="w-3 h-3 text-rose-400 shrink-0" />
-                <span className="truncate max-w-[170px] sm:max-w-[200px]">{currentShow.venue}</span>
-              </div>
+          {/* ENCABEZADO FIJO DE NOVEDADES (100% ESTABLE: NO SE DIFUMINA NUNCA, CENTRADO, FUENTE MÁS GRANDE Y CURVAS LIMPIAS) */}
+          <div className="absolute top-0 inset-x-0 z-30 pointer-events-none">
+            <div className="w-full py-2.5 px-4 bg-slate-900/90 backdrop-blur-md border-b border-slate-700/60 flex items-center justify-center gap-2 shadow-md rounded-t-3xl">
+              <Sparkles className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
+              <span className="text-sm sm:text-base font-black tracking-widest text-slate-200 uppercase text-center">
+                NOVEDADES
+              </span>
             </div>
           </div>
         </div>
