@@ -504,15 +504,14 @@ export default function App() {
               </p>
 
               {/* Venues quick chips sorted alphabetically (A-Z) */}
-              <div className="flex flex-wrap items-center gap-2 pt-2 text-xs">
-                <span className="text-slate-400 font-medium">Lugares en La Feliz:</span>
+              <div className="flex flex-wrap items-center justify-end gap-2 pt-2 text-xs">
+                <span className="text-slate-400 font-medium mr-auto">Lugares en La Feliz:</span>
                 {[
                   'Abbey Road',
                   'Arena Mar del Plata',
                   'Auditorium',
                   'Bendu Arena',
                   'Once Unidos',
-                  'Mute',
                   'Plaza de la Música',
                   'Polideportivo',
                   'Radio City',
