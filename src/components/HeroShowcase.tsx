@@ -26,13 +26,13 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
     }
   }, [displayShows.length, currentIndex]);
 
-  // Rotación automática suave cada 6 segundos si no tiene el mouse encima
+  // Rotación automática suave cada 10 segundos si no tiene el mouse encima
   useEffect(() => {
     if (isPaused || displayShows.length <= 1) return;
 
     const interval = setInterval(() => {
       handleNext();
-    }, 6000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [isPaused, displayShows.length, currentIndex]);
@@ -43,7 +43,7 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
     setTimeout(() => {
       setCurrentIndex((prev) => (prev + 1) % displayShows.length);
       setIsFading(false);
-    }, 300);
+    }, 400);
   };
 
   const handlePrev = () => {
@@ -52,7 +52,7 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
     setTimeout(() => {
       setCurrentIndex((prev) => (prev - 1 + displayShows.length) % displayShows.length);
       setIsFading(false);
-    }, 300);
+    }, 400);
   };
 
   if (displayShows.length === 0) {
@@ -90,11 +90,11 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
           </div>
         )}
 
-        {/* Tarjeta principal del show destacado */}
+        {/* Tarjeta principal del show destacado con transición suave */}
         <div 
           onClick={handleCardClick}
-          className={`relative z-10 w-full sm:w-[94%] h-full rounded-3xl overflow-hidden cursor-pointer transition-all duration-500 shadow-2xl border border-white/15 hover:border-rose-500/60 group ${
-            isFading ? 'opacity-30 scale-[0.99] blur-xs' : 'opacity-100 scale-100 blur-0'
+          className={`relative z-10 w-full sm:w-[94%] h-full rounded-3xl overflow-hidden cursor-pointer transition-all duration-700 ease-out shadow-2xl border border-white/15 hover:border-rose-500/60 group ${
+            isFading ? 'opacity-20 scale-[0.98] blur-xs' : 'opacity-100 scale-100 blur-0'
           }`}
           style={{
             background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.5))'
