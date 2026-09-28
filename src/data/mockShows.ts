@@ -118,7 +118,7 @@ export const INITIAL_SHOWS: Show[] = [
     image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=1200&auto=format&fit=crop',
     genre: 'Trap / Punk / Urbano',
     city: 'Mar del Plata',
-    venue: 'Club Once Unidos',
+    venue: 'Once Unidos',
     venueAddress: 'Belisario Roldán 52',
     dates: ['2026-12-05'],
     time: '21:00 hs',
@@ -385,7 +385,7 @@ export const PRESET_VENUES: PresetVenue[] = [
     ticketUrl: 'https://www.ticketek.com.ar'
   },
   { 
-    name: 'Club Once Unidos', 
+    name: 'Once Unidos', 
     address: 'Falkner y Belisario Roldán', 
     defaultTicketPortal: 'Articket',
     ticketUrl: 'https://www.articket.com.ar'

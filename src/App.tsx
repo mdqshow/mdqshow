@@ -511,7 +511,7 @@ export default function App() {
                   'Arena Mar del Plata',
                   'Auditorium',
                   'Bendu Arena',
-                  'Club Once Unidos',
+                  'Once Unidos',
                   'Mute',
                   'Plaza de la Música',
                   'Polideportivo',

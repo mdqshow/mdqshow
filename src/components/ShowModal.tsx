@@ -429,7 +429,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                 { label: '🍻 Abbey Road', name: 'Abbey Road Concert Bar' },
                 { label: '🏟️ Arena MDQ', name: 'Arena Mar del Plata' },
                 { label: '🔥 Bendu Arena', name: 'BENDU ARENA' },
-                { label: '⭐ Once Unidos', name: 'Club Once Unidos' },
+                { label: '⭐ Once Unidos', name: 'Once Unidos' },
                 { label: '⚽ Estadio Minella', name: 'Estadio José María Minella' },
                 { label: '🎸 Plaza de la Música', name: 'Plaza de la Música Mar del Plata' },
                 { label: '🏀 Polideportivo', name: 'Polideportivo Islas Malvinas' },
