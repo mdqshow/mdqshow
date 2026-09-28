@@ -80,7 +80,7 @@ export const ComingSoon: React.FC<ComingSoonProps> = ({ onUnlockAdmin }) => {
 
       {/* Footer Minimalista */}
       <footer className="max-w-6xl w-full mx-auto px-6 py-6 text-center text-xs text-slate-600 border-t border-slate-900/80 relative z-10">
-        <p>© 2025 MDQSHOW • Mar del Plata, Buenos Aires, Argentina</p>
+        <p>© {new Date().getFullYear()} MDQSHOW • Mar del Plata, Buenos Aires, Argentina</p>
       </footer>
 
       {/* Modal Acceso Privado para vos y anunciantes */}
