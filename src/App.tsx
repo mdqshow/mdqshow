@@ -656,6 +656,7 @@ export default function App() {
                     <AdSenseBanner 
                       format="in-feed" 
                       simulationVariant="random" 
+                      onOpenContact={() => setIsContactModalOpen(true)}
                     />
                   )}
                 </React.Fragment>

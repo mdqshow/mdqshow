@@ -90,7 +90,7 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
           </div>
         )}
 
-        {/* Tarjeta principal del show destacado (Foto limpia, sin carteles de destacado ni entradas) */}
+        {/* Tarjeta principal del show destacado */}
         <div 
           onClick={handleCardClick}
           className={`relative z-10 w-full sm:w-[94%] h-full rounded-3xl overflow-hidden cursor-pointer transition-all duration-500 shadow-2xl border border-white/15 hover:border-rose-500/60 group ${
@@ -108,19 +108,24 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
             className="w-full h-full object-cover object-center transform scale-105 group-hover:scale-110 transition-transform duration-700"
           />
 
-          {/* Máscaras de degradé limpias que integran la foto al fondo oscuro */}
+          {/* Degradé superior para destacar el lugar/teatro */}
+          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-slate-950/90 via-slate-950/50 to-transparent pointer-events-none" />
+
+          {/* Degradé lateral y degradé inferior para nombre y fecha */}
           <div className="absolute inset-y-0 left-0 w-28 sm:w-44 bg-gradient-to-r from-slate-950/90 via-slate-950/60 to-transparent pointer-events-none" />
-          <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-slate-950 via-slate-950/85 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-slate-950 via-slate-950/85 to-transparent pointer-events-none" />
 
-          {/* Contenido limpio solicitado: SOLO Lugar, Nombre de la Banda y Fecha */}
-          <div className="absolute bottom-0 inset-x-0 p-5 sm:p-6 z-20 space-y-1.5 pointer-events-none">
-            {/* Lugar */}
-            <div className="flex items-center gap-1.5 text-xs text-rose-300 font-semibold drop-shadow">
+          {/* PARTE DE ARRIBA: Nombre del lugar / teatro */}
+          <div className="absolute top-4 left-4 sm:top-5 sm:left-5 z-20 pointer-events-none">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/80 border border-slate-700/80 backdrop-blur-md shadow-md text-xs sm:text-sm font-semibold text-rose-300">
               <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-              <span className="truncate max-w-[280px] sm:max-w-none">{currentShow.venue}</span>
+              <span className="truncate max-w-[240px] sm:max-w-none">{currentShow.venue}</span>
             </div>
+          </div>
 
-            {/* Nombre de la banda (Tipografía de gran porte, similar a BRUTO Playa Grande) */}
+          {/* PARTE DE ABAJO: Nombre de la Banda y Fecha */}
+          <div className="absolute bottom-0 inset-x-0 p-5 sm:p-6 z-20 space-y-1.5 pointer-events-none">
+            {/* Nombre de la banda */}
             <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-xl group-hover:text-rose-200 transition-colors line-clamp-1">
               {currentShow.band}
             </h3>
