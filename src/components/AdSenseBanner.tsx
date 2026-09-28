@@ -18,7 +18,8 @@ interface AdSenseBannerProps {
 
 /**
  * Publicidad Propia MDQSHOW (Sponsors Locales).
- * - Borde dorado fino y delicado (border amber-500/50).
+ * - Borde dorado con balance exacto: 1.5px de grosor, color dorado cálido nítido (amber-400)
+ *   y un resplandor dorado sutil constante (shadow amber) para que destaque con elegancia sin ser tosco.
  * - Rotación desfasada (cada publicidad cambia de forma independiente en momentos distintos).
  * - Duración de 10s con efecto de transición fade/scale.
  * - Etiquetas/títulos ubicados abajo a la derecha para no tapar la fotografía.
@@ -108,14 +109,12 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const initialDelay = setTimeout(() => {
-      // Primer cambio desfasado a los 5s
       setIsBottomFading(true);
       setTimeout(() => {
         setBottomIndex((prev) => (prev + 2) % localSponsors.length);
         setIsBottomFading(false);
       }, 500);
 
-      // Y luego continúa rotando cada 10 segundos
       interval = setInterval(() => {
         setIsBottomFading(true);
         setTimeout(() => {
@@ -141,7 +140,13 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
         aria-label="Espacio publicitario de sponsors locales"
         className={`w-full my-6 ${className}`}
       >
-        <div className="bg-slate-900/80 border border-amber-500/40 hover:border-amber-400/80 rounded-2xl p-3 sm:p-4 backdrop-blur-md transition-all duration-500 overflow-hidden relative group shadow-lg shadow-amber-950/15">
+        <div 
+          className="bg-slate-900/80 rounded-2xl p-3 sm:p-4 backdrop-blur-md transition-all duration-500 overflow-hidden relative group shadow-lg"
+          style={{
+            border: '1.5px solid rgba(245, 158, 11, 0.75)',
+            boxShadow: '0 0 16px -2px rgba(245, 158, 11, 0.25)'
+          }}
+        >
           <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-2.5 px-1">
             <span className="flex items-center gap-1.5">
               <Sparkles className="w-3 h-3 text-amber-300" />
@@ -156,7 +161,10 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
               rel="noopener noreferrer"
               className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto min-w-0 cursor-pointer group/item flex-1"
             >
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden shrink-0 bg-slate-950 border border-amber-500/30 shadow-md">
+              <div 
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden shrink-0 bg-slate-950 shadow-md"
+                style={{ border: '1.5px solid rgba(245, 158, 11, 0.6)' }}
+              >
                 <img 
                   src={topAd.image} 
                   alt={topAd.title} 
@@ -184,7 +192,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
                 href={topAd.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/30 hover:border-amber-400 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/50 hover:border-amber-400 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
               >
                 <span>Conocer más</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -196,8 +204,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
     );
   }
 
-  // Formato In-Feed: Dos cuadraditos con borde fino dorado, desfasados en tiempo,
-  // con la etiqueta y título ubicados abajo a la derecha para no tapar la fotografía.
+  // Formato In-Feed: Dos cuadraditos con borde dorado con el grosor y visibilidad justos (1.5px dorado brillante cálido)
   if (format === 'in-feed') {
     return (
       <aside 
@@ -209,7 +216,11 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
           href={topAd.link}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 relative rounded-2xl overflow-hidden border border-amber-500/40 hover:border-amber-400/90 shadow-md hover:shadow-xl hover:shadow-amber-950/30 transition-all duration-500 group block cursor-pointer bg-slate-950"
+          className="flex-1 relative rounded-2xl overflow-hidden transition-all duration-500 group block cursor-pointer bg-slate-950 hover:scale-[1.01]"
+          style={{
+            border: '1.5px solid rgba(245, 158, 11, 0.85)',
+            boxShadow: '0 0 14px -2px rgba(245, 158, 11, 0.35)'
+          }}
           title={`${topAd.title} — Clic para abrir`}
         >
           {/* Imagen completa con transición propia */}
@@ -228,7 +239,10 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
           <div className={`absolute bottom-2.5 right-2.5 z-10 text-right pointer-events-none transition-opacity duration-500 max-w-[80%] ${
             isTopFading ? 'opacity-0' : 'opacity-100'
           }`}>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/80 backdrop-blur-md border border-amber-500/40 text-[9px] font-black text-amber-300 uppercase tracking-wider shadow-sm mb-1">
+            <span 
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/90 backdrop-blur-md text-[9px] font-black text-amber-300 uppercase tracking-wider shadow-sm mb-1"
+              style={{ border: '1px solid rgba(245, 158, 11, 0.7)' }}
+            >
               <Sparkles className="w-2.5 h-2.5 text-amber-400" />
               {topAd.tag}
             </span>
@@ -246,7 +260,11 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
           href={bottomAd.link}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 relative rounded-2xl overflow-hidden border border-amber-500/40 hover:border-amber-400/90 shadow-md hover:shadow-xl hover:shadow-amber-950/30 transition-all duration-500 group block cursor-pointer bg-slate-950"
+          className="flex-1 relative rounded-2xl overflow-hidden transition-all duration-500 group block cursor-pointer bg-slate-950 hover:scale-[1.01]"
+          style={{
+            border: '1.5px solid rgba(245, 158, 11, 0.85)',
+            boxShadow: '0 0 14px -2px rgba(245, 158, 11, 0.35)'
+          }}
           title={`${bottomAd.title} — Clic para abrir`}
         >
           {/* Imagen completa con transición propia */}
@@ -265,7 +283,10 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
           <div className={`absolute bottom-2.5 right-2.5 z-10 text-right pointer-events-none transition-opacity duration-500 max-w-[80%] ${
             isBottomFading ? 'opacity-0' : 'opacity-100'
           }`}>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/80 backdrop-blur-md border border-amber-500/40 text-[9px] font-black text-amber-300 uppercase tracking-wider shadow-sm mb-1">
+            <span 
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/90 backdrop-blur-md text-[9px] font-black text-amber-300 uppercase tracking-wider shadow-sm mb-1"
+              style={{ border: '1px solid rgba(245, 158, 11, 0.7)' }}
+            >
               <Sparkles className="w-2.5 h-2.5 text-amber-400" />
               {bottomAd.tag}
             </span>
