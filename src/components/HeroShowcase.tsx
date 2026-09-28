@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, MapPin, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { Show } from '../types';
 import { formatSingleDate } from '../utils/dateHelpers';
 
@@ -8,12 +8,31 @@ interface HeroShowcaseProps {
   onSelectShow?: (show: Show) => void;
 }
 
+/**
+ * Head Principal MDQSHOW:
+ * Muestra las "NOVEDADES" (los últimos 5 shows agregados / ordenados por fecha de creación o los más recientes de la cartelera).
+ * - Arriba a la izquierda: Insignia destacada "NOVEDADES" con degradé y destello.
+ * - Abajo a la izquierda: Nombre de la Banda y Fecha del recital.
+ * - Abajo a la derecha: Nombre del Lugar / Teatro con pin de ubicación.
+ * - Rotación automática cada 10 segundos con transición suave.
+ */
 export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelectShow }) => {
-  // Filtramos los shows marcados por el usuario como "Destacar show en la parte superior" (featured === true)
-  const featuredShows = shows.filter(s => s.featured === true);
+  // Obtenemos los últimos 5 shows agregados a la plataforma
+  // Si tienen createdAt ordenamos descendente; si no, tomamos los últimos del array o los primeros 5
+  const displayShows = React.useMemo(() => {
+    if (!shows || shows.length === 0) return [];
+    
+    const sorted = [...shows].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (timeA !== 0 && timeB !== 0) {
+        return timeB - timeA;
+      }
+      return 0;
+    });
 
-  // Si no hay shows con featured o se están cargando, tomamos los primeros shows como fallback
-  const displayShows = featuredShows.length > 0 ? featuredShows : shows.slice(0, 5);
+    return sorted.slice(0, 5);
+  }, [shows]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFading, setIsFading] = useState(false);
@@ -108,55 +127,64 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
             className="w-full h-full object-cover object-center transform scale-105 group-hover:scale-110 transition-transform duration-700"
           />
 
-          {/* Degradé superior para destacar el lugar/teatro */}
-          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-slate-950/90 via-slate-950/50 to-transparent pointer-events-none" />
+          {/* Degradé superior para destacar la insignia de NOVEDADES */}
+          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-slate-950/90 via-slate-950/40 to-transparent pointer-events-none" />
 
-          {/* Degradé lateral y degradé inferior para nombre y fecha */}
-          <div className="absolute inset-y-0 left-0 w-28 sm:w-44 bg-gradient-to-r from-slate-950/90 via-slate-950/60 to-transparent pointer-events-none" />
-          <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-slate-950 via-slate-950/85 to-transparent pointer-events-none" />
+          {/* Degradé lateral y degradé inferior para nombre, fecha y lugar */}
+          <div className="absolute inset-y-0 left-0 w-32 sm:w-48 bg-gradient-to-r from-slate-950/90 via-slate-950/50 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent pointer-events-none" />
 
-          {/* PARTE DE ARRIBA: Nombre del lugar / teatro */}
+          {/* PARTE DE ARRIBA (IZQUIERDA): Título NOVEDADES */}
           <div className="absolute top-4 left-4 sm:top-5 sm:left-5 z-20 pointer-events-none">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/80 border border-slate-700/80 backdrop-blur-md shadow-md text-xs sm:text-sm font-semibold text-rose-300">
-              <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-              <span className="truncate max-w-[240px] sm:max-w-none">{currentShow.venue}</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/85 border border-rose-500/50 backdrop-blur-md shadow-lg text-xs sm:text-sm font-black text-rose-300 tracking-wider uppercase">
+              <Sparkles className="w-3.5 h-3.5 text-rose-400 shrink-0 animate-pulse" />
+              <span>Novedades</span>
             </div>
           </div>
 
-          {/* PARTE DE ABAJO: Nombre de la Banda y Fecha */}
-          <div className="absolute bottom-0 inset-x-0 p-5 sm:p-6 z-20 space-y-1.5 pointer-events-none">
-            {/* Nombre de la banda */}
-            <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-xl group-hover:text-rose-200 transition-colors line-clamp-1">
-              {currentShow.band}
-            </h3>
+          {/* PARTE DE ABAJO: Nombre de la Banda y Fecha a la IZQUIERDA | Lugar a la DERECHA */}
+          <div className="absolute bottom-0 inset-x-0 p-5 sm:p-6 z-20 flex flex-col sm:flex-row sm:items-end justify-between gap-3 pointer-events-none">
+            {/* LADO IZQUIERDO: Banda y Fecha */}
+            <div className="space-y-1.5 min-w-0 flex-1">
+              <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-xl group-hover:text-rose-200 transition-colors line-clamp-1">
+                {currentShow.band}
+              </h3>
 
-            {/* Fecha */}
-            <div className="flex items-center gap-2 pt-0.5 text-xs sm:text-sm font-bold text-amber-300 drop-shadow">
-              <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
-              <span className="capitalize">
-                {currentShow.dates && currentShow.dates.length > 0 
-                  ? formatSingleDate(currentShow.dates[0])
-                  : 'Fecha a confirmar'}
-              </span>
-              {currentShow.time && (
-                <span className="text-slate-300 text-xs font-normal">
-                  • {currentShow.time}
+              <div className="flex items-center gap-2 pt-0.5 text-xs sm:text-sm font-bold text-amber-300 drop-shadow">
+                <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="capitalize">
+                  {currentShow.dates && currentShow.dates.length > 0 
+                    ? formatSingleDate(currentShow.dates[0])
+                    : 'Fecha a confirmar'}
                 </span>
-              )}
+                {currentShow.time && (
+                  <span className="text-slate-300 text-xs font-normal">
+                    • {currentShow.time}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* LADO DERECHO: Nombre del Lugar / Teatro */}
+            <div className="shrink-0 sm:text-right">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950/85 border border-slate-700/80 backdrop-blur-md shadow-md text-xs sm:text-sm font-bold text-slate-200 group-hover:text-white group-hover:border-rose-500/40 transition-colors">
+                <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                <span className="truncate max-w-[200px] sm:max-w-xs">{currentShow.venue}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Flechas de navegación discreta si hay más de 1 show destacado */}
+        {/* Flechas de navegación discreta si hay más de 1 show */}
         {displayShows.length > 1 && (
-          <div className="absolute bottom-3 right-4 z-30 flex items-center gap-1.5">
+          <div className="absolute top-4 right-4 sm:top-5 sm:right-6 z-30 flex items-center gap-1.5">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handlePrev();
               }}
               className="w-7 h-7 rounded-full bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs"
-              title="Anterior show destacado"
+              title="Anterior novedad"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -169,7 +197,7 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
                 handleNext();
               }}
               className="w-7 h-7 rounded-full bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs"
-              title="Siguiente show destacado"
+              title="Siguiente novedad"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
