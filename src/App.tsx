@@ -87,6 +87,8 @@ export default function App() {
     setIsPreviewUnlocked(false);
     localStorage.removeItem(LOCAL_STORAGE_ADMIN);
     localStorage.removeItem('mdqshow_preview_access');
+    sessionStorage.removeItem('mdqshow_preview_access');
+    window.location.hash = '';
   };
 
   // Modo Próximamente / Vista previa privada
@@ -94,7 +96,8 @@ export default function App() {
   // Para entrar a la web completa se requiere ingresar con la clave MDQ2026mdq
   const [isPreviewUnlocked, setIsPreviewUnlocked] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    return localStorage.getItem('mdqshow_preview_access') === 'true' || localStorage.getItem(LOCAL_STORAGE_ADMIN) === 'true';
+    // Solo si explícitamente se desbloqueó en esta sesión
+    return sessionStorage.getItem('mdqshow_preview_access') === 'true';
   });
 
   // Shows list initialized from local fallback, then synced with Firestore in real time

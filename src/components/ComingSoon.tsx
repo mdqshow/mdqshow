@@ -15,7 +15,7 @@ export const ComingSoon: React.FC<ComingSoonProps> = ({ onUnlockAdmin }) => {
     e.preventDefault();
     // Clave solicitada por Christian
     if (password === 'MDQ2026mdq') {
-      localStorage.setItem('mdqshow_preview_access', 'true');
+      sessionStorage.setItem('mdqshow_preview_access', 'true');
       onUnlockAdmin();
     } else {
       setError(true);
