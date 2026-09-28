@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Sparkles, Lock } from 'lucide-react';
-import faroLogo from '../assets/images/faro_rocker_mascot_1790285020797.jpg';
+import { Lock, MapPin } from 'lucide-react';
+import { MdqBrandIcon } from './MdqBrandIcon';
 
 interface ComingSoonProps {
   onUnlockAdmin: () => void;
@@ -13,7 +13,6 @@ export const ComingSoon: React.FC<ComingSoonProps> = ({ onUnlockAdmin }) => {
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Clave solicitada por Christian
     if (password === 'MDQ2026mdq') {
       sessionStorage.setItem('mdqshow_preview_access', 'true');
       onUnlockAdmin();
@@ -23,67 +22,91 @@ export const ComingSoon: React.FC<ComingSoonProps> = ({ onUnlockAdmin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0d14] text-slate-100 flex flex-col justify-between selection:bg-rose-500 selection:text-white relative overflow-hidden">
-      {/* Background Glows */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-rose-600/15 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-[400px] h-[400px] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-10 left-10 w-[300px] h-[300px] bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="min-h-screen bg-[#0e1117] text-slate-100 flex flex-col justify-between selection:bg-rose-500 selection:text-white relative overflow-hidden">
+      {/* Glow ambiental de fondo */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] bg-rose-600/10 rounded-full blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[130px] pointer-events-none" />
 
-      {/* Top Header */}
-      <header className="max-w-6xl w-full mx-auto px-6 py-8 flex items-center justify-between relative z-10">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <img 
-              src={faroLogo} 
-              alt="MDQSHOW Faro Logo" 
-              className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl object-cover border-2 border-rose-500/40 shadow-lg shadow-rose-950/50"
-            />
-            <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-[#0a0d14] rounded-full animate-pulse" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xl sm:text-2xl font-black tracking-tight text-white">MDQ<span className="text-rose-500">SHOW</span></span>
+      {/* Top Header - Exacto idéntico al Navbar original */}
+      <header className="sticky top-0 z-40 bg-[#0e1117]/90 backdrop-blur-md border-b border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
+            {/* Logo & Brand Oficial idéntico al Navbar */}
+            <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-slate-950 border border-rose-500/50 flex items-center justify-center shadow-xl shadow-rose-950/60 p-1 hover:scale-105 transition-transform overflow-hidden relative group shrink-0">
+                <div className="absolute inset-0 bg-gradient-to-tr from-rose-600/25 via-rose-500/10 to-amber-500/20 pointer-events-none" />
+                <MdqBrandIcon className="w-full h-full relative z-10" />
+              </div>
+
+              <div>
+                <div className="flex items-center space-x-1.5 sm:space-x-2">
+                  <span className="font-black text-xl sm:text-3xl tracking-tight text-white font-mono leading-none">
+                    MDQ<span className="text-rose-500">SHOW</span>
+                  </span>
+                  <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                    <MapPin className="w-3 h-3 mr-1 text-rose-400" />
+                    <span>Mar del Plata</span>
+                  </span>
+                </div>
+                {/* Mar del Plata en mobile */}
+                <div className="flex items-center text-[10px] text-rose-400/90 font-medium sm:hidden mt-0.5">
+                  <MapPin className="w-2.5 h-2.5 mr-1 text-rose-400 shrink-0" />
+                  <span>Mar del Plata</span>
+                </div>
+                <p className="text-xs text-slate-400 hidden sm:block">
+                  Cartelera de recitales y shows en Mar del Plata
+                </p>
+              </div>
             </div>
-            <p className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">Mar del Plata • Cartelera Oficial</p>
+
+            {/* Botón discreto de acceso privado */}
+            <button
+              onClick={() => setShowSecretPrompt(true)}
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-800 px-3.5 py-2 rounded-xl transition-all duration-200 shadow-sm"
+              title="Acceso privado con clave"
+            >
+              <Lock className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Acceso privado</span>
+            </button>
           </div>
         </div>
-
-        {/* Botón discreto de acceso privado */}
-        <button
-          onClick={() => setShowSecretPrompt(true)}
-          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 px-3 py-1.5 rounded-full transition-all duration-200"
-          title="Acceso exclusivo para administradores y anunciantes"
-        >
-          <Lock className="w-3.5 h-3.5 text-amber-400" />
-          <span className="hidden sm:inline">Acceso privado</span>
-        </button>
       </header>
 
-      {/* Hero Central Limpio y Minimalista */}
+      {/* Hero Central Limpio con la tipografía y faro con luz */}
       <main className="max-w-4xl w-full mx-auto px-6 py-16 sm:py-24 flex flex-col items-center text-center relative z-10 space-y-8 my-auto">
-        {/* Badge Próximamente */}
-        <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-rose-500/15 via-amber-500/15 to-rose-500/15 border border-rose-500/30 text-rose-300 text-xs sm:text-sm font-semibold tracking-wide shadow-lg shadow-rose-950/30 animate-pulse">
-          <Sparkles className="w-4 h-4 text-amber-400" />
-          <span>MUY PRONTO EN MAR DEL PLATA</span>
+        {/* Faro animado con el haz de luz giratorio */}
+        <div className="relative">
+          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-slate-950 border-2 border-rose-500/50 flex items-center justify-center shadow-2xl shadow-rose-950/80 p-2 relative group overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-tr from-rose-600/30 via-rose-500/15 to-amber-500/25 pointer-events-none" />
+            <MdqBrandIcon className="w-full h-full relative z-10" />
+          </div>
+          <div className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-full bg-rose-600 text-[10px] font-black tracking-wider text-white shadow-lg uppercase border border-rose-400/40 animate-pulse">
+            Próximamente
+          </div>
         </div>
 
-        {/* Titular Impactante */}
-        <div className="space-y-5 max-w-2xl">
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-black text-white tracking-tight leading-[1.08]">
-            Todos los recitales en un solo lugar.
+        {/* Marca con su tipografía exacta */}
+        <div className="space-y-4 max-w-2xl">
+          <h1 className="font-mono font-black text-4xl sm:text-6xl md:text-7xl tracking-tight text-white leading-none">
+            MDQ<span className="text-rose-500">SHOW</span>
           </h1>
-          <p className="text-base sm:text-xl text-slate-300 font-normal leading-relaxed">
-            Estamos preparando la plataforma definitiva de shows y recitales en vivo de <span className="text-white font-semibold underline decoration-rose-500 decoration-2 underline-offset-4">Mar del Plata</span>. Cartelera al día, venta oficial de entradas y agenda cultural.
+          <p className="text-sm sm:text-lg text-slate-400 font-medium tracking-wide">
+            Cartelera de recitales y shows en Mar del Plata
           </p>
+          <div className="pt-2">
+            <p className="text-base sm:text-xl text-slate-300 font-normal leading-relaxed max-w-xl mx-auto">
+              Muy pronto vas a poder consultar todos los recitales, fechas oficiales, lugares y venta de entradas en un solo lugar.
+            </p>
+          </div>
         </div>
       </main>
 
-      {/* Footer Minimalista */}
-      <footer className="max-w-6xl w-full mx-auto px-6 py-6 text-center text-xs text-slate-600 border-t border-slate-900/80 relative z-10">
-        <p>© {new Date().getFullYear()} MDQSHOW • Mar del Plata, Buenos Aires, Argentina</p>
+      {/* Footer Minimalista Original */}
+      <footer className="max-w-7xl w-full mx-auto px-6 py-6 text-center text-xs text-slate-500 border-t border-slate-800/80 relative z-10">
+        <p>© {new Date().getFullYear()} MDQSHOW • Cartelera de recitales y shows en Mar del Plata</p>
       </footer>
 
-      {/* Modal Acceso Privado para vos y anunciantes */}
+      {/* Modal Acceso Privado */}
       {showSecretPrompt && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-3xl p-6 shadow-2xl relative">
