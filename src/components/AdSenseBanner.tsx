@@ -14,13 +14,13 @@ interface AdSenseBannerProps {
   className?: string;
   simulationVariant?: 'random' | 'direct_sponsor';
   onOpenContact?: () => void;
-  initialOffset?: number; // Para permitir variedad si hay múltiples banners en la página
+  initialOffset?: number;
 }
 
 /**
  * Publicidad Propia MDQSHOW (Sponsors Locales).
- * - Borde dorado con balance exacto: 1.5px de grosor, color dorado cálido nítido (amber-400)
- *   y un resplandor dorado sutil constante (shadow amber).
+ * - Horizontal (GoogleAds/Banner general): Borde sutil estándar del mismo color que los shows (border-slate-800).
+ * - In-Feed (los cuadraditos en la grilla): Borde dorado exclusivo para diferenciarlo de los shows.
  * - Rotación desfasada (cada publicidad cambia de forma independiente en momentos distintos).
  * - Duración de 10s con efecto de transición fade/scale.
  * - Disposición del texto:
@@ -137,23 +137,17 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   const topAd = localSponsors[topIndex % localSponsors.length];
   const bottomAd = localSponsors[bottomIndex % localSponsors.length];
 
-  // Formato Horizontal (Banner adaptable superior o de footer)
+  // Formato Horizontal (Banner adaptable superior o de footer: borde slate-800 original como los shows)
   if (format === 'horizontal') {
     return (
       <aside 
         aria-label="Espacio publicitario de sponsors locales"
         className={`w-full my-6 ${className}`}
       >
-        <div 
-          className="bg-slate-900/80 rounded-2xl p-3 sm:p-4 backdrop-blur-md transition-all duration-500 overflow-hidden relative group shadow-lg"
-          style={{
-            border: '1.5px solid rgba(245, 158, 11, 0.75)',
-            boxShadow: '0 0 16px -2px rgba(245, 158, 11, 0.25)'
-          }}
-        >
-          <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-2.5 px-1">
-            <span className="flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-amber-300" />
+        <div className="bg-slate-900/80 border border-slate-800 hover:border-slate-700 rounded-2xl p-3 sm:p-4 backdrop-blur-md transition-all duration-300 overflow-hidden relative group shadow-lg">
+          <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-2.5 px-1">
+            <span className="flex items-center gap-1.5 text-rose-400 font-bold">
+              <Sparkles className="w-3 h-3 text-amber-400" />
               Sponsor Destacado
             </span>
           </div>
@@ -165,10 +159,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
               rel="noopener noreferrer"
               className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto min-w-0 cursor-pointer group/item flex-1"
             >
-              <div 
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden shrink-0 bg-slate-950 shadow-md"
-                style={{ border: '1.5px solid rgba(245, 158, 11, 0.6)' }}
-              >
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden shrink-0 bg-slate-950 border border-slate-800 shadow-md">
                 <img 
                   src={topAd.image} 
                   alt={topAd.title} 
@@ -179,10 +170,10 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
               </div>
 
               <div className="min-w-0 flex-1">
-                <div className="inline-block text-[10px] font-black text-amber-400 uppercase tracking-wider mb-0.5">
+                <div className="inline-block text-[10px] font-black text-rose-400 uppercase tracking-wider mb-0.5">
                   {topAd.tag}
                 </div>
-                <h4 className="text-sm sm:text-base font-bold text-white leading-snug truncate max-w-xl group-hover/item:text-amber-200 transition-colors">
+                <h4 className="text-sm sm:text-base font-bold text-white leading-snug truncate max-w-xl group-hover/item:text-rose-200 transition-colors">
                   {topAd.title} — {topAd.subtitle}
                 </h4>
                 <p className="text-xs text-slate-300 line-clamp-1 sm:line-clamp-2 mt-0.5 max-w-2xl leading-relaxed">
@@ -196,10 +187,10 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
                 href={topAd.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/50 hover:border-amber-400 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-600 text-slate-200 hover:text-white border border-slate-700 hover:border-rose-500 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
               >
                 <span>Conocer más</span>
-                <ExternalLink className="w-3.5 h-3.5" />
+                <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-white" />
               </a>
             </div>
           </div>
