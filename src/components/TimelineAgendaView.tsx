@@ -90,8 +90,8 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
             {monthItems.map(({ date, show }, index) => {
               const countdown = getDaysUntil(date);
               const isFav = favorites.includes(show.id);
-              // Intercalar dos publicidades propias lado a lado cada 5 recitales dentro del cronograma
-              const showSponsorBanner = (index + 1) % 5 === 0 && index !== monthItems.length - 1;
+              // Intercalar dos publicidades propias lado a lado cada 10 recitales dentro del cronograma
+              const showSponsorBanner = (index + 1) % 10 === 0 && index !== monthItems.length - 1;
 
               return (
                 <React.Fragment key={`${show.id}-${date}-${index}`}>

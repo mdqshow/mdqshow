@@ -11,8 +11,8 @@ interface HeroShowcaseProps {
 /**
  * Head Principal MDQSHOW:
  * Muestra las "NOVEDADES" (pasan solas automáticamente cada 7 segundos, sin flechitas).
- * - Arriba a la izquierda: Insignia NOVEDADES estilizada con los colores del botón CRONOGRAMA (bg-rose-500 text-white),
- *   con mayor ancho y presencia.
+ * - Arriba a la izquierda: Insignia NOVEDADES idéntica al botón no seleccionado (como el de "Cartelera" en la imagen del usuario):
+ *   fondo oscuro azulado translúcido (bg-slate-900/90 border border-slate-800) con texto slate-400 suave e ícono a tono, con buen ancho.
  * - Abajo a la izquierda: Nombre de la Banda y Fecha del recital (destacados y prioritarios).
  * - Abajo a la derecha: Lugar / Teatro en tamaño compacto y balanceado para no competir con la fecha.
  */
@@ -105,7 +105,7 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
           </div>
         )}
 
-        {/* Tarjeta principal del show destacado con transición suave */}
+        {/* Tarjeta principal del show con transición suave */}
         <div 
           onClick={handleCardClick}
           className={`relative z-10 w-full sm:w-[94%] h-full rounded-3xl overflow-hidden cursor-pointer transition-all duration-700 ease-out shadow-2xl border border-white/15 hover:border-rose-500/60 group ${
@@ -130,17 +130,17 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
           <div className="absolute inset-y-0 left-0 w-32 sm:w-48 bg-gradient-to-r from-slate-950/90 via-slate-950/50 to-transparent pointer-events-none" />
           <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent pointer-events-none" />
 
-          {/* PARTE DE ARRIBA (IZQUIERDA): Insignia NOVEDADES (con los colores del botón Cronograma: bg-rose-500 text-white y más ancho) */}
+          {/* PARTE DE ARRIBA (IZQUIERDA): Insignia NOVEDADES tal como el botón no seleccionado (como en la foto de Cartelera) */}
           <div className="absolute top-4 left-4 sm:top-5 sm:left-5 z-20 pointer-events-none">
-            <div className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-1.5 sm:py-2 rounded-xl bg-rose-500 text-white shadow-lg shadow-rose-950/50 border border-rose-400/40 font-black text-xs sm:text-sm tracking-wider uppercase backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-white shrink-0 animate-pulse" />
+            <div className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-1.5 sm:py-2 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 font-semibold text-xs sm:text-sm tracking-wide shadow-md backdrop-blur-md">
+              <Sparkles className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <span>Novedades</span>
             </div>
           </div>
 
-          {/* PARTE DE ABAJO: Nombre de la Banda y Fecha a la IZQUIERDA | Lugar a la DERECHA (más chico para balancear) */}
+          {/* PARTE DE ABAJO: Nombre de la Banda y Fecha a la IZQUIERDA | Lugar a la DERECHA */}
           <div className="absolute bottom-0 inset-x-0 p-5 sm:p-6 z-20 flex flex-col sm:flex-row sm:items-end justify-between gap-2.5 pointer-events-none">
-            {/* LADO IZQUIERDO: Banda y Fecha (protagonistas) */}
+            {/* LADO IZQUIERDO: Banda y Fecha */}
             <div className="space-y-1 min-w-0 flex-1">
               <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-xl group-hover:text-rose-200 transition-colors line-clamp-1">
                 {currentShow.band}
@@ -161,7 +161,7 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
               </div>
             </div>
 
-            {/* LADO DERECHO: Nombre del Lugar / Teatro (más compacto para no resaltar más que la fecha) */}
+            {/* LADO DERECHO: Nombre del Lugar / Teatro */}
             <div className="shrink-0 sm:text-right">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] sm:text-xs font-medium text-slate-300 backdrop-blur-md shadow-sm">
                 <MapPin className="w-3 h-3 text-rose-400 shrink-0" />
