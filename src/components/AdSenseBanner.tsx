@@ -19,10 +19,12 @@ interface AdSenseBannerProps {
 /**
  * Publicidad Propia MDQSHOW (Sponsors Locales).
  * - Borde dorado con balance exacto: 1.5px de grosor, color dorado cálido nítido (amber-400)
- *   y un resplandor dorado sutil constante (shadow amber) para que destaque con elegancia sin ser tosco.
+ *   y un resplandor dorado sutil constante (shadow amber).
  * - Rotación desfasada (cada publicidad cambia de forma independiente en momentos distintos).
  * - Duración de 10s con efecto de transición fade/scale.
- * - Etiquetas/títulos ubicados abajo a la derecha para no tapar la fotografía.
+ * - Disposición del texto:
+ *   * Izquierda: Nombre de la empresa y bajada/subtítulo.
+ *   * Derecha: Etiqueta "HELADERÍA ARTESANAL" / "CERVECERÍA MDQ" / etc.
  */
 export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   format = 'horizontal',
@@ -204,7 +206,9 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
     );
   }
 
-  // Formato In-Feed: Dos cuadraditos con borde dorado con el grosor y visibilidad justos (1.5px dorado brillante cálido)
+  // Formato In-Feed: Dos cuadraditos con borde dorado 1.5px
+  // Margen Izquierdo: Nombre de empresa y subtítulo.
+  // Margen Derecho: Etiqueta "HELADERIA ARTESANAL", etc.
   if (format === 'in-feed') {
     return (
       <aside 
@@ -232,26 +236,33 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
             }`}
           />
 
-          {/* Degradé suave en la esquina inferior derecha para leer la etiqueta sin tapar la foto */}
-          <div className="absolute inset-0 bg-gradient-to-tl from-slate-950/85 via-slate-950/15 to-transparent pointer-events-none" />
+          {/* Degradé inferior para lectura nítida de ambos extremos */}
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-950/95 via-slate-950/40 to-transparent pointer-events-none" />
 
-          {/* Título y etiqueta ubicados ABAJO A LA DERECHA */}
-          <div className={`absolute bottom-2.5 right-2.5 z-10 text-right pointer-events-none transition-opacity duration-500 max-w-[80%] ${
+          {/* Fila inferior con el texto a la izquierda y la etiqueta a la derecha */}
+          <div className={`absolute bottom-0 inset-x-0 p-3.5 z-10 flex items-end justify-between gap-2 pointer-events-none transition-opacity duration-500 ${
             isTopFading ? 'opacity-0' : 'opacity-100'
           }`}>
-            <span 
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/90 backdrop-blur-md text-[9px] font-black text-amber-300 uppercase tracking-wider shadow-sm mb-1"
-              style={{ border: '1px solid rgba(245, 158, 11, 0.7)' }}
-            >
-              <Sparkles className="w-2.5 h-2.5 text-amber-400" />
-              {topAd.tag}
-            </span>
-            <h4 className="text-sm font-black text-white group-hover:text-amber-200 transition-colors drop-shadow-md truncate">
-              {topAd.title}
-            </h4>
-            <p className="text-[10px] text-amber-200/90 drop-shadow line-clamp-1">
-              {topAd.subtitle}
-            </p>
+            {/* Lado Izquierdo: Nombre de la empresa y bajada */}
+            <div className="min-w-0 flex-1 text-left">
+              <h4 className="text-sm sm:text-base font-black text-white group-hover:text-amber-200 transition-colors drop-shadow-md truncate">
+                {topAd.title}
+              </h4>
+              <p className="text-[10px] sm:text-[11px] text-amber-200/90 drop-shadow line-clamp-1">
+                {topAd.subtitle}
+              </p>
+            </div>
+
+            {/* Lado Derecho: Etiqueta (ej. "Heladería Artesanal") */}
+            <div className="shrink-0 text-right">
+              <span 
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-950/90 backdrop-blur-md text-[9px] font-black text-amber-300 uppercase tracking-wider shadow-sm"
+                style={{ border: '1px solid rgba(245, 158, 11, 0.7)' }}
+              >
+                <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                {topAd.tag}
+              </span>
+            </div>
           </div>
         </a>
 
@@ -276,26 +287,33 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
             }`}
           />
 
-          {/* Degradé suave en la esquina inferior derecha para leer la etiqueta sin tapar la foto */}
-          <div className="absolute inset-0 bg-gradient-to-tl from-slate-950/85 via-slate-950/15 to-transparent pointer-events-none" />
+          {/* Degradé inferior para lectura nítida de ambos extremos */}
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-950/95 via-slate-950/40 to-transparent pointer-events-none" />
 
-          {/* Título y etiqueta ubicados ABAJO A LA DERECHA */}
-          <div className={`absolute bottom-2.5 right-2.5 z-10 text-right pointer-events-none transition-opacity duration-500 max-w-[80%] ${
+          {/* Fila inferior con el texto a la izquierda y la etiqueta a la derecha */}
+          <div className={`absolute bottom-0 inset-x-0 p-3.5 z-10 flex items-end justify-between gap-2 pointer-events-none transition-opacity duration-500 ${
             isBottomFading ? 'opacity-0' : 'opacity-100'
           }`}>
-            <span 
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/90 backdrop-blur-md text-[9px] font-black text-amber-300 uppercase tracking-wider shadow-sm mb-1"
-              style={{ border: '1px solid rgba(245, 158, 11, 0.7)' }}
-            >
-              <Sparkles className="w-2.5 h-2.5 text-amber-400" />
-              {bottomAd.tag}
-            </span>
-            <h4 className="text-sm font-black text-white group-hover:text-amber-200 transition-colors drop-shadow-md truncate">
-              {bottomAd.title}
-            </h4>
-            <p className="text-[10px] text-amber-200/90 drop-shadow line-clamp-1">
-              {bottomAd.subtitle}
-            </p>
+            {/* Lado Izquierdo: Nombre de la empresa y bajada */}
+            <div className="min-w-0 flex-1 text-left">
+              <h4 className="text-sm sm:text-base font-black text-white group-hover:text-amber-200 transition-colors drop-shadow-md truncate">
+                {bottomAd.title}
+              </h4>
+              <p className="text-[10px] sm:text-[11px] text-amber-200/90 drop-shadow line-clamp-1">
+                {bottomAd.subtitle}
+              </p>
+            </div>
+
+            {/* Lado Derecho: Etiqueta (ej. "Heladería Artesanal") */}
+            <div className="shrink-0 text-right">
+              <span 
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-950/90 backdrop-blur-md text-[9px] font-black text-amber-300 uppercase tracking-wider shadow-sm"
+                style={{ border: '1px solid rgba(245, 158, 11, 0.7)' }}
+              >
+                <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                {bottomAd.tag}
+              </span>
+            </div>
           </div>
         </a>
       </aside>
