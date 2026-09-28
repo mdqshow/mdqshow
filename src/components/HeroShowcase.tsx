@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Calendar, MapPin, ChevronLeft, ChevronRight, Ticket } from 'lucide-react';
+import { Calendar, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Show } from '../types';
 import { formatSingleDate } from '../utils/dateHelpers';
 
@@ -90,7 +90,7 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
           </div>
         )}
 
-        {/* Tarjeta principal del show destacado */}
+        {/* Tarjeta principal del show destacado (Foto limpia, sin carteles de destacado ni entradas) */}
         <div 
           onClick={handleCardClick}
           className={`relative z-10 w-full sm:w-[94%] h-full rounded-3xl overflow-hidden cursor-pointer transition-all duration-500 shadow-2xl border border-white/15 hover:border-rose-500/60 group ${
@@ -99,7 +99,7 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
           style={{
             background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.5))'
           }}
-          title={`Ver detalles de ${currentShow.band}`}
+          title={`Ver cartelera de ${currentShow.band}`}
         >
           {/* Foto del Show */}
           <img 
@@ -108,67 +108,36 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelect
             className="w-full h-full object-cover object-center transform scale-105 group-hover:scale-110 transition-transform duration-700"
           />
 
-          {/* Máscaras de degradé que integran la foto al fondo oscuro */}
+          {/* Máscaras de degradé limpias que integran la foto al fondo oscuro */}
           <div className="absolute inset-y-0 left-0 w-28 sm:w-44 bg-gradient-to-r from-slate-950/90 via-slate-950/60 to-transparent pointer-events-none" />
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-slate-950 via-slate-950/85 to-transparent pointer-events-none" />
-          <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-slate-950/70 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-slate-950 via-slate-950/85 to-transparent pointer-events-none" />
 
-          {/* Badge superior: "DESTACADO" */}
-          <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600/90 border border-rose-400/40 text-[10px] font-black uppercase tracking-wider text-white shadow-lg shadow-rose-950/50 backdrop-blur-md">
-              <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
-              <span>Destacado</span>
-            </span>
-            {currentShow.ticketStatus === 'agotado' && (
-              <span className="px-2.5 py-1 rounded-full bg-red-950/80 border border-red-500/40 text-[10px] font-bold text-red-300 uppercase">
-                Agotado
-              </span>
-            )}
-            {currentShow.ticketStatus === 'ultimas_entradas' && (
-              <span className="px-2.5 py-1 rounded-full bg-amber-500/90 text-slate-950 text-[10px] font-extrabold uppercase animate-pulse">
-                ¡Últimas entradas!
-              </span>
-            )}
-          </div>
-
-          {/* Contenido limpio: Nombre de la banda (tamaño idéntico al de BRUTO) y Fecha */}
-          <div className="absolute bottom-0 inset-x-0 p-5 sm:p-6 z-20 space-y-2 pointer-events-none">
-            {/* Lugar y Género sutil */}
-            <div className="flex items-center gap-2 text-xs text-rose-300 font-semibold drop-shadow">
-              <span className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                <span className="truncate max-w-[200px] sm:max-w-none">{currentShow.venue}</span>
-              </span>
-              <span>•</span>
-              <span className="text-slate-300 truncate">{currentShow.genre}</span>
+          {/* Contenido limpio solicitado: SOLO Lugar, Nombre de la Banda y Fecha */}
+          <div className="absolute bottom-0 inset-x-0 p-5 sm:p-6 z-20 space-y-1.5 pointer-events-none">
+            {/* Lugar */}
+            <div className="flex items-center gap-1.5 text-xs text-rose-300 font-semibold drop-shadow">
+              <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+              <span className="truncate max-w-[280px] sm:max-w-none">{currentShow.venue}</span>
             </div>
 
-            {/* Nombre de la banda (Tipografía destacada de gran porte, similar a BRUTO Playa Grande) */}
+            {/* Nombre de la banda (Tipografía de gran porte, similar a BRUTO Playa Grande) */}
             <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-xl group-hover:text-rose-200 transition-colors line-clamp-1">
               {currentShow.band}
             </h3>
 
-            {/* Fecha destacada */}
-            <div className="flex items-center justify-between pt-1">
-              <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-300 drop-shadow">
-                <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
-                <span className="capitalize">
-                  {currentShow.dates && currentShow.dates.length > 0 
-                    ? formatSingleDate(currentShow.dates[0])
-                    : 'Fecha a confirmar'}
+            {/* Fecha */}
+            <div className="flex items-center gap-2 pt-0.5 text-xs sm:text-sm font-bold text-amber-300 drop-shadow">
+              <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="capitalize">
+                {currentShow.dates && currentShow.dates.length > 0 
+                  ? formatSingleDate(currentShow.dates[0])
+                  : 'Fecha a confirmar'}
+              </span>
+              {currentShow.time && (
+                <span className="text-slate-300 text-xs font-normal">
+                  • {currentShow.time}
                 </span>
-                {currentShow.time && (
-                  <span className="text-slate-300 text-xs font-normal">
-                    • {currentShow.time}
-                  </span>
-                )}
-              </div>
-
-              {/* Tag / Botón de entradas */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/90 border border-slate-700/80 text-[11px] font-bold text-white group-hover:bg-rose-600 group-hover:border-rose-500 transition-colors shadow-sm">
-                <Ticket className="w-3.5 h-3.5 text-rose-400 group-hover:text-white transition-colors" />
-                <span>Ver entradas</span>
-              </div>
+              )}
             </div>
           </div>
         </div>
