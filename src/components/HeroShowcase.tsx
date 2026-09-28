@@ -17,11 +17,21 @@ interface HeroShowcaseProps {
  * - Rotación automática cada 10 segundos con transición suave.
  */
 export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [], onSelectShow }) => {
-  // Obtenemos los últimos 5 shows agregados a la plataforma
-  // Si tienen createdAt ordenamos descendente; si no, tomamos los últimos del array o los primeros 5
+  // Obtenemos los shows de NOVEDADES:
+  // 1. Primero los marcados explícitamente como Novedad por el administrador (isNewBadge === true).
+  // 2. Si no hay suficientes, completamos con los que tienen createdAt más reciente.
+  // 3. Fallback: los shows más recientes de la cartelera (máximo 5).
   const displayShows = React.useMemo(() => {
     if (!shows || shows.length === 0) return [];
     
+    // Shows con la tilde de Novedad
+    const explicitlyMarked = shows.filter(s => s.isNewBadge === true);
+
+    if (explicitlyMarked.length > 0) {
+      return explicitlyMarked.slice(0, 5);
+    }
+    
+    // Orden descendente por createdAt
     const sorted = [...shows].sort((a, b) => {
       const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;

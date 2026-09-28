@@ -80,6 +80,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
   const [image, setImage] = useState('');
   const [imagePosition, setImagePosition] = useState<'top' | 'center' | 'bottom'>('top');
   const [featured, setFeatured] = useState(false);
+  const [isNewBadge, setIsNewBadge] = useState(false);
   const [error, setError] = useState('');
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
@@ -118,6 +119,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       setImage(initialShow.image || '');
       setImagePosition(initialShow.imagePosition || 'top');
       setFeatured(Boolean(initialShow.featured));
+      setIsNewBadge(Boolean(initialShow.isNewBadge));
       setError('');
       setShowConfirmDelete(false);
     } else {
@@ -144,6 +146,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       setImage('');
       setImagePosition('top');
       setFeatured(false);
+      setIsNewBadge(true); // Nuevos shows vienen marcados como Novedad por defecto
       setError('');
       setShowConfirmDelete(false);
     }
@@ -303,6 +306,8 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       imagePosition,
       description: initialShow?.description || `${band} en vivo en ${venue}.`,
       featured,
+      isNewBadge,
+      createdAt: initialShow?.createdAt || new Date().toISOString(),
       isUserAdded: true,
       openingActs: initialShow?.openingActs || [],
     };
@@ -927,17 +932,41 @@ export const ShowModal: React.FC<ShowModalProps> = ({
               )}
             </div>
 
-            <label className="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-950/70 border border-slate-800 cursor-pointer hover:bg-slate-950">
-              <input
-                type="checkbox"
-                checked={featured}
-                onChange={(e) => setFeatured(e.target.checked)}
-                className="w-4 h-4 text-rose-600 rounded bg-slate-900 border-slate-700 focus:ring-rose-500 cursor-pointer"
-              />
-              <span className="text-xs font-semibold text-slate-300">
-                Destacar show en la parte superior (Show Estrella / Imperdible)
-              </span>
-            </label>
+            <div className="space-y-2 pt-1">
+              <label className="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-950/70 border border-slate-800 cursor-pointer hover:bg-slate-950">
+                <input
+                  type="checkbox"
+                  checked={isNewBadge}
+                  onChange={(e) => setIsNewBadge(e.target.checked)}
+                  className="w-4 h-4 text-amber-500 rounded bg-slate-900 border-slate-700 focus:ring-amber-500 cursor-pointer"
+                />
+                <div>
+                  <span className="text-xs font-semibold text-slate-200 block">
+                    Mostrar en NOVEDADES (Banner superior del sitio)
+                  </span>
+                  <span className="text-[11px] text-slate-400 block">
+                    Aparece entre los shows que rotan en el Head principal de novedades.
+                  </span>
+                </div>
+              </label>
+
+              <label className="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-950/70 border border-slate-800 cursor-pointer hover:bg-slate-950">
+                <input
+                  type="checkbox"
+                  checked={featured}
+                  onChange={(e) => setFeatured(e.target.checked)}
+                  className="w-4 h-4 text-rose-600 rounded bg-slate-900 border-slate-700 focus:ring-rose-500 cursor-pointer"
+                />
+                <div>
+                  <span className="text-xs font-semibold text-slate-200 block">
+                    Show Destacado Estrella (Popup de bienvenida inicial)
+                  </span>
+                  <span className="text-[11px] text-slate-400 block">
+                    Se abre automáticamente en el popup promocional para los visitantes.
+                  </span>
+                </div>
+              </label>
+            </div>
           </div>
 
           {/* Delete confirmation section */}

@@ -6,6 +6,7 @@ import { trackTicketClick, trackShareEvent } from '../services/metricsService';
 import { getWhatsAppShareUrl, addToDeviceCalendar } from '../utils/shareAndCalendar';
 import { formatDisplayPrice } from '../utils/priceHelpers';
 import { formatProperCase } from '../utils/textFormatting';
+import { AdSenseBanner } from './AdSenseBanner';
 
 interface TimelineAgendaViewProps {
   shows: Show[];
@@ -89,13 +90,15 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
             {monthItems.map(({ date, show }, index) => {
               const countdown = getDaysUntil(date);
               const isFav = favorites.includes(show.id);
+              // Intercalar dos publicidades propias lado a lado cada 5 recitales dentro del cronograma
+              const showSponsorBanner = (index + 1) % 5 === 0 && index !== monthItems.length - 1;
 
               return (
-                <div
-                  key={`${show.id}-${date}-${index}`}
-                  id={`timeline-show-${show.id}`}
-                  className="scroll-mt-28 bg-slate-900/90 border border-slate-800/90 hover:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-200 hover:shadow-lg hover:shadow-rose-950/10"
-                >
+                <React.Fragment key={`${show.id}-${date}-${index}`}>
+                  <div
+                    id={`timeline-show-${show.id}`}
+                    className="scroll-mt-28 bg-slate-900/90 border border-slate-800/90 hover:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-200 hover:shadow-lg hover:shadow-rose-950/10"
+                  >
                   {/* Left: Date Badge & Band Info */}
                   <div className="flex items-center space-x-4 w-full sm:w-auto min-w-0 flex-1">
                     {/* Date Block */}
@@ -237,7 +240,16 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                     </div>
                   </div>
                 </div>
-              );
+
+                {/* Dos publicidades lado a lado en el ancho completo del cronograma */}
+                {showSponsorBanner && (
+                  <AdSenseBanner
+                    format="timeline-double"
+                    initialOffset={index}
+                  />
+                )}
+              </React.Fragment>
+            );
             })}
           </div>
         </div>

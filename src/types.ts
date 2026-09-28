@@ -18,6 +18,8 @@ export interface Show {
   openingActs?: string[];
   isUserAdded?: boolean;
   imagePosition?: 'top' | 'center' | 'bottom';
+  createdAt?: string; // ISO string de cuándo se dio de alta
+  isNewBadge?: boolean; // Novedad elegida por el administrador
 }
 
 export interface FilterState {

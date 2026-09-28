@@ -8,7 +8,7 @@ import brutoImg from '../assets/images/bruto_playa_grande_mdq_1790548238336.jpg'
 import laFonteDoroImg from '../assets/images/la_fonte_doro_mdq_1790601235619.jpg';
 
 interface AdSenseBannerProps {
-  format?: 'horizontal' | 'in-feed' | 'compact';
+  format?: 'horizontal' | 'in-feed' | 'compact' | 'timeline-double';
   slotId?: string;
   adClient?: string;
   className?: string;
@@ -21,6 +21,7 @@ interface AdSenseBannerProps {
  * Publicidad Propia MDQSHOW (Sponsors Locales).
  * - Horizontal (GoogleAds/Banner general): Borde sutil estándar del mismo color que los shows (border-slate-800).
  * - In-Feed (los cuadraditos en la grilla): Borde dorado exclusivo para diferenciarlo de los shows.
+ * - Timeline-Double (en la lista del Cronograma): Dos publicidades lado a lado en el ancho completo con borde dorado de 1.5px.
  * - Rotación desfasada (cada publicidad cambia de forma independiente en momentos distintos).
  * - Duración de 10s con efecto de transición fade/scale.
  * - Disposición del texto:
@@ -96,7 +97,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   const [bottomIndex, setBottomIndex] = useState((initialOffset + 1) % localSponsors.length);
   const [isBottomFading, setIsBottomFading] = useState(false);
 
-  // Cuadradito superior: rota cada 10 segundos
+  // Cuadradito superior / izquierda: rota cada 10 segundos
   useEffect(() => {
     const interval = setInterval(() => {
       setIsTopFading(true);
@@ -109,7 +110,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
     return () => clearInterval(interval);
   }, [localSponsors.length]);
 
-  // Cuadradito inferior: desfasado 5 segundos para que NUNCA cambien al mismo tiempo
+  // Cuadradito inferior / derecha: desfasado 5 segundos para que NUNCA cambien al mismo tiempo
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const initialDelay = setTimeout(() => {
@@ -199,9 +200,103 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
     );
   }
 
-  // Formato In-Feed: Dos cuadraditos con borde dorado 1.5px
-  // Margen Izquierdo: Nombre de empresa y subtítulo.
-  // Margen Derecho: Etiqueta "HELADERIA ARTESANAL", etc.
+  // Formato Timeline Double: Dos cuadraditos lado a lado (2 columnas en tablet/desktop) que ocupan todo el ancho del cronograma
+  if (format === 'timeline-double') {
+    return (
+      <aside 
+        aria-label="Espacio publicitario de sponsors locales en cronograma"
+        className={`w-full my-4 grid grid-cols-1 sm:grid-cols-2 gap-4 ${className}`}
+      >
+        {/* Publicidad 1 (Izquierda) */}
+        <a
+          href={topAd.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative h-44 sm:h-48 rounded-2xl overflow-hidden transition-all duration-500 group block cursor-pointer bg-slate-950 hover:scale-[1.01]"
+          style={{
+            border: '1.5px solid rgba(245, 158, 11, 0.85)',
+            boxShadow: '0 0 14px -2px rgba(245, 158, 11, 0.35)'
+          }}
+          title={`${topAd.title} — Clic para abrir`}
+        >
+          <img 
+            src={topAd.image} 
+            alt={topAd.title} 
+            className={`absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-700 ease-in-out ${
+              isTopFading ? 'opacity-20 scale-95 blur-xs' : 'opacity-100 scale-100 blur-0'
+            }`}
+          />
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-950/95 via-slate-950/40 to-transparent pointer-events-none" />
+          <div className={`absolute bottom-0 inset-x-0 p-3.5 z-10 flex items-end justify-between gap-2 pointer-events-none transition-opacity duration-500 ${
+            isTopFading ? 'opacity-0' : 'opacity-100'
+          }`}>
+            <div className="min-w-0 flex-1 text-left">
+              <h4 className="text-sm sm:text-base font-black text-white group-hover:text-amber-200 transition-colors drop-shadow-md truncate">
+                {topAd.title}
+              </h4>
+              <p className="text-[10px] sm:text-[11px] text-amber-200/90 drop-shadow line-clamp-1">
+                {topAd.subtitle}
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <span 
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-950/90 backdrop-blur-md text-[9px] font-black text-amber-300 uppercase tracking-wider shadow-sm"
+                style={{ border: '1px solid rgba(245, 158, 11, 0.7)' }}
+              >
+                <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                {topAd.tag}
+              </span>
+            </div>
+          </div>
+        </a>
+
+        {/* Publicidad 2 (Derecha - desfasada 5 segundos) */}
+        <a
+          href={bottomAd.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative h-44 sm:h-48 rounded-2xl overflow-hidden transition-all duration-500 group block cursor-pointer bg-slate-950 hover:scale-[1.01]"
+          style={{
+            border: '1.5px solid rgba(245, 158, 11, 0.85)',
+            boxShadow: '0 0 14px -2px rgba(245, 158, 11, 0.35)'
+          }}
+          title={`${bottomAd.title} — Clic para abrir`}
+        >
+          <img 
+            src={bottomAd.image} 
+            alt={bottomAd.title} 
+            className={`absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-700 ease-in-out ${
+              isBottomFading ? 'opacity-20 scale-95 blur-xs' : 'opacity-100 scale-100 blur-0'
+            }`}
+          />
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-950/95 via-slate-950/40 to-transparent pointer-events-none" />
+          <div className={`absolute bottom-0 inset-x-0 p-3.5 z-10 flex items-end justify-between gap-2 pointer-events-none transition-opacity duration-500 ${
+            isBottomFading ? 'opacity-0' : 'opacity-100'
+          }`}>
+            <div className="min-w-0 flex-1 text-left">
+              <h4 className="text-sm sm:text-base font-black text-white group-hover:text-amber-200 transition-colors drop-shadow-md truncate">
+                {bottomAd.title}
+              </h4>
+              <p className="text-[10px] sm:text-[11px] text-amber-200/90 drop-shadow line-clamp-1">
+                {bottomAd.subtitle}
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <span 
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-950/90 backdrop-blur-md text-[9px] font-black text-amber-300 uppercase tracking-wider shadow-sm"
+                style={{ border: '1px solid rgba(245, 158, 11, 0.7)' }}
+              >
+                <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                {bottomAd.tag}
+              </span>
+            </div>
+          </div>
+        </a>
+      </aside>
+    );
+  }
+
+  // Formato In-Feed: Dos cuadraditos apilados con borde dorado 1.5px (para la grilla de shows)
   if (format === 'in-feed') {
     return (
       <aside 
