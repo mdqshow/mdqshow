@@ -14,6 +14,7 @@ interface AdSenseBannerProps {
   className?: string;
   simulationVariant?: 'random' | 'direct_sponsor';
   onOpenContact?: () => void;
+  initialOffset?: number; // Para permitir variedad si hay múltiples banners en la página
 }
 
 /**
@@ -28,7 +29,8 @@ interface AdSenseBannerProps {
  */
 export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   format = 'horizontal',
-  className = ''
+  className = '',
+  initialOffset = 0
 }) => {
   const localSponsors = [
     {
@@ -88,10 +90,10 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   ];
 
   // Índices y estados de transición independientes para cada publicidad
-  const [topIndex, setTopIndex] = useState(0);
+  const [topIndex, setTopIndex] = useState(initialOffset % localSponsors.length);
   const [isTopFading, setIsTopFading] = useState(false);
 
-  const [bottomIndex, setBottomIndex] = useState(1);
+  const [bottomIndex, setBottomIndex] = useState((initialOffset + 1) % localSponsors.length);
   const [isBottomFading, setIsBottomFading] = useState(false);
 
   // Cuadradito superior: rota cada 10 segundos

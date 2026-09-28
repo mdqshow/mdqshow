@@ -639,28 +639,69 @@ export default function App() {
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredShows.map((show, index) => (
-                <React.Fragment key={show.id}>
-                  <ShowCard
-                    show={show}
-                    isFavorite={favorites.includes(show.id)}
-                    onToggleFavorite={toggleFavorite}
-                    onSelectShow={setSelectedShow}
-                    isAdmin={isAdmin}
-                    onEditShow={handleOpenEditShow}
-                    onDeleteShow={handleDeleteShow}
-                    metrics={metricsMap[show.id]}
-                  />
-                  {/* Google AdSense: Anuncio In-Feed integrado en la grilla después de 5 recitales */}
-                  {index === 4 && (
-                    <AdSenseBanner 
-                      format="in-feed" 
-                      simulationVariant="random" 
-                      onOpenContact={() => setIsContactModalOpen(true)}
+              {filteredShows.map((show, index) => {
+                // Posiciones intercaladas:
+                // Bloque 1: Show 1, 2, 3 (Fila 1) + Show 4, 5 + Publicidad 1 (DERECHA en Fila 2) -> index === 4
+                // 2 filas completas de shows: 6 shows (Show 6, 7, 8, 9, 10, 11)
+                // Bloque 2: Publicidad 2 (IZQUIERDA en Fila 5) + Show 12, 13 -> insertamos antes de index 11 (después de 6 shows completos)
+                // 2 filas completas de shows: 6 shows (Show 14, 15, 16, 17, 18, 19)
+                // Bloque 3: Show 20, 21 + Publicidad 3 (DERECHA en Fila 8) -> después de index 18
+                const isAd2Before = index === 11; // Publicidad a la IZQUIERDA en la tercera fila
+                const isAd1After = index === 4;   // Publicidad a la DERECHA
+                const isAd3After = index === 19;  // Publicidad a la DERECHA tras otras 2 filas completas
+                const isAd4Before = index === 26; // Siguiente publicidad a la IZQUIERDA si hay muchos shows
+
+                return (
+                  <React.Fragment key={show.id}>
+                    {/* Publicidad intercalada a la IZQUIERDA */}
+                    {isAd2Before && (
+                      <AdSenseBanner 
+                        format="in-feed" 
+                        simulationVariant="random" 
+                        onOpenContact={() => setIsContactModalOpen(true)}
+                        initialOffset={2}
+                      />
+                    )}
+                    {isAd4Before && (
+                      <AdSenseBanner 
+                        format="in-feed" 
+                        simulationVariant="random" 
+                        onOpenContact={() => setIsContactModalOpen(true)}
+                        initialOffset={4}
+                      />
+                    )}
+
+                    <ShowCard
+                      show={show}
+                      isFavorite={favorites.includes(show.id)}
+                      onToggleFavorite={toggleFavorite}
+                      onSelectShow={setSelectedShow}
+                      isAdmin={isAdmin}
+                      onEditShow={handleOpenEditShow}
+                      onDeleteShow={handleDeleteShow}
+                      metrics={metricsMap[show.id]}
                     />
-                  )}
-                </React.Fragment>
-              ))}
+
+                    {/* Publicidad intercalada a la DERECHA */}
+                    {isAd1After && (
+                      <AdSenseBanner 
+                        format="in-feed" 
+                        simulationVariant="random" 
+                        onOpenContact={() => setIsContactModalOpen(true)}
+                        initialOffset={0}
+                      />
+                    )}
+                    {isAd3After && (
+                      <AdSenseBanner 
+                        format="in-feed" 
+                        simulationVariant="random" 
+                        onOpenContact={() => setIsContactModalOpen(true)}
+                        initialOffset={1}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
           ) : (
             <TimelineAgendaView
