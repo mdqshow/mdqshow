@@ -559,9 +559,12 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right Column: Dynamic Animated Showcase de Marcas de Mar del Plata */}
+            {/* Right Column: Dynamic Animated Showcase de Recitales Destacados */}
             <div className="lg:col-span-5 w-full">
-              <HeroShowcase />
+              <HeroShowcase 
+                shows={shows} 
+                onSelectShow={setSelectedShow} 
+              />
             </div>
           </div>
 
