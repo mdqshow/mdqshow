@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@keyframes spinGradient {
+  0% {
+    --border-angle: 0deg;
+  }
+  100% {
+    --border-angle: 360deg;
+  }
+}
+
+@property --border-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.highlight-rotate-glow {
+  position: relative;
+  border-width: 3px !important;
+  border-style: solid !important;
+  border-color: transparent !important;
+  box-shadow: 0 0 25px rgba(244, 63, 94, 0.7), 0 0 50px rgba(249, 115, 22, 0.4) !important;
+  animation: spinGradient 1.6s linear infinite;
+  background-image: linear-gradient(#0f172a, #0f172a), 
+                    conic-gradient(from var(--border-angle), #f43f5e 0%, #fb923c 25%, #ef4444 50%, #f97316 75%, #f43f5e 100%);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  transform: none !important;
+  transition: box-shadow 0.4s ease;
+  z-index: 20;
+}
