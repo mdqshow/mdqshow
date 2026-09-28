@@ -19,8 +19,8 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Clave de administrador predeterminada (modificable por el admin)
-    if (password.trim() === 'mdq2026' || password.trim() === 'admin123') {
+    // Clave de administrador unificada
+    if (password.trim() === 'MDQ2026mdq' || password.trim() === 'mdq2026') {
       setError('');
       setPassword('');
       onLoginSuccess();

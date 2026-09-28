@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Lock, ArrowRight, Music, MapPin, Calendar, CheckCircle2, Mail } from 'lucide-react';
+import { Sparkles, Lock } from 'lucide-react';
 import faroLogo from '../assets/images/faro_rocker_mascot_1790285020797.jpg';
 
 interface ComingSoonProps {
@@ -10,13 +10,11 @@ export const ComingSoon: React.FC<ComingSoonProps> = ({ onUnlockAdmin }) => {
   const [showSecretPrompt, setShowSecretPrompt] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
-  const [emailSubscribed, setEmailSubscribed] = useState(false);
-  const [emailInput, setEmailInput] = useState('');
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Clave unificada con el admin de la app
-    if (password === 'mdq2025' || password === 'admin' || password === 'mdqshow') {
+    // Clave solicitada por Christian
+    if (password === 'MDQ2026mdq') {
       localStorage.setItem('mdqshow_preview_access', 'true');
       onUnlockAdmin();
     } else {
@@ -24,24 +22,10 @@ export const ComingSoon: React.FC<ComingSoonProps> = ({ onUnlockAdmin }) => {
     }
   };
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (emailInput.trim()) {
-      setEmailSubscribed(true);
-      try {
-        const existing = JSON.parse(localStorage.getItem('mdqshow_subscribers_local') || '[]');
-        existing.push({ email: emailInput.trim(), date: new Date().toISOString() });
-        localStorage.setItem('mdqshow_subscribers_local', JSON.stringify(existing));
-      } catch (err) {
-        // ignore
-      }
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#0a0d14] text-slate-100 flex flex-col justify-between selection:bg-rose-500 selection:text-white relative overflow-hidden">
       {/* Background Glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-rose-600/15 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-rose-600/15 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-[400px] h-[400px] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute top-10 left-10 w-[300px] h-[300px] bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
 
@@ -75,16 +59,16 @@ export const ComingSoon: React.FC<ComingSoonProps> = ({ onUnlockAdmin }) => {
         </button>
       </header>
 
-      {/* Hero Central */}
-      <main className="max-w-4xl w-full mx-auto px-6 py-12 flex flex-col items-center text-center relative z-10 space-y-8">
+      {/* Hero Central Limpio y Minimalista */}
+      <main className="max-w-4xl w-full mx-auto px-6 py-16 sm:py-24 flex flex-col items-center text-center relative z-10 space-y-8 my-auto">
         {/* Badge Próximamente */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-rose-500/15 via-amber-500/15 to-rose-500/15 border border-rose-500/30 text-rose-300 text-xs sm:text-sm font-semibold tracking-wide shadow-lg shadow-rose-950/30 animate-pulse">
+        <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-rose-500/15 via-amber-500/15 to-rose-500/15 border border-rose-500/30 text-rose-300 text-xs sm:text-sm font-semibold tracking-wide shadow-lg shadow-rose-950/30 animate-pulse">
           <Sparkles className="w-4 h-4 text-amber-400" />
           <span>MUY PRONTO EN MAR DEL PLATA</span>
         </div>
 
         {/* Titular Impactante */}
-        <div className="space-y-4 max-w-2xl">
+        <div className="space-y-5 max-w-2xl">
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-black text-white tracking-tight leading-[1.08]">
             Todos los recitales en un solo lugar.
           </h1>
@@ -92,71 +76,10 @@ export const ComingSoon: React.FC<ComingSoonProps> = ({ onUnlockAdmin }) => {
             Estamos preparando la plataforma definitiva de shows y recitales en vivo de <span className="text-white font-semibold underline decoration-rose-500 decoration-2 underline-offset-4">Mar del Plata</span>. Cartelera al día, venta oficial de entradas y agenda cultural.
           </p>
         </div>
-
-        {/* Features Preview Pills */}
-        <div className="flex flex-wrap justify-center gap-2.5 sm:gap-3.5 pt-2">
-          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 shadow-md">
-            <Music className="w-3.5 h-3.5 text-rose-400" />
-            <span>Rock, Trap, Cumbia, Pop & Electrónica</span>
-          </div>
-          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 shadow-md">
-            <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-            <span>GAP, Polideportivo, Abbey Road & Playas</span>
-          </div>
-          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 shadow-md">
-            <Calendar className="w-3.5 h-3.5 text-amber-400" />
-            <span>Fechas confirmadas 2025 / 2026</span>
-          </div>
-        </div>
-
-        {/* Formulario de aviso de lanzamiento */}
-        <div className="w-full max-w-md pt-4">
-          {!emailSubscribed ? (
-            <form onSubmit={handleEmailSubmit} className="space-y-3">
-              <div className="relative flex items-center">
-                <input
-                  type="email"
-                  required
-                  placeholder="Dejanos tu email para enterarte antes..."
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  className="w-full bg-slate-900/90 border border-slate-800 focus:border-rose-500 rounded-2xl py-3.5 pl-4 pr-32 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-rose-500/20 shadow-xl transition-all"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-1.5 top-1.5 bottom-1.5 px-4 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-medium text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
-                >
-                  <span>Avisarme</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <p className="text-[11px] text-slate-500">Cero spam. Solo te avisaremos el día del lanzamiento oficial.</p>
-            </form>
-          ) : (
-            <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 flex items-center justify-center gap-2 text-sm">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-              <span>¡Listo! Te avisaremos ni bien abramos la cartelera.</span>
-            </div>
-          )}
-        </div>
-
-        {/* Contacto comercial para marcas / productoras */}
-        <div className="pt-6 border-t border-slate-800/80 w-full max-w-lg flex flex-col items-center gap-2">
-          <p className="text-xs text-slate-400">
-            ¿Sos productor, teatro o marca y querés anunciar en MDQSHOW?
-          </p>
-          <a
-            href="mailto:christianornella@gmail.com?subject=Consulta%20Comercial%20MDQSHOW"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-rose-400 hover:text-rose-300 underline underline-offset-4 transition-colors"
-          >
-            <Mail className="w-3.5 h-3.5" />
-            <span>christianornella@gmail.com</span>
-          </a>
-        </div>
       </main>
 
-      {/* Footer */}
-      <footer className="max-w-6xl w-full mx-auto px-6 py-6 text-center text-xs text-slate-600 border-t border-slate-900 relative z-10">
+      {/* Footer Minimalista */}
+      <footer className="max-w-6xl w-full mx-auto px-6 py-6 text-center text-xs text-slate-600 border-t border-slate-900/80 relative z-10">
         <p>© 2025 MDQSHOW • Mar del Plata, Buenos Aires, Argentina</p>
       </footer>
 
@@ -170,7 +93,7 @@ export const ComingSoon: React.FC<ComingSoonProps> = ({ onUnlockAdmin }) => {
 
             <h3 className="text-lg font-bold text-white text-center mb-1">Acceso a Cartelera Completa</h3>
             <p className="text-xs text-slate-400 text-center mb-6">
-              Ingresá tu clave de administración o el enlace directo para visualizar la plataforma completa.
+              Ingresá tu clave de administración para visualizar la plataforma completa.
             </p>
 
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
@@ -187,7 +110,7 @@ export const ComingSoon: React.FC<ComingSoonProps> = ({ onUnlockAdmin }) => {
                   className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
                 />
                 {error && (
-                  <p className="text-xs text-rose-400 mt-1.5 pl-1">Clave incorrecta. Intentá con mdq2025</p>
+                  <p className="text-xs text-rose-400 mt-1.5 pl-1 font-medium">Clave incorrecta.</p>
                 )}
               </div>
 

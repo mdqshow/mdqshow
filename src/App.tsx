@@ -89,13 +89,9 @@ export default function App() {
 
   // Modo Próximamente / Vista previa privada
   // El público general ve la pantalla "Próximamente".
-  // Si ingresás con ?admin, ?preview, #admin o abrís el modal de clave, podés ver la web completa.
+  // Para entrar a la web completa se requiere ingresar con la clave MDQ2026mdq
   const [isPreviewUnlocked, setIsPreviewUnlocked] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('admin') === '1' || params.has('admin') || params.has('preview') || window.location.hash === '#admin') {
-      return true;
-    }
     return localStorage.getItem('mdqshow_preview_access') === 'true' || localStorage.getItem(LOCAL_STORAGE_ADMIN) === 'true';
   });
 
