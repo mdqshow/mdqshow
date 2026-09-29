@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Sparkles } from 'lucide-react';
+import { Calendar, MapPin } from 'lucide-react';
 import { Show } from '../types';
 import { formatSingleDate } from '../utils/dateHelpers';
 
@@ -12,10 +12,11 @@ interface HeroShowcaseProps {
  * Head Principal MDQSHOW:
  * Muestra las "NOVEDADES" (pasan solas automáticamente cada 7 segundos).
  * - Encabezado FIJO superior:
- *   * Misma tipografía ("Recitales y shows"), font-black, tamaño superior (text-lg sm:text-xl md:text-2xl).
- *   * Bordes redondeados tanto en la parte superior como en la inferior (rounded-2xl / rounded-3xl flotante prolijo).
- *   * 100% fijo (no se difumina durante la transición de shows).
- * - Foto informativa sin links: no abre modales ni redirige al hacer clic, es netamente informativa.
+ *   * Sin estrellas/destellos.
+ *   * Fondo negro esfumado en la parte superior para que la foto no se vea por debajo del texto.
+ *   * Fuente más grande, sin negrita excesiva (font-medium / font-normal estilizado), con tracking amplio y centrada.
+ *   * Bordes redondeados prolijos.
+ * - Foto informativa sin links: netamente informativa.
  */
 export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [] }) => {
   const displayShows = React.useMemo(() => {
@@ -94,7 +95,7 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [] }) => {
           </div>
         )}
 
-        {/* CONTENEDOR PRINCIPAL ESTABLE: SIN LINK (CURSOR DEFAULT, PURAMENTE INFORMATIVO) */}
+        {/* CONTENEDOR PRINCIPAL ESTABLE: SIN LINK (NETAMENTE INFORMATIVO) */}
         <div 
           className="relative z-10 w-full sm:w-[94%] h-full rounded-3xl overflow-hidden shadow-2xl border border-white/15 bg-slate-950 select-none"
         >
@@ -108,8 +109,8 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [] }) => {
               }`}
             />
 
-            {/* Degradé superior para destacar la barra de Novedades */}
-            <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-slate-950/80 via-slate-950/40 to-transparent pointer-events-none" />
+            {/* ESFUMADO NEGRO SUPERIOR: Negro sólido arriba que se esfuma gradualmente hacia abajo para ocultar la foto detrás del título */}
+            <div className="absolute inset-x-0 top-0 h-32 sm:h-36 bg-gradient-to-b from-[#0e1117] via-[#0e1117]/90 to-transparent pointer-events-none" />
 
             {/* Degradé lateral y degradé inferior para lectura óptima de nombre, fecha y lugar */}
             <div className="absolute inset-y-0 left-0 w-36 sm:w-52 bg-gradient-to-r from-slate-950/95 via-slate-950/60 to-transparent pointer-events-none" />
@@ -150,14 +151,12 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({ shows = [] }) => {
             </div>
           </div>
 
-          {/* ENCABEZADO FIJO DE NOVEDADES: CON BORDES CURVOS EN LA PARTE SUPERIOR E INFERIOR, FUENTE MÁS GRANDE Y MISMO ESTILO QUE RECITALES Y SHOWS */}
+          {/* ENCABEZADO FIJO DE NOVEDADES: SIN ESTRELLAS, FUENTE MÁS GRANDE, SIN NEGRITA PESADA, CON BORDES REDONDEADOS Y ESFUMADO LIMPIO */}
           <div className="absolute top-0 inset-x-0 z-30 pointer-events-none p-2 sm:p-3">
-            <div className="w-full py-2 sm:py-2.5 px-4 bg-slate-900/90 backdrop-blur-md border border-slate-700/60 flex items-center justify-center gap-3 shadow-lg rounded-2xl sm:rounded-2xl">
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0 animate-pulse" />
-              <span className="text-lg sm:text-xl md:text-2xl font-black tracking-[0.25em] text-white uppercase text-center drop-shadow-md">
+            <div className="w-full py-2.5 sm:py-3 px-4 bg-slate-900/85 backdrop-blur-md border border-slate-700/60 flex items-center justify-center shadow-lg rounded-2xl">
+              <span className="text-xl sm:text-2xl md:text-3xl font-medium tracking-[0.3em] text-white uppercase text-center drop-shadow-md">
                 NOVEDADES
               </span>
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0 animate-pulse" />
             </div>
           </div>
         </div>
