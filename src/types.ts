@@ -20,6 +20,7 @@ export interface Show {
   imagePosition?: 'top' | 'center' | 'bottom';
   createdAt?: string; // ISO string de cuándo se dio de alta
   isNewBadge?: boolean; // Novedad elegida por el administrador
+  spotifyUrl?: string; // Link al perfil o playlist de Spotify del artista
 }
 
 export interface FilterState {

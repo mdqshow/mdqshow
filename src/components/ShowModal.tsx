@@ -23,6 +23,7 @@ import { formatSingleDate } from '../utils/dateHelpers';
 import { normalizePriceInput } from '../utils/priceHelpers';
 import { detectTicketPortalFromUrl } from '../utils/ticketDetectors';
 import { formatProperCase } from '../utils/textFormatting';
+import { SpotifyIcon } from './SpotifyIcon';
 
 interface ShowModalProps {
   isOpen: boolean;
@@ -76,6 +77,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
   const [isCustomPortal, setIsCustomPortal] = useState(false);
   const [ticketUrl, setTicketUrl] = useState('https://articket.com.ar');
   const [ticketPriceRange, setTicketPriceRange] = useState('');
+  const [spotifyUrl, setSpotifyUrl] = useState('');
 
   const [image, setImage] = useState('');
   const [imagePosition, setImagePosition] = useState<'top' | 'center' | 'bottom'>('top');
@@ -116,6 +118,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
 
       setTicketPriceRange(initialShow.ticketPriceRange || '');
       setTicketStatus(initialShow.ticketStatus || 'disponibles');
+      setSpotifyUrl(initialShow.spotifyUrl || '');
       setImage(initialShow.image || '');
       setImagePosition(initialShow.imagePosition || 'top');
       setFeatured(Boolean(initialShow.featured));
@@ -143,6 +146,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       setTicketUrl('https://articket.com.ar');
       setTicketPriceRange('');
       setTicketStatus('disponibles');
+      setSpotifyUrl('');
       setImage('');
       setImagePosition('top');
       setFeatured(false);
@@ -307,6 +311,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       description: initialShow?.description || `${band} en vivo en ${venue}.`,
       featured,
       isNewBadge,
+      spotifyUrl: spotifyUrl.trim() || undefined,
       createdAt: initialShow?.createdAt || new Date().toISOString(),
       isUserAdded: true,
       openingActs: initialShow?.openingActs || [],
@@ -793,6 +798,27 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                 </p>
               )}
             </div>
+          </div>
+
+          {/* Perfil de Spotify de la banda / artista */}
+          <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2">
+            <label className="block text-slate-300 font-semibold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-green-400 font-bold">
+                <SpotifyIcon className="w-4 h-4 text-[#1DB954]" />
+                Link de Spotify del artista o banda (opcional)
+              </span>
+              <span className="text-[11px] text-slate-400 font-normal">Para escuchar su música</span>
+            </label>
+            <input
+              type="url"
+              value={spotifyUrl}
+              onChange={(e) => setSpotifyUrl(e.target.value)}
+              placeholder="https://open.spotify.com/artist/... o https://open.spotify.com/album/..."
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-green-500 transition-colors text-xs"
+            />
+            <p className="text-[11px] text-slate-400">
+              Si lo completás, aparecerá el botón de <strong className="text-green-400">Spotify</strong> entre WhatsApp y Agendar para que el público reproduzca las canciones del artista con 1 clic.
+            </p>
           </div>
 
           {/* Band image & Featured */}

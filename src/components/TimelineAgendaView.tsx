@@ -7,6 +7,7 @@ import { getWhatsAppShareUrl, addToDeviceCalendar } from '../utils/shareAndCalen
 import { formatDisplayPrice } from '../utils/priceHelpers';
 import { formatProperCase } from '../utils/textFormatting';
 import { AdSenseBanner } from './AdSenseBanner';
+import { SpotifyIcon } from './SpotifyIcon';
 
 interface TimelineAgendaViewProps {
   shows: Show[];
@@ -216,6 +217,19 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                       >
                         <MessageCircle className="w-4 h-4" />
                       </button>
+
+                      {/* Spotify link (si está configurado) */}
+                      {show.spotifyUrl && (
+                        <a
+                          href={show.spotifyUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 sm:p-2.5 rounded-xl bg-green-950/40 hover:bg-green-900/50 border border-green-500/30 text-[#1DB954] hover:text-green-300 transition-colors cursor-pointer shrink-0 flex items-center justify-center"
+                          title={`Escuchar a ${show.band} en Spotify`}
+                        >
+                          <SpotifyIcon className="w-4 h-4" />
+                        </a>
+                      )}
 
                       {/* Calendario inteligente 1-clic */}
                       <button

@@ -93,12 +93,69 @@ export default function App() {
 
   // Modo Próximamente / Vista previa privada
   // El público general ve la pantalla "Próximamente".
-  // Para entrar a la web completa se requiere ingresar con la clave MDQ2026mdq
+  // Para entrar a la web completa se requiere:
+  // 1. Ingresar con la clave en pantalla (MDQ2026mdq)
+  // 2. O entrar mediante enlace directo de test sin clave para clientes y conocidos:
+  //    - mdqshow.com.ar/test (o /demo, /preview)
+  //    - mdqshow.com.ar/?test (o ?preview=true)
+  //    - mdqshow.com.ar/#test
   const [isPreviewUnlocked, setIsPreviewUnlocked] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    // Solo si explícitamente se desbloqueó en esta sesión
+
+    // Chequeo de link de test directo en path, search o hash
+    const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
+    const search = window.location.search.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+
+    const isTestUrl = 
+      path.endsWith('/test') || 
+      path.endsWith('/demo') || 
+      path.endsWith('/preview') || 
+      path.endsWith('/cliente') || 
+      search.includes('test') || 
+      search.includes('demo') || 
+      search.includes('preview') || 
+      hash === '#test' || 
+      hash === '#demo' || 
+      hash === '#preview';
+
+    if (isTestUrl) {
+      sessionStorage.setItem('mdqshow_preview_access', 'true');
+      return true;
+    }
+
+    // Si ya se desbloqueó en esta sesión previamente
     return sessionStorage.getItem('mdqshow_preview_access') === 'true';
   });
+
+  // Escuchar si el usuario navega a /test o agrega #test en cualquier momento
+  useEffect(() => {
+    const checkTestUrl = () => {
+      const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
+      const search = window.location.search.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+
+      if (
+        path.endsWith('/test') || 
+        path.endsWith('/demo') || 
+        path.endsWith('/preview') || 
+        search.includes('test') || 
+        hash === '#test' || 
+        hash === '#demo'
+      ) {
+        sessionStorage.setItem('mdqshow_preview_access', 'true');
+        setIsPreviewUnlocked(true);
+      }
+    };
+
+    checkTestUrl();
+    window.addEventListener('popstate', checkTestUrl);
+    window.addEventListener('hashchange', checkTestUrl);
+    return () => {
+      window.removeEventListener('popstate', checkTestUrl);
+      window.removeEventListener('hashchange', checkTestUrl);
+    };
+  }, []);
 
   // Shows list initialized from local fallback, then synced with Firestore in real time
   const [shows, setShows] = useState<Show[]>(() => getLocalFallbackShows());

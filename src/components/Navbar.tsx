@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapPin, Plus, Heart, Calendar, LayoutGrid, ShieldCheck, Lock, LogOut, Mail, Bell, Download, FileText, BarChart3, Database } from 'lucide-react';
+import React, { useState } from 'react';
+import { MapPin, Plus, Heart, Calendar, LayoutGrid, ShieldCheck, Lock, LogOut, Mail, Bell, Download, FileText, BarChart3, Database, Link2, Check } from 'lucide-react';
 import { MdqBrandIcon } from './MdqBrandIcon';
 import { AVAILABLE_CITIES } from '../data/mockShows';
 
@@ -42,6 +42,22 @@ export const Navbar: React.FC<NavbarProps> = ({
   onDownloadTxt,
   onOpenMetrics,
 }) => {
+  const [copiedTestLink, setCopiedTestLink] = useState(false);
+
+  const handleCopyTestLink = () => {
+    const origin = window.location.origin;
+    const testUrl = `${origin}/test`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(testUrl).then(() => {
+        setCopiedTestLink(true);
+        setTimeout(() => setCopiedTestLink(false), 2500);
+      }).catch(() => {
+        prompt('Copiá este enlace para enviar a clientes o conocidos:', testUrl);
+      });
+    } else {
+      prompt('Copiá este enlace para enviar a clientes o conocidos:', testUrl);
+    }
+  };
   return (
     <header className="sticky top-0 z-40 bg-[#0e1117]/90 backdrop-blur-md border-b border-slate-800/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -177,6 +193,31 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Admin Controls */}
             {isAdmin ? (
               <div className="flex items-center space-x-1 sm:space-x-1.5">
+                {/* Botón Copiar Link Test para enviar a clientes o conocidos */}
+                <button
+                  type="button"
+                  id="navbar-copy-test-link-btn"
+                  onClick={handleCopyTestLink}
+                  className={`flex items-center p-1.5 sm:px-2.5 sm:py-2 rounded-xl transition-all border text-xs font-bold cursor-pointer ${
+                    copiedTestLink
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                      : 'text-indigo-300 hover:text-white bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/30'
+                  }`}
+                  title="Copiar link directo sin clave (/test) para enviar a futuros clientes o conocidos"
+                >
+                  {copiedTestLink ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1 shrink-0 text-white" />
+                      <span className="hidden sm:inline">¡Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1 shrink-0" />
+                      <span className="hidden sm:inline">Link Test</span>
+                    </>
+                  )}
+                </button>
+
                 {onOpenMetrics && (
                   <button
                     id="admin-metrics-btn"
