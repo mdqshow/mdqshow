@@ -200,3 +200,125 @@
   will-change: transform, opacity, filter;
 }
 
+/* 
+ * 6. BENDU ARENA:
+ * Balanceo / Tilt 3D elegante con resplandor dorado (oro/ámbar) característico
+ * Aparece con sutil escala y se queda quieto 5s.
+ */
+@keyframes benduGlowTilt {
+  0%, 100% {
+    transform: perspective(500px) rotateX(0deg) scale(1);
+    filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.2));
+  }
+  15% {
+    transform: perspective(500px) rotateX(15deg) scale(1.05);
+    filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.7));
+  }
+  30%, 80% {
+    transform: perspective(500px) rotateX(0deg) scale(1);
+    filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.3));
+  }
+}
+
+.animate-bendu {
+  animation: benduGlowTilt 8s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+/* 
+ * 7. ARENA MAR DEL PLATA:
+ * Expansión de onda horizontal (tracking letter spacing) que se expande y contrae con pausa
+ */
+@keyframes arenaMdpExpand {
+  0%, 100% {
+    letter-spacing: 0.1em;
+    transform: scale(1);
+  }
+  20% {
+    letter-spacing: 0.28em;
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.5));
+  }
+  35%, 80% {
+    letter-spacing: 0.1em;
+    transform: scale(1);
+    filter: drop-shadow(0 0 2px rgba(56, 189, 248, 0.2));
+  }
+}
+
+.animate-arena-mdp {
+  animation: arenaMdpExpand 8s ease-in-out infinite;
+  animation-delay: 1.5s;
+  will-change: letter-spacing, transform;
+}
+
+/* 
+ * 8. PLAZA DE LA MÚSICA:
+ * Efecto ecualizador / pulso rítmico musical suave en dos fases
+ */
+@keyframes plazaMusicaBeat {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.2));
+  }
+  12% {
+    transform: scale(1.06) skewX(-2deg);
+    filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.6));
+  }
+  24% {
+    transform: scale(1);
+  }
+  36% {
+    transform: scale(1.04) skewX(2deg);
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.5));
+  }
+  48%, 80% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.2));
+  }
+}
+
+.animate-plaza-musica {
+  animation: plazaMusicaBeat 8s ease-in-out infinite;
+  animation-delay: 3s;
+  will-change: transform, filter;
+}
+
+/* 
+ * 9. ABBEY ROAD:
+ * Estilo Rock retro británico, sutil destello de luz neón / flash y reposo
+ */
+@keyframes abbeyRoadNeon {
+  0%, 100% {
+    opacity: 0.95;
+    filter: drop-shadow(0 0 3px rgba(251, 146, 60, 0.3));
+    transform: scale(1);
+  }
+  16% {
+    opacity: 1;
+    filter: drop-shadow(0 0 16px rgba(251, 146, 60, 0.85)) drop-shadow(0 0 28px rgba(249, 115, 22, 0.6));
+    transform: scale(1.05);
+  }
+  24% {
+    opacity: 0.85;
+    transform: scale(0.99);
+  }
+  32% {
+    opacity: 1;
+    filter: drop-shadow(0 0 14px rgba(251, 146, 60, 0.7));
+    transform: scale(1.03);
+  }
+  44%, 80% {
+    opacity: 0.95;
+    filter: drop-shadow(0 0 3px rgba(251, 146, 60, 0.3));
+    transform: scale(1);
+  }
+}
+
+.animate-abbey-road {
+  animation: abbeyRoadNeon 8s ease-in-out infinite;
+  animation-delay: 4.5s;
+  will-change: filter, opacity, transform;
+}
+
+
