@@ -39,27 +39,28 @@
 
 /* Animaciones exclusivas para Sponsors */
 /* 
- * 1. TÍTULO SUPERIOR (BRUTO / SURF COFFEE):
- * Giro 3D lento y elegante de 360 grados sobre el eje Y (o sutil balanceo tridimensional),
- * y luego se queda 5 segundos completamente quieto y fijo en pausa antes de volver a girar.
- * Ciclo total: 7 segundos (2 segundos de giro suave + 5 segundos quieto).
+ * 1. GIRO 3D LETRA POR LETRA DESPACIO (BRUTO / SURF COFFEE):
+ * Cada letra gira sobre su eje Y (360 grados) de forma lenta y secuencial (con delay).
+ * Una vez que rotan, se quedan 5 segundos quietas y fijas antes del siguiente ciclo.
+ * Ciclo total: 7 segundos.
  */
-@keyframes sponsorTitleFlipPause {
+@keyframes sponsorLetterFlipPause {
   0% {
-    transform: perspective(600px) rotateY(0deg);
+    transform: perspective(400px) rotateY(0deg);
   }
-  28% {
-    transform: perspective(600px) rotateY(360deg);
+  22% {
+    transform: perspective(400px) rotateY(360deg);
   }
-  30%, 100% {
-    transform: perspective(600px) rotateY(360deg);
+  25%, 100% {
+    transform: perspective(400px) rotateY(360deg);
   }
 }
 
-.animate-sponsor-title {
-  animation: sponsorTitleFlipPause 7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+.animate-sponsor-letter {
+  display: inline-block;
   transform-style: preserve-3d;
   will-change: transform;
+  animation: sponsorLetterFlipPause 7s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
 /* 
