@@ -24,6 +24,7 @@ import { getWhatsAppShareUrl, addToDeviceCalendar } from '../utils/shareAndCalen
 import { formatDisplayPrice } from '../utils/priceHelpers';
 import { formatProperCase } from '../utils/textFormatting';
 import { SpotifyIcon } from './SpotifyIcon';
+import { WhatsAppIcon } from './WhatsAppIcon';
 
 interface ShowCardProps {
   show: Show;
@@ -287,14 +288,14 @@ export const ShowCard: React.FC<ShowCardProps> = ({
 
         {/* Secondary Actions: WhatsApp, Spotify (si tiene) & Calendar - Iconos limpios sin texto truncado */}
         <div className={`grid ${show.spotifyUrl ? 'grid-cols-3' : 'grid-cols-2'} gap-2 relative`}>
-          {/* WhatsApp Share */}
+          {/* WhatsApp Share con icono oficial (teléfono adentro) */}
           <button
             type="button"
             onClick={handleShareWhatsApp}
-            className="flex items-center justify-center py-2 px-2 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 transition-all active:scale-95 cursor-pointer shadow-xs"
+            className="flex items-center justify-center py-2 px-2 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 text-[#25D366] hover:text-[#2ee672] border border-emerald-500/30 transition-all active:scale-95 cursor-pointer shadow-xs"
             title="Compartir fecha de recital por WhatsApp"
           >
-            <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+            <WhatsAppIcon className="w-4 h-4 shrink-0" />
           </button>
 
           {/* Spotify Direct Link (si el recital tiene link cargado) */}

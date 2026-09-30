@@ -8,6 +8,7 @@ import { formatDisplayPrice } from '../utils/priceHelpers';
 import { formatProperCase } from '../utils/textFormatting';
 import { AdSenseBanner } from './AdSenseBanner';
 import { SpotifyIcon } from './SpotifyIcon';
+import { WhatsAppIcon } from './WhatsAppIcon';
 
 interface TimelineAgendaViewProps {
   shows: Show[];
@@ -212,10 +213,10 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                           trackShareEvent(show.id, show.band);
                           window.open(getWhatsAppShareUrl(show), '_blank', 'noopener,noreferrer');
                         }}
-                        className="p-2 sm:p-2.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/30 text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer shrink-0"
+                        className="p-2 sm:p-2.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/30 text-[#25D366] hover:text-[#2ee672] transition-colors cursor-pointer shrink-0"
                         title="Compartir por WhatsApp"
                       >
-                        <MessageCircle className="w-4 h-4" />
+                        <WhatsAppIcon className="w-4 h-4 shrink-0" />
                       </button>
 
                       {/* Spotify link (si está configurado) */}
