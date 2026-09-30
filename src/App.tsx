@@ -559,58 +559,96 @@ export default function App() {
               </div>
 
               {/* Venues quick chips sorted alphabetically (A-Z) */}
-              <div className="flex flex-wrap items-center gap-2 pt-2 text-xs">
-                <span className="text-slate-400 font-medium">Lugares en La Feliz:</span>
-                {[
-                  'Abbey Road',
-                  'Arena Mar del Plata',
-                  'Auditorium',
-                  'Bendu Arena',
-                  'Once Unidos',
-                  'Plaza de la Música',
-                  'Polideportivo',
-                  'Radio City',
-                  'Teatro Colón',
-                  'Teatro Tronador',
-                  'Vorterix'
-                ].map((venueShort) => {
-                  const isActive = filters.venue !== 'all' && filters.venue.toLowerCase().includes(venueShort.toLowerCase());
-                  return (
+              {/* Primer renglón alineado a la izquierda con la frase 'Lugares en La Feliz:' */}
+              {/* Segundo renglón centrado */}
+              <div className="space-y-2 pt-2 text-xs">
+                {/* Renglón 1: Frase y primeros lugares a la izquierda */}
+                <div className="flex flex-wrap items-center justify-start gap-2">
+                  <span className="text-slate-400 font-medium shrink-0">Lugares en La Feliz:</span>
+                  {[
+                    'Abbey Road',
+                    'Arena Mar del Plata',
+                    'Auditorium',
+                    'Bendu Arena',
+                    'Once Unidos',
+                  ].map((venueShort) => {
+                    const isActive = filters.venue !== 'all' && filters.venue.toLowerCase().includes(venueShort.toLowerCase());
+                    return (
+                      <button
+                        key={venueShort}
+                        onClick={() => {
+                          if (isActive) {
+                            handleFilterChange({ venue: 'all' });
+                          } else {
+                            const fullVenue = availableVenues.find(v => v.toLowerCase().includes(venueShort.toLowerCase())) || venueShort;
+                            handleFilterChange({ venue: fullVenue });
+                            setTimeout(() => {
+                              const showsEl = document.getElementById('shows-section');
+                              if (showsEl) {
+                                showsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }
+                            }, 100);
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-rose-500 text-white shadow-xs'
+                            : 'bg-slate-800/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/60'
+                        }`}
+                      >
+                        {venueShort}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Renglón 2: Resto de los lugares centrado */}
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {[
+                    'Plaza de la Música',
+                    'Polideportivo',
+                    'Radio City',
+                    'Teatro Colón',
+                    'Teatro Tronador',
+                    'Vorterix'
+                  ].map((venueShort) => {
+                    const isActive = filters.venue !== 'all' && filters.venue.toLowerCase().includes(venueShort.toLowerCase());
+                    return (
+                      <button
+                        key={venueShort}
+                        onClick={() => {
+                          if (isActive) {
+                            handleFilterChange({ venue: 'all' });
+                          } else {
+                            const fullVenue = availableVenues.find(v => v.toLowerCase().includes(venueShort.toLowerCase())) || venueShort;
+                            handleFilterChange({ venue: fullVenue });
+                            setTimeout(() => {
+                              const showsEl = document.getElementById('shows-section');
+                              if (showsEl) {
+                                showsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }
+                            }, 100);
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-rose-500 text-white shadow-xs'
+                            : 'bg-slate-800/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/60'
+                        }`}
+                      >
+                        {venueShort}
+                      </button>
+                    );
+                  })}
+                  {filters.venue !== 'all' && (
                     <button
-                      key={venueShort}
-                      onClick={() => {
-                        if (isActive) {
-                          handleFilterChange({ venue: 'all' });
-                        } else {
-                          const fullVenue = availableVenues.find(v => v.toLowerCase().includes(venueShort.toLowerCase())) || venueShort;
-                          handleFilterChange({ venue: fullVenue });
-                          // Auto-scroll down to shows list smoothly
-                          setTimeout(() => {
-                            const showsEl = document.getElementById('shows-section');
-                            if (showsEl) {
-                              showsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }
-                          }, 100);
-                        }
-                      }}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                        isActive
-                          ? 'bg-rose-500 text-white shadow-xs'
-                          : 'bg-slate-800/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/60'
-                      }`}
+                      onClick={() => handleFilterChange({ venue: 'all' })}
+                      className="text-xs text-rose-400 hover:underline ml-1 cursor-pointer font-medium"
                     >
-                      {venueShort}
+                      (Ver todos)
                     </button>
-                  );
-                })}
-                {filters.venue !== 'all' && (
-                  <button
-                    onClick={() => handleFilterChange({ venue: 'all' })}
-                    className="text-xs text-rose-400 hover:underline ml-1 cursor-pointer font-medium"
-                  >
-                    (Ver todos)
-                  </button>
-                )}
+                  )}
+                </div>
               </div>
             </div>
 
@@ -776,15 +814,6 @@ export default function App() {
       {/* Footer */}
       <footer className="mt-16 border-t border-slate-800/80 bg-slate-950 py-10 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          {/* Google AdSense: Banner Horizontal en el footer */}
-          <div className="w-full animate-in fade-in duration-300">
-            <AdSenseBanner 
-              format="horizontal" 
-              simulationVariant="random" 
-              className="my-0"
-            />
-          </div>
-
           {/* Quick buttons */}
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button
