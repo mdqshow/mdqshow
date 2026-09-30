@@ -558,9 +558,9 @@ export default function App() {
                 </p>
               </div>
 
-              {/* Venues quick chips sorted alphabetically (A-Z) - Alineación a la izquierda con botones inmediatamente después */}
-              <div className="flex flex-wrap items-center justify-start gap-2 pt-2 text-xs">
-                <span className="text-slate-400 font-medium shrink-0">Lugares en La Feliz:</span>
+              {/* Venues quick chips sorted alphabetically (A-Z) */}
+              <div className="flex flex-wrap items-center gap-2 pt-2 text-xs">
+                <span className="text-slate-400 font-medium">Lugares en La Feliz:</span>
                 {[
                   'Abbey Road',
                   'Arena Mar del Plata',
