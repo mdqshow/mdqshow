@@ -22,6 +22,7 @@ import { InstallAppModal } from './components/InstallAppModal';
 import { AdminMetricsModal } from './components/AdminMetricsModal';
 import { AdSenseBanner } from './components/AdSenseBanner';
 import { HeroShowcase } from './components/HeroShowcase';
+import { AirportBoardHeader } from './components/AirportBoardHeader';
 import { 
   subscribeToMetrics, 
   ShowMetrics, 
@@ -616,9 +617,9 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right Column: Dynamic Animated Showcase de Recitales Destacados */}
-            <div className="lg:col-span-5 w-full">
-              <HeroShowcase 
+            {/* Right Column: Cartelera estilo Aeropuerto (Split-Flap) con Novedades */}
+            <div className="lg:col-span-5 w-full flex items-center justify-center">
+              <AirportBoardHeader 
                 shows={shows} 
                 onSelectShow={setSelectedShow} 
               />
