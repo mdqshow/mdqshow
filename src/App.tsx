@@ -559,9 +559,71 @@ export default function App() {
               </div>
 
               {/* Venues quick chips sorted alphabetically (A-Z) */}
-              {/* Contenedor fit-content para que el segundo renglón se centre respecto al ancho del primer renglón y no de toda la página */}
+              {/* En Celular (sm e inferiores): Carrusel horizontal scrolleable elegante con touch natural, sin cortar renglones */}
+              {/* En Desktop/Tablet (sm en adelante): Los dos renglones exactos que configuramos, con el 2do renglón centrado respecto al 1ro */}
               <div className="pt-2 text-xs">
-                <div className="inline-flex flex-col items-center gap-2 max-w-full">
+                {/* --- VERSIÓN CELULAR (< sm): Scroll horizontal limpio y fluido con snap --- */}
+                <div className="block sm:hidden">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
+                      Lugares en La Feliz:
+                    </span>
+                    {filters.venue !== 'all' && (
+                      <button
+                        onClick={() => handleFilterChange({ venue: 'all' })}
+                        className="text-xs text-rose-400 font-semibold hover:underline ml-auto cursor-pointer"
+                      >
+                        (Ver todos)
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 -mx-4 px-4 scroll-smooth">
+                    {[
+                      'Abbey Road',
+                      'Arena Mar del Plata',
+                      'Auditorium',
+                      'Bendu Arena',
+                      'Once Unidos',
+                      'Plaza de la Música',
+                      'Polideportivo',
+                      'Radio City',
+                      'Teatro Colón',
+                      'Teatro Tronador',
+                      'Vorterix'
+                    ].map((venueShort) => {
+                      const isActive = filters.venue !== 'all' && filters.venue.toLowerCase().includes(venueShort.toLowerCase());
+                      return (
+                        <button
+                          key={`mobile-${venueShort}`}
+                          onClick={() => {
+                            if (isActive) {
+                              handleFilterChange({ venue: 'all' });
+                            } else {
+                              const fullVenue = availableVenues.find(v => v.toLowerCase().includes(venueShort.toLowerCase())) || venueShort;
+                              handleFilterChange({ venue: fullVenue });
+                              setTimeout(() => {
+                                const showsEl = document.getElementById('shows-section');
+                                if (showsEl) {
+                                  showsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }
+                              }, 100);
+                            }
+                          }}
+                          className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-rose-500 text-white shadow-xs'
+                              : 'bg-slate-800/90 text-slate-300 border border-slate-700/60 active:scale-95'
+                          }`}
+                        >
+                          {venueShort}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* --- VERSIÓN DESKTOP/TABLET (>= sm): Mantener exactamente el diseño de 2 renglones centrado --- */}
+                <div className="hidden sm:inline-flex flex-col items-center gap-2 max-w-full">
                   {/* Renglón 1: Frase y primeros lugares a la izquierda */}
                   <div className="flex flex-wrap items-center justify-start gap-2 w-full">
                     <span className="text-slate-400 font-medium shrink-0">Lugares en La Feliz:</span>
