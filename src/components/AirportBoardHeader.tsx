@@ -11,11 +11,6 @@ const MONTH_NAMES = [
   'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'
 ];
 
-/**
- * Extrae partes de la fecha:
- * - day: "20" (2 caracteres)
- * - month: "NOV" (3 caracteres)
- */
 function parseAirportDateParts(dateInput?: string | string[]): { day: string; month: string } {
   if (!dateInput) return { day: 'PR', month: 'ÓX' };
   const rawStr = Array.isArray(dateInput) ? dateInput[0] : dateInput;
@@ -23,7 +18,6 @@ function parseAirportDateParts(dateInput?: string | string[]): { day: string; mo
 
   const clean = rawStr.trim();
 
-  // Caso 1: ISO YYYY-MM-DD o YYYY/MM/DD
   const isoMatch = clean.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
   if (isoMatch) {
     const monthNum = parseInt(isoMatch[2], 10);
@@ -32,7 +26,6 @@ function parseAirportDateParts(dateInput?: string | string[]): { day: string; mo
     return { day, month };
   }
 
-  // Caso 2: Latino DD/MM/YYYY o DD-MM-YYYY
   const latamMatch = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
   if (latamMatch) {
     const day = latamMatch[1].padStart(2, '0').slice(0, 2);
@@ -41,7 +34,6 @@ function parseAirportDateParts(dateInput?: string | string[]): { day: string; mo
     return { day, month };
   }
 
-  // Caso 3: Fallback Date
   const parsedTimestamp = Date.parse(clean);
   if (!isNaN(parsedTimestamp)) {
     const d = new Date(parsedTimestamp);
@@ -54,58 +46,54 @@ function parseAirportDateParts(dateInput?: string | string[]): { day: string; mo
 }
 
 /**
- * Casillero mecánico de split-flap auténtico:
- * Conoce el caracter anterior (oldChar) y el nuevo caracter al que transiciona (newChar).
- * - En la 1ª mitad del giro (0deg -> 90deg), la aleta muestra el caracter viejo saliendo.
- * - Exactamente en los 90deg (punto ciego vertical), conmuta instantáneamente al caracter nuevo.
- * - En la 2ª mitad del giro (90deg -> 0deg), la aleta se abre revelando el nuevo caracter.
- * Esto elimina por completo el salto visual de "muestra un dato antes de girar y otro después".
+ * Casilla de split-flap auténtica:
+ * - Siempre muestra de forma determinista el caracter correspondiente.
+ * - Antes del giro (isFlapping = false): muestra EXACTAMENTE oldChar. NUNCA newChar.
+ * - Al arrancar el giro (isFlapping = true):
+ *     0 a 200ms: se pliega la aleta superior mostrando oldChar.
+ *     a los 200ms: en el punto ciego (pliegue plano), conmuta a newChar.
+ *     200ms a 400ms: cae la nueva aleta revelando newChar.
+ * - Al terminar el giro (isFlapping = false y ya rotó): muestra newChar fijo.
  */
 const FlipTile: React.FC<{
   oldChar: string;
   newChar: string;
   isFlapping: boolean;
+  hasFlipped: boolean;
   widthClass: string;
   delayMs?: number;
-}> = ({ oldChar, newChar, isFlapping, widthClass, delayMs = 0 }) => {
-  const [displayedChar, setDisplayedChar] = useState(oldChar);
-  const [isHalfway, setIsHalfway] = useState(false);
+}> = ({ oldChar, newChar, isFlapping, hasFlipped, widthClass, delayMs = 0 }) => {
+  const [showNew, setShowNew] = useState(false);
 
   useEffect(() => {
-    if (isFlapping) {
-      // Inicia giro: mostramos el viejo caracter plegándose
-      setIsHalfway(false);
-      setDisplayedChar(oldChar);
-
-      // A la mitad del giro mecánico (~220ms), cambiamos la letra por la nueva
-      const halfTimer = setTimeout(() => {
-        setIsHalfway(true);
-        setDisplayedChar(newChar);
-      }, delayMs + 200);
-
-      // Al completar el giro, se restablece
-      const endTimer = setTimeout(() => {
-        setIsHalfway(false);
-        setDisplayedChar(newChar);
-      }, delayMs + 450);
-
-      return () => {
-        clearTimeout(halfTimer);
-        clearTimeout(endTimer);
-      };
-    } else {
-      setDisplayedChar(newChar);
-      setIsHalfway(false);
+    if (!isFlapping) {
+      setShowNew(hasFlipped);
+      return;
     }
-  }, [isFlapping, oldChar, newChar, delayMs]);
+
+    // Comienza el giro mostrando oldChar
+    setShowNew(false);
+
+    // Conmuta a newChar exactamente en la mitad del giro mecánico
+    const timer = setTimeout(() => {
+      setShowNew(true);
+    }, delayMs + 220);
+
+    return () => clearTimeout(timer);
+  }, [isFlapping, hasFlipped, delayMs]);
+
+  // Si no está rotando y ya rotó, muestra newChar; de lo contrario muestra oldChar (o showNew a mitad del giro)
+  const charToDisplay = isFlapping 
+    ? (showNew ? newChar : oldChar) 
+    : (hasFlipped ? newChar : oldChar);
 
   return (
     <div
-      className={`${widthClass} h-[22px] sm:h-[26px] md:h-[28px] bg-[#151515] border border-[#242424] rounded-[2px] flex items-center justify-center text-white text-xs sm:text-sm md:text-base font-bold shadow-inner shadow-black relative overflow-hidden transition-all duration-400 ease-in-out ${
-        isFlapping && isHalfway
-          ? 'rotate-x-0 scale-y-100 opacity-100'
-          : isFlapping
+      className={`${widthClass} h-[22px] sm:h-[26px] md:h-[28px] bg-[#151515] border border-[#242424] rounded-[2px] flex items-center justify-center text-white text-xs sm:text-sm md:text-base font-bold shadow-inner shadow-black relative overflow-hidden transition-all duration-350 ease-in-out ${
+        isFlapping && !showNew
           ? 'rotate-x-90 scale-y-0 opacity-40 shadow-none'
+          : isFlapping && showNew
+          ? 'rotate-x-0 scale-y-100 opacity-100 shadow-inner'
           : 'rotate-x-0 scale-y-100 opacity-100 shadow-inner'
       }`}
       style={{
@@ -113,22 +101,25 @@ const FlipTile: React.FC<{
         transformOrigin: 'center center',
       }}
     >
-      {/* Ranura divisoria horizontal central de la aleta */}
+      {/* Ranura central de división del flap */}
       <div className="absolute inset-x-0 top-1/2 h-[1px] bg-[#090909] z-10 pointer-events-none" />
       <span className="relative z-0 leading-none">
-        {displayedChar === ' ' ? '\u00A0' : displayedChar}
+        {charToDisplay === ' ' ? '\u00A0' : charToDisplay}
       </span>
     </div>
   );
 };
 
 /**
- * Fila de Cartelera de Aeropuerto:
- * - Color BLANCO en fecha y artista (#ffffff)
- * - Transición sincronizada entre oldShow y newShow:
- *   1º Gira el DÍA (2 casillas)
- *   2º Gira el MES (3 casillas)
- *   3º Gira el ARTISTA (hasta 15 casillas)
+ * Fila de Cartelera:
+ * Mientras está en reposo ('idle'):
+ * - Muestra estrictamente el show actual (oldShow).
+ * Durante la rotación:
+ * - 1º Rota DÍA: Día conmuta a newShow, mientras Mes y Artista siguen mostrando oldShow intacto.
+ * - 2º Rota MES: Mes conmuta a newShow, mientras Artista sigue mostrando oldShow intacto.
+ * - 3º Rota ARTISTA: Artista conmuta a newShow.
+ * Al finalizar:
+ * - Toda la fila queda con newShow asentado.
  */
 const AirportBoardRow: React.FC<{
   currentShow: Show;
@@ -152,47 +143,53 @@ const AirportBoardRow: React.FC<{
   const newPaddedBand = newCleanBand.padEnd(15, ' ').slice(0, 15);
 
   const isDayFlapping = flapPhase === 'day';
+  const hasDayFlipped = flapPhase === 'month' || flapPhase === 'band';
+
   const isMonthFlapping = flapPhase === 'month';
+  const hasMonthFlipped = flapPhase === 'band';
+
   const isBandFlapping = flapPhase === 'band';
+  const hasBandFlipped = false;
 
   return (
     <div className="flex items-center justify-between w-full bg-[#0e0e0e] font-airport-matrix select-none border-b border-[#1c1c1c] last:border-b-0 py-0.5 sm:py-1 px-1 sm:px-2">
-      {/* Columna Fecha: Día + Separador sutil + Mes */}
+      {/* Columna Fecha: Día + Separador + Mes */}
       <div className="flex items-center gap-[2px] shrink-0">
-        {/* 1º: DÍA (2 casilleros) */}
+        {/* 1º: DÍA */}
         {oldDate.day.split('').map((char, i) => (
           <FlipTile
             key={`day-${i}`}
             oldChar={char}
             newChar={newDate.day[i] || ' '}
             isFlapping={isDayFlapping}
+            hasFlipped={hasDayFlipped}
             widthClass="w-[13px] sm:w-[16px] md:w-[18px]"
             delayMs={i * 35}
           />
         ))}
 
-        {/* Separador sutil entre día y mes */}
         <div className="w-[3px] sm:w-[4px]" />
 
-        {/* 2º: MES (3 casilleros) */}
+        {/* 2º: MES */}
         {oldDate.month.split('').map((char, i) => (
           <FlipTile
             key={`month-${i}`}
             oldChar={char}
             newChar={newDate.month[i] || ' '}
             isFlapping={isMonthFlapping}
+            hasFlipped={hasMonthFlipped}
             widthClass="w-[13px] sm:w-[16px] md:w-[18px]"
             delayMs={i * 35}
           />
         ))}
       </div>
 
-      {/* Casillero vacío de separación central */}
+      {/* Separador central */}
       <div className="flex items-center gap-[2px] mx-0.5 sm:mx-1 shrink-0">
         <div className="w-[6px] sm:w-[8px] h-[22px] sm:h-[26px] md:h-[28px] bg-[#121212] border border-[#202020] rounded-[2px]" />
       </div>
 
-      {/* 3º: ARTISTA (hasta 15 casilleros) */}
+      {/* 3º: ARTISTA */}
       <div className="flex items-center gap-[2px] shrink-0">
         {oldPaddedBand.split('').map((char, i) => (
           <FlipTile
@@ -200,6 +197,7 @@ const AirportBoardRow: React.FC<{
             oldChar={char}
             newChar={newPaddedBand[i] || ' '}
             isFlapping={isBandFlapping}
+            hasFlipped={hasBandFlipped}
             widthClass="w-[12px] sm:w-[15px] md:w-[17px]"
             delayMs={i * 25}
           />
@@ -209,13 +207,6 @@ const AirportBoardRow: React.FC<{
   );
 };
 
-/**
- * Cartelera de Aeropuerto:
- * - Cadencia continua: entre fila y fila siempre hay exactamente 2 SEGUNDOS de pausa quieta.
- *   Incluso tras terminar de rotar la Fila 5: pasan 2 segundos y comienza a rotar la Fila 1.
- * - Cada casilla rota con su caracter original y conmuta mecánicamente al nuevo en el giro.
- * - Secuencia fija por fila: Día -> Mes -> Artista.
- */
 export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = [] }) => {
   const displayShows = React.useMemo(() => {
     if (!shows || shows.length === 0) return [];
@@ -241,12 +232,11 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
 
   const ROWS_TO_SHOW = 5;
 
-  // Estado del show actual visible en cada fila
+  // Estado del show visible actual en cada una de las 5 filas
   const [currentIndices, setCurrentIndices] = useState<number[]>([0, 1, 2, 3, 4]);
-  // Estado del show objetivo (hacia el cual está girando cada fila)
+  // Estado del nuevo show hacia el cual rotará la fila
   const [targetIndices, setTargetIndices] = useState<number[]>([0, 1, 2, 3, 4]);
 
-  // Fase de animación para cada fila
   type FlapPhase = 'idle' | 'day' | 'month' | 'band';
   const [rowFlapPhases, setRowFlapPhases] = useState<FlapPhase[]>([
     'idle', 'idle', 'idle', 'idle', 'idle'
@@ -258,14 +248,11 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
     let isCancelled = false;
     const timeouts: NodeJS.Timeout[] = [];
 
-    // Duración de cada fase en milisegundos
-    const DAY_DURATION = 380;
-    const MONTH_DURATION = 380;
-    const BAND_DURATION = 580;
-    const ROW_ANIMATION_TOTAL = DAY_DURATION + MONTH_DURATION + BAND_DURATION; // ~1340ms
-    const PAUSE_BETWEEN_ROWS = 2000; // Exactamente 2 SEGUNDOS entre fila y fila en todo momento
+    const DAY_DURATION = 350;
+    const MONTH_DURATION = 350;
+    const BAND_DURATION = 650;
+    const PAUSE_BETWEEN_ROWS = 2000; // 2 segundos constantes entre cada fila
 
-    // Puntero de fila actual a rotar (0, 1, 2, 3, 4, y luego 0 otra vez tras 2 segundos)
     let activeRow = 0;
 
     const scheduleNextRow = () => {
@@ -273,22 +260,21 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
 
       const r = activeRow;
 
-      // Determinamos cuál es el nuevo show que ocupará la fila r
+      // 1. Configuramos el targetIndex SOLO para la fila que va a rotar
       setTargetIndices((prevTargets) => {
         const next = [...prevTargets];
-        // Avanzamos al siguiente show disponible en el pool
-        next[r] = (prevTargets[r] + ROWS_TO_SHOW) % displayShows.length;
+        next[r] = (currentIndices[r] + ROWS_TO_SHOW) % displayShows.length;
         return next;
       });
 
-      // 1. Inicia giro del DÍA
+      // 2. Inicia giro del DÍA: mientras tanto, el mes y el artista siguen mostrando el actual
       setRowFlapPhases((prev) => {
         const next = [...prev];
         next[r] = 'day';
         return next;
       });
 
-      // 2. Termina DÍA, inicia giro del MES
+      // 3. Termina DÍA, inicia giro del MES
       timeouts.push(
         setTimeout(() => {
           if (isCancelled) return;
@@ -300,7 +286,7 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
         }, DAY_DURATION)
       );
 
-      // 3. Termina MES, inicia giro del ARTISTA
+      // 4. Termina MES, inicia giro del ARTISTA
       timeouts.push(
         setTimeout(() => {
           if (isCancelled) return;
@@ -312,11 +298,10 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
         }, DAY_DURATION + MONTH_DURATION)
       );
 
-      // 4. Termina ARTISTA: Fila r concluye su rotación y se asienta
+      // 5. Termina ARTISTA: Fila r asienta el nuevo show en currentIndices y vuelve a 'idle'
       timeouts.push(
         setTimeout(() => {
           if (isCancelled) return;
-          // Asentamos el nuevo show como el actual
           setCurrentIndices((prevCurrent) => {
             const next = [...prevCurrent];
             next[r] = (prevCurrent[r] + ROWS_TO_SHOW) % displayShows.length;
@@ -331,21 +316,21 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
           // Avanzamos al siguiente renglón (0 -> 1 -> 2 -> 3 -> 4 -> 0...)
           activeRow = (activeRow + 1) % ROWS_TO_SHOW;
 
-          // PAUSA DE EXACTAMENTE 2 SEGUNDOS antes de que empiece a rotar la siguiente fila
+          // PAUSA DE 2 SEGUNDOS antes de que empiece a rotar la siguiente fila
           timeouts.push(
             setTimeout(() => {
               if (isCancelled) return;
               scheduleNextRow();
             }, PAUSE_BETWEEN_ROWS)
           );
-        }, ROW_ANIMATION_TOTAL)
+        }, DAY_DURATION + MONTH_DURATION + BAND_DURATION)
       );
     };
 
-    // Al inicio, dejamos una lectura previa y luego arranca el ciclo continuo con pausa de 2s
+    // Pausa inicial antes del primer ciclo
     const initialDelay = setTimeout(() => {
       scheduleNextRow();
-    }, 6000);
+    }, 4000);
     timeouts.push(initialDelay);
 
     return () => {
@@ -370,10 +355,10 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
 
       {/* Contenedor principal con las 5 FILAS exactas */}
       <div className="bg-[#0b0c0e] border border-[#1a1c20] rounded-lg overflow-hidden shadow-inner flex-1 flex flex-col justify-around my-auto">
-        {currentIndices.map((showIndex, rowPos) => {
-          const currentShow = displayShows[showIndex % displayShows.length] || displayShows[0];
-          const targetIndex = targetIndices[rowPos];
-          const targetShow = displayShows[targetIndex % displayShows.length] || displayShows[0];
+        {currentIndices.map((currentIdx, rowPos) => {
+          const currentShow = displayShows[currentIdx % displayShows.length] || displayShows[0];
+          const targetIdx = targetIndices[rowPos];
+          const targetShow = displayShows[targetIdx % displayShows.length] || displayShows[0];
 
           return (
             <AirportBoardRow
