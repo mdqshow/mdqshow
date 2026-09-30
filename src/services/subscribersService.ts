@@ -37,7 +37,16 @@ export function subscribeToSubscribers(
       }
     },
     (err) => {
-      console.warn('Firestore subscribers listener error:', err);
+      // Manejo seguro y silencioso de cuota o modo offline
+      console.warn('Firestore subscribers listener en modo local seguro:', err.message || err);
+      try {
+        const cached = localStorage.getItem(STORAGE_KEY_SUBSCRIBERS);
+        if (cached) {
+          onUpdate(JSON.parse(cached));
+        }
+      } catch {
+        // ignore
+      }
       if (onError) onError(err);
     }
   );

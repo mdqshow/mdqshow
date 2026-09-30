@@ -63,7 +63,16 @@ export function subscribeToMetrics(
       onUpdate(map);
     },
     (err) => {
-      console.warn('Firestore metrics listener error:', err);
+      // Manejo silencioso y seguro de cuota excedida de Firestore o modo offline
+      console.warn('Firestore metrics listener en modo local seguro:', err.message || err);
+      try {
+        const cached = localStorage.getItem(STORAGE_KEY_METRICS);
+        if (cached) {
+          onUpdate(JSON.parse(cached));
+        }
+      } catch {
+        // ignore
+      }
       if (onError) onError(err);
     }
   );

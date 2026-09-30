@@ -162,13 +162,19 @@ export function subscribeToShows(
       onUpdate(showsList);
     },
     (err) => {
-      // Si la conexión a Firestore está momentáneamente inaccesible o en modo offline
-      if (err.message && (err.message.includes('unavailable') || err.message.includes('offline'))) {
-        console.warn('Firestore temporalmente offline, usando caché local:', err.message);
+      // Manejo transparente de cuota diaria superada de Google Cloud Firestore o modo offline
+      const msg = err.message || '';
+      if (
+        msg.includes('Quota limit exceeded') ||
+        msg.includes('Quota exceeded') ||
+        msg.includes('unavailable') ||
+        msg.includes('offline')
+      ) {
+        console.warn('Firestore operando en modo caché local protegida:', msg);
       } else {
-        console.error('Error al suscribir a Firestore shows:', err);
+        console.warn('Firestore shows listener fallback:', msg);
       }
-      // Usar respaldo local si hay error de conexión
+      // Servir la lista de shows desde la caché local sin interrumpir la experiencia del usuario
       onUpdate(getLocalFallbackShows());
       if (onError) onError(err);
     }
