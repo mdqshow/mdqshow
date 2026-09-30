@@ -14,16 +14,15 @@ export interface SponsorAd {
   tagBorder: string;
   tagText: string;
   link: string;
-  animationClass: string;
   titleSizeClass: string;
   locationSizeClass: string;
 }
 
 /**
- * Sponsors locales iniciales con diseño tipográfico grande y animado.
- * 1. BRUTO: Letras bien grandes e imponentes, animación de LATIDO (heartbeat rítmico), Playa Grande abajo.
- * 2. SURF COFFEE: Fondo azul/celeste surfer característico, letras grandes con suave animación de onda marina fluida.
- * Toda la tarjeta es un enlace directo clickable (sin botones de "visitar perfil").
+ * Sponsors locales con animación separada:
+ * - Parte superior (Título de la marca): Rota despacio en 3D, se queda fija 5 segundos, y vuelve a rotar.
+ * - Parte inferior (Ubicación): Hace un zoom rítmico estilo latido (dum-dum), y queda en pausa de reposo.
+ * Nada es constante ni mareante: todo respira armoniosamente.
  */
 export const LOCAL_SPONSORS: SponsorAd[] = [
   {
@@ -38,7 +37,6 @@ export const LOCAL_SPONSORS: SponsorAd[] = [
     tagBorder: 'border-zinc-700/60',
     tagText: 'text-zinc-300',
     link: 'https://www.instagram.com/bruto.playagrande',
-    animationClass: 'animate-heartbeat',
     titleSizeClass: 'text-4xl sm:text-5xl lg:text-6xl font-black tracking-widest',
     locationSizeClass: 'text-sm sm:text-base font-extrabold tracking-[0.25em]'
   },
@@ -47,14 +45,13 @@ export const LOCAL_SPONSORS: SponsorAd[] = [
     title: 'SURF COFFEE',
     location: 'AVELLANEDA 1387',
     tag: 'Café & Bakery',
-    bgColor: 'bg-[#1b4965]', // Azul océano profundo surfer característico de la marca
+    bgColor: 'bg-[#1b4965]', // Azul océano profundo surfer característico
     textColor: 'text-white',
     subtextColor: 'text-sky-200 font-bold',
     tagBg: 'bg-[#133347]/90',
     tagBorder: 'border-sky-500/40',
     tagText: 'text-sky-200',
     link: 'https://www.instagram.com/surfcoffee',
-    animationClass: 'animate-surf-wave',
     titleSizeClass: 'text-3xl sm:text-4xl lg:text-5xl font-black tracking-wide',
     locationSizeClass: 'text-sm sm:text-base font-extrabold tracking-[0.2em]'
   }
@@ -103,15 +100,22 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
           </span>
         </div>
 
-        {/* Contenido tipográfico grande y animado */}
+        {/* Contenido tipográfico con animaciones pausadas coordinadas */}
         <div className="absolute inset-0 p-5 flex flex-col items-center justify-center text-center z-10">
-          <div className={`flex flex-col items-center justify-center transition-transform duration-300 group-hover:scale-105 ${ad.animationClass}`}>
-            <h3 className={`${ad.titleSizeClass} ${ad.textColor} uppercase font-sans drop-shadow-lg leading-tight`}>
-              {ad.title}
-            </h3>
-            <p className={`${ad.locationSizeClass} ${ad.subtextColor} uppercase mt-2 drop-shadow-md`}>
-              {ad.location}
-            </p>
+          <div className="flex flex-col items-center justify-center transition-transform duration-300 group-hover:scale-105">
+            {/* Título: Gira despacio en 3D y se queda 5 segundos quieto */}
+            <div className="animate-sponsor-title">
+              <h3 className={`${ad.titleSizeClass} ${ad.textColor} uppercase font-sans drop-shadow-lg leading-tight`}>
+                {ad.title}
+              </h3>
+            </div>
+            
+            {/* Ubicación: Hace zoom tipo latido esporádico (no constante) y descansa */}
+            <div className="animate-sponsor-location mt-2">
+              <p className={`${ad.locationSizeClass} ${ad.subtextColor} uppercase drop-shadow-md`}>
+                {ad.location}
+              </p>
+            </div>
           </div>
         </div>
       </a>

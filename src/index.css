@@ -38,58 +38,64 @@
 }
 
 /* Animaciones exclusivas para Sponsors */
-/* 1. BRUTO: Latido rítmico cardíaco con glow nocturno (latir) */
-@keyframes brutoHeartbeat {
+/* 
+ * 1. TÍTULO SUPERIOR (BRUTO / SURF COFFEE):
+ * Giro 3D lento y elegante de 360 grados sobre el eje Y (o sutil balanceo tridimensional),
+ * y luego se queda 5 segundos completamente quieto y fijo en pausa antes de volver a girar.
+ * Ciclo total: 7 segundos (2 segundos de giro suave + 5 segundos quieto).
+ */
+@keyframes sponsorTitleFlipPause {
   0% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
-  }
-  14% {
-    transform: scale(1.07);
-    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.6));
+    transform: perspective(600px) rotateY(0deg);
   }
   28% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
+    transform: perspective(600px) rotateY(360deg);
   }
-  42% {
-    transform: scale(1.05);
-    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4));
-  }
-  70% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
-  }
-  100% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
+  30%, 100% {
+    transform: perspective(600px) rotateY(360deg);
   }
 }
 
-.animate-heartbeat {
-  animation: brutoHeartbeat 2.4s ease-in-out infinite;
-  transform-origin: center;
+.animate-sponsor-title {
+  animation: sponsorTitleFlipPause 7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 
-/* 2. SURF COFFEE: Flujo/ola marina suave con sutil brisa y destello celeste */
-@keyframes surfWaveBreeze {
-  0% {
-    transform: translateY(0px) scale(1);
-    letter-spacing: 0.08em;
+/* 
+ * 2. SUBTÍTULO / UBICACIÓN (PLAYA GRANDE / AVELLANEDA 1387):
+ * Latido/zoom cardíaco esporádico (no constante):
+ * Hace dos pulsos rítmicos estilo latido (dum-dum), y luego se queda quieto 5 segundos en reposo.
+ * Ciclo total: 7 segundos (coordinado con una fase no lineal para que no canse la vista).
+ */
+@keyframes sponsorLocationPulsePause {
+  0%, 45% {
+    transform: scale(1);
+    opacity: 0.9;
   }
   50% {
-    transform: translateY(-3px) scale(1.02);
-    letter-spacing: 0.12em;
-    filter: drop-shadow(0 4px 10px rgba(56, 189, 248, 0.5));
+    transform: scale(1.15);
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.6));
   }
-  100% {
-    transform: translateY(0px) scale(1);
-    letter-spacing: 0.08em;
+  55% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.4));
+  }
+  66%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
   }
 }
 
-.animate-surf-wave {
-  animation: surfWaveBreeze 3.2s ease-in-out infinite;
+.animate-sponsor-location {
+  animation: sponsorLocationPulsePause 7s ease-in-out infinite;
   transform-origin: center;
+  will-change: transform;
 }
 
