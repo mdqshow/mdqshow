@@ -285,17 +285,16 @@ export const ShowCard: React.FC<ShowCardProps> = ({
           </p>
         </div>
 
-        {/* Secondary Actions: WhatsApp, Spotify (si tiene) & Calendar */}
+        {/* Secondary Actions: WhatsApp, Spotify (si tiene) & Calendar - Iconos limpios sin texto truncado */}
         <div className={`grid ${show.spotifyUrl ? 'grid-cols-3' : 'grid-cols-2'} gap-2 relative`}>
           {/* WhatsApp Share */}
           <button
             type="button"
             onClick={handleShareWhatsApp}
-            className="flex items-center justify-center py-2 px-2.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-xs"
+            className="flex items-center justify-center py-2 px-2 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 transition-all active:scale-95 cursor-pointer shadow-xs"
             title="Compartir fecha de recital por WhatsApp"
           >
-            <MessageCircle className="w-3.5 h-3.5 mr-1 text-emerald-400 shrink-0" />
-            <span className="truncate">WhatsApp</span>
+            <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
           </button>
 
           {/* Spotify Direct Link (si el recital tiene link cargado) */}
@@ -304,11 +303,10 @@ export const ShowCard: React.FC<ShowCardProps> = ({
               href={show.spotifyUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center py-2 px-2.5 rounded-xl bg-green-950/40 hover:bg-green-900/50 text-green-400 hover:text-green-300 border border-green-500/30 text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-xs"
+              className="flex items-center justify-center py-2 px-2 rounded-xl bg-green-950/40 hover:bg-green-900/50 text-green-400 hover:text-green-300 border border-green-500/30 transition-all active:scale-95 cursor-pointer shadow-xs"
               title={`Escuchar a ${show.band} en Spotify`}
             >
-              <SpotifyIcon className="w-3.5 h-3.5 mr-1 text-[#1DB954] shrink-0" />
-              <span className="truncate">Spotify</span>
+              <SpotifyIcon className="w-4 h-4 text-[#1DB954] shrink-0" />
             </a>
           )}
 
@@ -316,7 +314,7 @@ export const ShowCard: React.FC<ShowCardProps> = ({
           <button
             type="button"
             onClick={handleAddToCalendar}
-            className={`w-full flex items-center justify-center py-2 px-2.5 rounded-xl border text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-xs ${
+            className={`w-full flex items-center justify-center py-2 px-2 rounded-xl border transition-all active:scale-95 cursor-pointer shadow-xs ${
               addedCalendar
                 ? 'bg-rose-500/20 border-rose-500 text-rose-300'
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700'
@@ -324,15 +322,9 @@ export const ShowCard: React.FC<ShowCardProps> = ({
             title="Guardar evento en tu calendario (detecta automáticamente Apple o Google Calendar)"
           >
             {addedCalendar ? (
-              <>
-                <Check className="w-3.5 h-3.5 mr-1 text-rose-400 shrink-0" />
-                <span className="truncate">¡Agendando!</span>
-              </>
+              <Check className="w-4 h-4 text-rose-400 shrink-0" />
             ) : (
-              <>
-                <CalendarPlus className="w-3.5 h-3.5 mr-1 text-rose-400 shrink-0" />
-                <span className="truncate">Agendar</span>
-              </>
+              <CalendarPlus className="w-4 h-4 text-rose-400 shrink-0" />
             )}
           </button>
         </div>

@@ -18,8 +18,7 @@ export const INITIAL_SHOWS: Show[] = [
     ticketStatus: 'ultimas_entradas',
     description: 'Ricardo Mollo, Diego Arnedo y Catriel Ciavarella vuelven al mítico Polideportivo marplatense con un show demoledor y arrollador.',
     featured: true,
-    openingActs: ['Científicos del Palo'],
-    spotifyUrl: 'https://open.spotify.com/artist/1Gjww0WffH6YgH0mHwM1Lz'
+    openingActs: ['Científicos del Palo']
   },
   {
     id: 'mdp-2',
@@ -37,8 +36,7 @@ export const INITIAL_SHOWS: Show[] = [
     ticketPriceRange: '$40.000 única',
     ticketStatus: 'disponibles',
     description: 'El banquete renguero junto al mar. Chizzo, Tete y Tanque en una noche histórica en los Silos del Puerto de Mar del Plata.',
-    featured: true,
-    spotifyUrl: 'https://open.spotify.com/artist/1hOaZ1pZ3Lh60j3H2aHnfe'
+    featured: true
   },
   {
     id: 'mdp-3',
@@ -57,8 +55,7 @@ export const INITIAL_SHOWS: Show[] = [
     ticketStatus: 'disponibles',
     description: 'Valentín Oliva llega a Mar del Plata para desplegar toda la energía de "Descartable" con su banda en vivo.',
     featured: true,
-    openingActs: ['Kevsho'],
-    spotifyUrl: 'https://open.spotify.com/artist/5L1Mw8OXzp5DYIIng7q2oR'
+    openingActs: ['Kevsho']
   },
   {
     id: 'mdp-4',
