@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 export interface SponsorAd {
   id: string;
@@ -14,43 +14,49 @@ export interface SponsorAd {
   tagBorder: string;
   tagText: string;
   link: string;
-  customStyle?: React.CSSProperties;
+  animationClass: string;
+  titleSizeClass: string;
+  locationSizeClass: string;
 }
 
 /**
- * Sponsors locales iniciales con diseño tipográfico y estético de alta gama.
- * 1. BRUTO: Fondo negro azabache, tipografía bold blanca imponente, "Playa Grande" abajo con sutileza.
- * 2. SURF COFFEE: Fondo azul/celeste característico (azul océano #0B3B60 o celeste surfer #227093 / #38769E), 
- *    letras blancas gruesas limpias y "Avellaneda 1387" abajo.
+ * Sponsors locales iniciales con diseño tipográfico grande y animado.
+ * 1. BRUTO: Letras bien grandes e imponentes, animación de LATIDO (heartbeat rítmico), Playa Grande abajo.
+ * 2. SURF COFFEE: Fondo azul/celeste surfer característico, letras grandes con suave animación de onda marina fluida.
+ * Toda la tarjeta es un enlace directo clickable (sin botones de "visitar perfil").
  */
 export const LOCAL_SPONSORS: SponsorAd[] = [
   {
     id: 'bruto',
     title: 'BRUTO',
-    location: 'Playa Grande',
+    location: 'PLAYA GRANDE',
     tag: 'Playa Grande',
-    desc: 'La previa, tragos y noche frente al mar.',
     bgColor: 'bg-black',
     textColor: 'text-white',
-    subtextColor: 'text-zinc-400',
+    subtextColor: 'text-zinc-300 font-bold',
     tagBg: 'bg-zinc-900/90',
     tagBorder: 'border-zinc-700/60',
     tagText: 'text-zinc-300',
-    link: 'https://www.instagram.com/bruto.playagrande'
+    link: 'https://www.instagram.com/bruto.playagrande',
+    animationClass: 'animate-heartbeat',
+    titleSizeClass: 'text-4xl sm:text-5xl lg:text-6xl font-black tracking-widest',
+    locationSizeClass: 'text-sm sm:text-base font-extrabold tracking-[0.25em]'
   },
   {
     id: 'surfcoffee',
     title: 'SURF COFFEE',
-    location: 'Avellaneda 1387',
+    location: 'AVELLANEDA 1387',
     tag: 'Café & Bakery',
-    desc: 'Specialty coffee & surf vibes en Mar del Plata.',
     bgColor: 'bg-[#1b4965]', // Azul océano profundo surfer característico de la marca
     textColor: 'text-white',
-    subtextColor: 'text-sky-200',
+    subtextColor: 'text-sky-200 font-bold',
     tagBg: 'bg-[#133347]/90',
     tagBorder: 'border-sky-500/40',
     tagText: 'text-sky-200',
-    link: 'https://www.instagram.com/surfcoffee'
+    link: 'https://www.instagram.com/surfcoffee',
+    animationClass: 'animate-surf-wave',
+    titleSizeClass: 'text-3xl sm:text-4xl lg:text-5xl font-black tracking-wide',
+    locationSizeClass: 'text-sm sm:text-base font-extrabold tracking-[0.2em]'
   }
 ];
 
@@ -65,12 +71,11 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   className = '',
   initialOffset = 0
 }) => {
-  // Las publicidades se fijan para la sesión/visita actual:
-  // Se eligen de forma determinista o aleatoria por carga de página (sin rotar cada 10s mientras el usuario navega)
+  // Las publicidades se fijan para la sesión actual
   const topAd = LOCAL_SPONSORS[initialOffset % LOCAL_SPONSORS.length];
   const bottomAd = LOCAL_SPONSORS[(initialOffset + 1) % LOCAL_SPONSORS.length];
 
-  // Render individual card con estética tipográfica limpia
+  // Render individual card con link directo en toda la tarjeta y animaciones exclusivas
   const renderAdCard = (ad: SponsorAd, heightClass: string) => {
     return (
       <a
@@ -84,31 +89,29 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
         }}
         title={`${ad.title} — ${ad.location} (Clic para visitar)`}
       >
-        {/* Textura sutil y sutil viñeta para efecto visual de alta gama */}
+        {/* Textura sutil y viñeta para efecto nocturno/profundo de alta gama */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent pointer-events-none" />
 
         {/* Badge superior derecho de Sponsor */}
-        <div className="absolute top-3 right-3 z-10">
+        <div className="absolute top-3 right-3 z-10 pointer-events-none">
           <span 
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md ${ad.tagBg} border ${ad.tagBorder} text-[9px] font-black ${ad.tagText} uppercase tracking-wider backdrop-blur-md shadow-xs`}
+            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md ${ad.tagBg} border ${ad.tagBorder} text-[10px] font-black ${ad.tagText} uppercase tracking-wider backdrop-blur-md shadow-xs`}
           >
-            <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+            <Sparkles className="w-3 h-3 text-amber-400" />
             <span>Sponsor</span>
           </span>
         </div>
 
-        {/* Contenido tipográfico centrado con impacto estético */}
-        <div className="absolute inset-0 p-4 sm:p-5 flex flex-col items-center justify-center text-center z-10 transition-transform duration-300 group-hover:scale-105">
-          <h3 className={`text-2xl sm:text-3xl font-black ${ad.textColor} tracking-wider uppercase font-sans drop-shadow-md`}>
-            {ad.title}
-          </h3>
-          <p className={`text-xs sm:text-sm font-semibold ${ad.subtextColor} tracking-widest uppercase mt-1 drop-shadow-sm`}>
-            {ad.location}
-          </p>
-          <div className="mt-3 flex items-center gap-1 text-[11px] font-medium text-amber-300 opacity-80 group-hover:opacity-100 transition-opacity">
-            <span>Visitar perfil</span>
-            <ExternalLink className="w-3 h-3 ml-0.5" />
+        {/* Contenido tipográfico grande y animado */}
+        <div className="absolute inset-0 p-5 flex flex-col items-center justify-center text-center z-10">
+          <div className={`flex flex-col items-center justify-center transition-transform duration-300 group-hover:scale-105 ${ad.animationClass}`}>
+            <h3 className={`${ad.titleSizeClass} ${ad.textColor} uppercase font-sans drop-shadow-lg leading-tight`}>
+              {ad.title}
+            </h3>
+            <p className={`${ad.locationSizeClass} ${ad.subtextColor} uppercase mt-2 drop-shadow-md`}>
+              {ad.location}
+            </p>
           </div>
         </div>
       </a>
@@ -139,21 +142,21 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
         aria-label="Espacio publicitario de sponsors locales en cronograma"
         className={`w-full my-3 grid grid-cols-1 sm:grid-cols-2 gap-3.5 ${className}`}
       >
-        {renderAdCard(topAd, 'h-32 sm:h-36')}
-        {renderAdCard(bottomAd, 'h-32 sm:h-36')}
+        {renderAdCard(topAd, 'h-36 sm:h-40')}
+        {renderAdCard(bottomAd, 'h-36 sm:h-40')}
       </aside>
     );
   }
 
-  // Formato Horizontal (banner completo)
+  // Formato Horizontal
   return (
     <aside 
       aria-label="Espacio publicitario de sponsors locales"
       className={`w-full my-4 ${className}`}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {renderAdCard(topAd, 'h-28 sm:h-32')}
-        {renderAdCard(bottomAd, 'h-28 sm:h-32')}
+        {renderAdCard(topAd, 'h-32 sm:h-36')}
+        {renderAdCard(bottomAd, 'h-32 sm:h-36')}
       </div>
     </aside>
   );

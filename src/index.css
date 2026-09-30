@@ -37,3 +37,59 @@
   letter-spacing: 0.12em;
 }
 
+/* Animaciones exclusivas para Sponsors */
+/* 1. BRUTO: Latido rítmico cardíaco con glow nocturno (latir) */
+@keyframes brutoHeartbeat {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
+  }
+  14% {
+    transform: scale(1.07);
+    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.6));
+  }
+  28% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
+  }
+  42% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4));
+  }
+  70% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
+  }
+}
+
+.animate-heartbeat {
+  animation: brutoHeartbeat 2.4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* 2. SURF COFFEE: Flujo/ola marina suave con sutil brisa y destello celeste */
+@keyframes surfWaveBreeze {
+  0% {
+    transform: translateY(0px) scale(1);
+    letter-spacing: 0.08em;
+  }
+  50% {
+    transform: translateY(-3px) scale(1.02);
+    letter-spacing: 0.12em;
+    filter: drop-shadow(0 4px 10px rgba(56, 189, 248, 0.5));
+  }
+  100% {
+    transform: translateY(0px) scale(1);
+    letter-spacing: 0.08em;
+  }
+}
+
+.animate-surf-wave {
+  animation: surfWaveBreeze 3.2s ease-in-out infinite;
+  transform-origin: center;
+}
+
