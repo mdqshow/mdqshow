@@ -486,11 +486,6 @@ export default function App() {
           return false;
         }
 
-        // Ticket status filter
-        if (filters.ticketStatus !== 'all' && show.ticketStatus !== filters.ticketStatus) {
-          return false;
-        }
-
         return true;
       })
       .sort((a, b) => {
@@ -563,9 +558,9 @@ export default function App() {
                 </p>
               </div>
 
-              {/* Venues quick chips sorted alphabetically (A-Z) */}
-              <div className="flex flex-wrap items-center justify-end gap-2 pt-2 text-xs">
-                <span className="text-slate-400 font-medium mr-auto">Lugares en La Feliz:</span>
+              {/* Venues quick chips sorted alphabetically (A-Z) - Alineación CENTRADA */}
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-xs">
+                <span className="text-slate-400 font-medium w-full text-center mb-0.5">Lugares en La Feliz:</span>
                 {[
                   'Abbey Road',
                   'Arena Mar del Plata',
@@ -645,11 +640,11 @@ export default function App() {
           />
         </section>
 
-        {/* Google AdSense: Banner Horizontal Superior (No invasivo) */}
+        {/* Espacio publicitario superior: Dos banners de sponsors locales lado a lado (como en el cronograma) */}
         <div className="animate-in fade-in duration-300">
           <AdSenseBanner 
-            format="horizontal" 
-            simulationVariant="random" 
+            format="timeline-double" 
+            initialOffset={0} 
           />
         </div>
 
@@ -844,7 +839,10 @@ export default function App() {
             </div>
             
             <p className="leading-relaxed">
-              <strong className="text-slate-300">MDQSHOW no comercializa, reserva ni emite entradas para ningún espectáculo.</strong> Actuamos exclusivamente como una guía informativa independiente sobre recitales, shows y eventos en la ciudad de Mar del Plata.
+              <strong className="text-slate-300">MDQSHOW no comercializa, reserva ni emite entradas para ningún espectáculo.</strong>
+            </p>
+            <p className="leading-relaxed text-slate-400">
+              Actuamos exclusivamente como una guía informativa independiente sobre recitales, shows y eventos en la ciudad de Mar del Plata.
             </p>
 
             <p className="leading-relaxed text-slate-400">

@@ -73,30 +73,6 @@ export const ShowCard: React.FC<ShowCardProps> = ({
     setTimeout(() => setAddedCalendar(false), 2000);
   };
 
-  // Status configuration
-  const statusConfig = {
-    disponibles: {
-      label: 'Entradas Disponibles',
-      bg: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300',
-      dot: 'bg-emerald-400',
-    },
-    ultimas_entradas: {
-      label: '¡Últimas Entradas!',
-      bg: 'bg-amber-500/15 border-amber-500/30 text-amber-300',
-      dot: 'bg-amber-400 animate-pulse',
-    },
-    agotado: {
-      label: 'Sold Out / Agotado',
-      bg: 'bg-rose-500/15 border-rose-500/30 text-rose-300',
-      dot: 'bg-rose-500',
-    },
-    proximamente: {
-      label: 'Próxima Venta',
-      bg: 'bg-sky-500/15 border-sky-500/30 text-sky-300',
-      dot: 'bg-sky-400',
-    },
-  }[show.ticketStatus];
-
   return (
     <div
       id={`show-card-${show.id}`}
@@ -155,17 +131,11 @@ export const ShowCard: React.FC<ShowCardProps> = ({
             </button>
           </div>
 
-          {/* Bottom Info Strip on Image: Genre + Status Badge in center + Countdown */}
+          {/* Bottom Info Strip on Image: Genre + Countdown */}
           <div className="absolute bottom-2.5 inset-x-2.5 z-20 flex items-center justify-between gap-1.5 pointer-events-none">
             {/* Genre Tag */}
-            <div className="px-2 py-0.5 rounded-md bg-slate-950/85 backdrop-blur-md border border-white/10 text-[11px] font-medium text-slate-300 truncate max-w-[90px] sm:max-w-[110px]">
+            <div className="px-2 py-0.5 rounded-md bg-slate-950/85 backdrop-blur-md border border-white/10 text-[11px] font-medium text-slate-300 truncate max-w-[120px]">
               {show.genre}
-            </div>
-
-            {/* Status Badge Centered at bottom of photo (no tapa el rostro del cantante) */}
-            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold backdrop-blur-md border shadow-sm shrink-0 ${statusConfig.bg}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dot}`} />
-              <span className="text-white text-[10px] sm:text-[11px] font-medium">{statusConfig.label}</span>
             </div>
 
             {/* Countdown Pill on Bottom Right of Image */}
@@ -233,7 +203,7 @@ export const ShowCard: React.FC<ShowCardProps> = ({
             <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
               <span className="flex items-center">
                 <Calendar className="w-3 h-3 mr-1 text-rose-400" />
-                {show.dates.length === 1 ? 'Fecha Confirmada' : `Fechas (${show.dates.length})`}
+                FECHAS CONFIRMADAS
               </span>
               <span className="text-slate-400 font-normal">{show.time}</span>
             </div>
@@ -281,9 +251,6 @@ export const ShowCard: React.FC<ShowCardProps> = ({
             <span className="truncate">Comprar Entradas en {formatProperCase(show.ticketPortalName)}</span>
             <ExternalLink className="w-3 h-3 ml-1.5 shrink-0 opacity-80" />
           </a>
-          <p className="text-[10px] text-center text-slate-500 mt-1">
-            Redirección directa a la ticketera oficial del evento
-          </p>
         </div>
 
         {/* Secondary Actions: WhatsApp, Spotify (si tiene) & Calendar - Iconos limpios sin texto truncado */}

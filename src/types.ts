@@ -12,7 +12,7 @@ export interface Show {
   ticketUrl: string;
   ticketPortalName: string;
   ticketPriceRange: string;
-  ticketStatus: 'disponibles' | 'ultimas_entradas' | 'agotado' | 'proximamente';
+  ticketStatus?: 'disponibles' | 'ultimas_entradas' | 'agotado' | 'proximamente';
   description: string;
   featured?: boolean;
   openingActs?: string[];
@@ -29,7 +29,7 @@ export interface FilterState {
   month: string; // 'all' or '2026-10', etc.
   genre: string;
   venue: string;
-  ticketStatus: string;
+  ticketStatus?: string;
   sortBy: 'date_asc' | 'date_desc' | 'band_asc';
 }
 

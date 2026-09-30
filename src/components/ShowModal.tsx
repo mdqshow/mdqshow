@@ -70,7 +70,6 @@ export const ShowModal: React.FC<ShowModalProps> = ({
   const [quickDateInput, setQuickDateInput] = useState('');
 
   const [time, setTime] = useState('21:00 hs');
-  const [ticketStatus, setTicketStatus] = useState<Show['ticketStatus']>('disponibles');
   
   // Ticket portal selection
   const [ticketPortalName, setTicketPortalName] = useState('Articket');
@@ -117,7 +116,6 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       }
 
       setTicketPriceRange(initialShow.ticketPriceRange || '');
-      setTicketStatus(initialShow.ticketStatus || 'disponibles');
       setSpotifyUrl(initialShow.spotifyUrl || '');
       setImage(initialShow.image || '');
       setImagePosition(initialShow.imagePosition || 'top');
@@ -305,7 +303,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       ticketUrl: ticketUrl.trim() || 'https://articket.com.ar',
       ticketPortalName: formatProperCase(ticketPortalName.trim()) || 'Boletería Oficial',
       ticketPriceRange: normalizePriceInput(ticketPriceRange),
-      ticketStatus,
+      ticketStatus: 'disponibles',
       image: image.trim() || defaultImg,
       imagePosition,
       description: initialShow?.description || `${band} en vivo en ${venue}.`,
@@ -644,31 +642,16 @@ export const ShowModal: React.FC<ShowModalProps> = ({
             </div>
           </div>
 
-          {/* Horario y Estado de Entradas */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-slate-300 font-semibold mb-1">Horario del recital</label>
-              <input
-                type="text"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                placeholder="21:00 hs"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
-              />
-            </div>
-            <div>
-              <label className="block text-slate-300 font-semibold mb-1">Estado de Entradas</label>
-              <select
-                value={ticketStatus}
-                onChange={(e) => setTicketStatus(e.target.value as Show['ticketStatus'])}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-rose-500 cursor-pointer"
-              >
-                <option value="disponibles">Entradas Disponibles</option>
-                <option value="ultimas_entradas">¡Últimas Entradas!</option>
-                <option value="agotado">Agotado / Sold Out</option>
-                <option value="proximamente">Próximamente a la venta</option>
-              </select>
-            </div>
+          {/* Horario del recital */}
+          <div>
+            <label className="block text-slate-300 font-semibold mb-1">Horario del recital</label>
+            <input
+              type="text"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              placeholder="21:00 hs"
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
+            />
           </div>
 
           {/* TICKETERA PRECARGADA / PORTAL OFICIAL */}
