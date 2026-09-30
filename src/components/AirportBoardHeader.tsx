@@ -22,12 +22,9 @@ function formatAirportDate(dateStr?: string): string {
 }
 
 /**
- * Fila de Cartelera de Aeropuerto exactamente como en la foto de referencia:
- * - 6 casilleros de fecha/hora en color amarillo/ámbar vintage (ej: 09:45 o 20 NOV)
- * - Separador de casilleros vacíos
- * - Casilleros de destino/artista en amarillo/ámbar idéntico a la imagen
- * - Cuadrícula de módulos negros con borde sutil
- * - Efecto de cambio flip/matriz
+ * Fila de Cartelera de Aeropuerto:
+ * - Color BLANCO en fecha y artista (#f8fafc / #ffffff)
+ * - Casilleros modulares con ranura mecánica al medio
  */
 const AirportBoardRow: React.FC<{
   dateStr: string;
@@ -42,13 +39,13 @@ const AirportBoardRow: React.FC<{
   const paddedBand = cleanBand.padEnd(16, ' ').slice(0, 16);
 
   return (
-    <div className="flex items-center bg-[#101010] font-airport-matrix select-none border-b border-[#1c1c1c] last:border-b-0 py-0.5 sm:py-1 px-1 sm:px-2">
-      {/* Columna Fecha: 6 casilleros amarillos exactamente como en la foto */}
-      <div className="flex items-center gap-[2px] sm:gap-[3px]">
+    <div className="flex items-center justify-between bg-[#0e0e0e] font-airport-matrix select-none border-b border-[#1c1c1c] last:border-b-0 py-1 sm:py-1.5 px-1.5 sm:px-2.5">
+      {/* Columna Fecha: 6 casilleros en BLANCO */}
+      <div className="flex items-center gap-[2px] sm:gap-[3px] shrink-0">
         {paddedDate.split('').map((char, i) => (
           <div
             key={i}
-            className={`w-[17px] sm:w-[22px] md:w-[24px] h-[24px] sm:h-[29px] md:h-[32px] bg-[#151515] border border-[#242424] rounded-[2px] flex items-center justify-center text-[#e2b740] text-sm sm:text-base md:text-lg font-bold shadow-inner shadow-black relative overflow-hidden transition-transform duration-300 ${
+            className={`w-[18px] sm:w-[22px] md:w-[24px] h-[26px] sm:h-[30px] md:h-[34px] bg-[#161616] border border-[#262626] rounded-[2px] flex items-center justify-center text-white text-sm sm:text-base md:text-lg font-bold shadow-inner shadow-black relative overflow-hidden transition-transform duration-300 ${
               isFlapping ? 'scale-y-0 opacity-40' : 'scale-y-100 opacity-100'
             }`}
           >
@@ -61,17 +58,17 @@ const AirportBoardRow: React.FC<{
         ))}
       </div>
 
-      {/* Casilleros vacíos de separación entre Fecha y Artista (como en la foto de la terminal) */}
-      <div className="flex items-center gap-[2px] sm:gap-[3px] mx-1 sm:mx-1.5">
-        <div className="w-[8px] sm:w-[12px] h-[24px] sm:h-[29px] md:h-[32px] bg-[#121212] border border-[#202020] rounded-[2px]" />
+      {/* Casillero vacío de separación */}
+      <div className="flex items-center gap-[2px] sm:gap-[3px] mx-1 sm:mx-1.5 shrink-0">
+        <div className="w-[8px] sm:w-[12px] h-[26px] sm:h-[30px] md:h-[34px] bg-[#121212] border border-[#202020] rounded-[2px]" />
       </div>
 
-      {/* Columna Artista / Grupo: casilleros amarillos con la misma tipografía DotGothic16 / VT323 */}
-      <div className="flex items-center gap-[2px] sm:gap-[3px] overflow-hidden">
+      {/* Columna Artista / Grupo: casilleros en BLANCO */}
+      <div className="flex items-center gap-[2px] sm:gap-[3px] overflow-hidden shrink-0">
         {paddedBand.split('').map((char, i) => (
           <div
             key={i}
-            className={`w-[15px] sm:w-[20px] md:w-[22px] h-[24px] sm:h-[29px] md:h-[32px] bg-[#151515] border border-[#242424] rounded-[2px] flex items-center justify-center text-[#e2b740] text-sm sm:text-base md:text-lg font-bold shadow-inner shadow-black relative overflow-hidden transition-transform duration-300 ${
+            className={`w-[16px] sm:w-[20px] md:w-[22px] h-[26px] sm:h-[30px] md:h-[34px] bg-[#161616] border border-[#262626] rounded-[2px] flex items-center justify-center text-white text-sm sm:text-base md:text-lg font-bold shadow-inner shadow-black relative overflow-hidden transition-transform duration-300 ${
               isFlapping ? 'scale-y-0 opacity-40' : 'scale-y-100 opacity-100'
             }`}
             style={{ transitionDelay: `${i * 12}ms` }}
@@ -89,31 +86,32 @@ const AirportBoardRow: React.FC<{
 };
 
 /**
- * Cartelera de Aeropuerto idéntica a la foto:
- * - Sin la fila "FECHA ARTISTA STATUS"
- * - Exactamente 5 FILAS de shows
- * - Tipografía y cuadrícula de matriz de puntos idéntica a la imagen
- * - Fondo negro puro, casilleros individuales con borde gris grafito y letras amarillo-ámbar #e2b740
+ * Cartelera de Aeropuerto:
+ * - Color BLANCO en fecha y artista
+ * - Solo dice "NOVEDADES" (sin DEPARTURES)
+ * - Ordenados estrictamente por fecha cronológica (más próximo primero)
+ * - Estirada para alinear con la altura del bloque izquierdo
  */
 export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = [] }) => {
-  // Obtenemos los shows de novedades o los más recientes
+  // Obtenemos los shows de novedades o los shows con fecha futura, ORDENADOS POR FECHA CRONOLÓGICA
   const displayShows = React.useMemo(() => {
     if (!shows || shows.length === 0) return [];
     
+    // Shows marcados explícitamente con Novedad
     const explicitlyMarked = shows.filter(s => s.isNewBadge === true);
-    if (explicitlyMarked.length > 0) {
-      return explicitlyMarked;
-    }
-    
-    const sorted = [...shows].sort((a, b) => {
-      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return timeB - timeA;
+    const pool = explicitlyMarked.length >= 5 ? explicitlyMarked : shows;
+
+    // Ordenar cronológicamente por la fecha del show (la más próxima primero)
+    const sortedByDate = [...pool].sort((a, b) => {
+      const dateA = a.dates && a.dates[0] ? a.dates[0] : '9999-99-99';
+      const dateB = b.dates && b.dates[0] ? b.dates[0] : '9999-99-99';
+      return dateA.localeCompare(dateB);
     });
-    return sorted.slice(0, 15);
+
+    return sortedByDate;
   }, [shows]);
 
-  // Exactamente 5 FILAS de shows como pidió el usuario
+  // Exactamente 5 FILAS de shows
   const ROWS_TO_SHOW = 5;
   const [startIndex, setStartIndex] = useState(0);
   const [isFlapping, setIsFlapping] = useState(false);
@@ -144,22 +142,22 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
   }
 
   return (
-    <div className="relative w-full rounded-2xl bg-[#0a0a0a] border-2 border-[#222222] p-2 sm:p-3 shadow-2xl shadow-black overflow-hidden select-none">
-      {/* Marco superior sutil con indicador de novedades */}
-      <div className="flex items-center justify-between pb-1.5 mb-1 border-b border-[#1f1f1f] px-1 text-zinc-400 font-airport-matrix text-xs">
+    <div className="relative w-full h-full min-h-[290px] sm:min-h-[320px] rounded-2xl bg-[#090a0c] border-2 border-[#202226] p-2.5 sm:p-3.5 shadow-2xl shadow-black overflow-hidden select-none flex flex-col justify-between">
+      {/* Marco superior con solo "NOVEDADES" */}
+      <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-[#1c1e22] px-1 text-zinc-400 font-airport-matrix">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#e2b740] animate-pulse" />
-          <span className="text-[#e2b740] font-bold tracking-widest text-[11px] sm:text-xs">
-            DEPARTURES • NOVEDADES
+          <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
+          <span className="text-white font-black tracking-[0.25em] text-xs sm:text-sm">
+            NOVEDADES
           </span>
         </div>
-        <div className="text-[10px] text-zinc-500 tracking-wider">
-          ROTACIÓN EN VIVO
+        <div className="text-[11px] text-zinc-400 tracking-wider">
+          CARTELERA EN VIVO
         </div>
       </div>
 
-      {/* Contenedor principal con las 5 FILAS exactas, sin filas de títulos de columnas */}
-      <div className="bg-[#0e0e0e] border border-[#1e1e1e] rounded-lg overflow-x-auto overflow-y-hidden shadow-inner flex flex-col justify-center">
+      {/* Contenedor principal con las 5 FILAS exactas, estiradas uniformemente */}
+      <div className="bg-[#0b0c0e] border border-[#1a1c20] rounded-lg overflow-x-auto overflow-y-hidden shadow-inner flex-1 flex flex-col justify-around my-auto">
         {currentRows.map((show, idx) => (
           <AirportBoardRow
             key={`${show.id}-${idx}-${startIndex}`}

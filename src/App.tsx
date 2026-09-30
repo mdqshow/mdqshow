@@ -544,22 +544,24 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
         {/* City Highlight Banner */}
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-rose-950/40 to-slate-900 border border-slate-800 p-6 sm:p-8 shadow-2xl">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch relative z-10">
             {/* Left Column: Text & Venues */}
-            <div className="lg:col-span-7 space-y-4">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-                <span className="block">Recitales y shows</span>
-                <span className="block mt-1">
-                  en{' '}
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-rose-500 to-amber-300">
-                    Mar del Plata
+            <div className="lg:col-span-7 flex flex-col justify-between space-y-4">
+              <div>
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+                  <span className="block">Recitales y shows</span>
+                  <span className="block mt-1">
+                    en{' '}
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-rose-500 to-amber-300">
+                      Mar del Plata
+                    </span>
                   </span>
-                </span>
-              </h1>
+                </h1>
 
-              <p className="text-sm sm:text-base text-slate-300 font-normal leading-relaxed">
-                La agenda más completa con todas las fechas confirmadas en teatros, estadios, clubes y paradores de la ciudad. Comprá tus entradas en boleterías oficiales y plataformas autorizadas.
-              </p>
+                <p className="text-sm sm:text-base text-slate-300 font-normal leading-relaxed mt-3">
+                  La agenda más completa con todas las fechas confirmadas en teatros, estadios, clubes y paradores de la ciudad. Comprá tus entradas en boleterías oficiales y plataformas autorizadas.
+                </p>
+              </div>
 
               {/* Venues quick chips sorted alphabetically (A-Z) */}
               <div className="flex flex-wrap items-center justify-end gap-2 pt-2 text-xs">
@@ -618,7 +620,7 @@ export default function App() {
             </div>
 
             {/* Right Column: Cartelera estilo Aeropuerto (Split-Flap) con Novedades */}
-            <div className="lg:col-span-5 w-full flex items-center justify-center">
+            <div className="lg:col-span-5 w-full flex flex-col justify-stretch">
               <AirportBoardHeader 
                 shows={shows} 
                 onSelectShow={setSelectedShow} 
