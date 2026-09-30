@@ -14,10 +14,14 @@ export interface SponsorAd {
 
 /**
  * Sponsors locales:
- * - Título con giro 3D LETRA POR LETRA despacio, se queda 5 segundos fijo y vuelve a girar.
- * - Ubicación abajo con zoom/latido esporádico (no constante) y reposo.
- * - Tarjeta 100% limpia, sin badges ni textos feos de "sponsor" ni "visitar perfil".
- * - Toda la tarjeta es un enlace directo con clic.
+ * 1. BRUTO:
+ *    - Gira letra por letra despacio en 3D (B - R - U - T - O), se queda 5s quieto.
+ *    - PLAYA GRANDE abajo hace zoom/latido esporádico (no constante) y reposo.
+ * 2. SURF COFFEE:
+ *    - "SURF" entra desde la izquierda y "COFFEE" desde la derecha hasta unirse en el centro.
+ *    - Se quedan quietos, aparece esfumada suavemente la dirección "AVELLANEDA 1387".
+ *    - Luego las palabras se desvanecen saliendo hacia sus respectivos lados antes del nuevo ciclo.
+ * Totalmente desfasadas y diferentes entre sí.
  */
 export const LOCAL_SPONSORS: SponsorAd[] = [
   {
@@ -55,12 +59,13 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   className = '',
   initialOffset = 0
 }) => {
-  // Las publicidades se fijan para la sesión actual
   const topAd = LOCAL_SPONSORS[initialOffset % LOCAL_SPONSORS.length];
   const bottomAd = LOCAL_SPONSORS[(initialOffset + 1) % LOCAL_SPONSORS.length];
 
-  // Render individual card con giro letra por letra y link directo
+  // Render individual card según el sponsor
   const renderAdCard = (ad: SponsorAd, heightClass: string) => {
+    const isSurf = ad.id === 'surfcoffee';
+
     return (
       <a
         href={ad.link}
@@ -77,36 +82,54 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent pointer-events-none" />
 
-        {/* Contenido tipográfico centrado, limpio (sin badge de sponsor) */}
-        <div className="absolute inset-0 p-5 flex flex-col items-center justify-center text-center z-10">
-          <div className="flex flex-col items-center justify-center transition-transform duration-300 group-hover:scale-105">
+        {/* Contenido tipográfico centrado */}
+        <div className="absolute inset-0 p-5 flex flex-col items-center justify-center text-center z-10 overflow-hidden">
+          <div className="flex flex-col items-center justify-center transition-transform duration-300 group-hover:scale-105 w-full">
             
-            {/* Título: Gira letra por letra despacio en 3D, y se queda 5 segundos quieto */}
-            <h3 className={`${ad.titleSizeClass} ${ad.textColor} uppercase font-sans drop-shadow-lg leading-tight select-none`}>
-              {ad.title.split('').map((char, index) => {
-                if (char === ' ') {
-                  return <span key={index} className="inline-block w-3 sm:w-4">&nbsp;</span>;
-                }
-                return (
-                  <span
-                    key={index}
-                    className="animate-sponsor-letter"
-                    style={{
-                      animationDelay: `${index * 0.12}s`
-                    }}
-                  >
-                    {char}
-                  </span>
-                );
-              })}
-            </h3>
-            
-            {/* Ubicación: Zoom rítmico estilo latido esporádico (no constante) y reposo */}
-            <div className="animate-sponsor-location mt-2.5">
-              <p className={`${ad.locationSizeClass} ${ad.subtextColor} uppercase drop-shadow-md`}>
-                {ad.location}
-              </p>
-            </div>
+            {isSurf ? (
+              /* --- SURF COFFEE: SURF entra por izquierda, COFFEE por derecha, dirección esfumada --- */
+              <>
+                <h3 className={`${ad.titleSizeClass} ${ad.textColor} uppercase font-sans drop-shadow-lg leading-tight select-none flex items-center justify-center gap-2 sm:gap-3 flex-wrap`}>
+                  <span className="animate-surf-slide-left">SURF</span>
+                  <span className="animate-coffee-slide-right">COFFEE</span>
+                </h3>
+                
+                <div className="animate-surf-address mt-2.5">
+                  <p className={`${ad.locationSizeClass} ${ad.subtextColor} uppercase drop-shadow-md`}>
+                    {ad.location}
+                  </p>
+                </div>
+              </>
+            ) : (
+              /* --- BRUTO: Gira letra por letra en 3D, y PLAYA GRANDE zoom/latido esporádico --- */
+              <>
+                <h3 className={`${ad.titleSizeClass} ${ad.textColor} uppercase font-sans drop-shadow-lg leading-tight select-none`}>
+                  {ad.title.split('').map((char, index) => {
+                    if (char === ' ') {
+                      return <span key={index} className="inline-block w-3 sm:w-4">&nbsp;</span>;
+                    }
+                    return (
+                      <span
+                        key={index}
+                        className="animate-bruto-letter"
+                        style={{
+                          animationDelay: `${index * 0.12}s`
+                        }}
+                      >
+                        {char}
+                      </span>
+                    );
+                  })}
+                </h3>
+                
+                <div className="animate-bruto-location mt-2.5">
+                  <p className={`${ad.locationSizeClass} ${ad.subtextColor} uppercase drop-shadow-md`}>
+                    {ad.location}
+                  </p>
+                </div>
+              </>
+            )}
+
           </div>
         </div>
       </a>
