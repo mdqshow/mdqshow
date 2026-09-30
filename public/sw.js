@@ -1,5 +1,5 @@
 // Service Worker for MDQSHOW PWA
-const CACHE_NAME = 'mdqshow-v1';
+const CACHE_NAME = 'mdqshow-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

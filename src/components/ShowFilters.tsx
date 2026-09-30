@@ -263,8 +263,8 @@ export const ShowFilters: React.FC<ShowFiltersProps> = ({
         )}
       </div>
 
-      {/* Month Navigation Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs sm:text-sm">
+      {/* Month Navigation Pills - Alineación centrada */}
+      <div className="flex items-center justify-center flex-wrap gap-2 pb-1 text-xs sm:text-sm">
         <div className="flex items-center text-slate-400 font-medium shrink-0 mr-1">
           <Calendar className="w-3.5 h-3.5 mr-1 text-rose-400" />
           <span>Mes:</span>
