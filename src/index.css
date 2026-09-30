@@ -30,3 +30,10 @@
   transition: box-shadow 0.4s ease;
   z-index: 20;
 }
+
+/* Tipografía de panel de vuelos de aeropuerto estilo Solari / Dot-Matrix */
+.font-airport-matrix {
+  font-family: 'DotGothic16', 'VT323', monospace;
+  letter-spacing: 0.12em;
+}
+
