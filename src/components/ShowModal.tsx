@@ -143,7 +143,6 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       setIsCustomPortal(false);
       setTicketUrl('https://articket.com.ar');
       setTicketPriceRange('');
-      setTicketStatus('disponibles');
       setSpotifyUrl('');
       setImage('');
       setImagePosition('top');
