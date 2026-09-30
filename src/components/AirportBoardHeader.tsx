@@ -333,12 +333,12 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
 
   return (
     <div className="relative w-full h-full min-h-[280px] sm:min-h-[310px] rounded-2xl bg-[#090a0c] border-2 border-[#202226] p-2 sm:p-3 shadow-2xl shadow-black overflow-hidden select-none flex flex-col justify-between">
-      {/* Marco superior: solo "NOVEDADES" con el color ámbar vintage original */}
+      {/* Marco superior: "MDQ LINE UP" con el color ámbar vintage original */}
       <div className="flex items-center pb-1.5 mb-1 border-b border-[#1c1e22] px-1 text-zinc-400 font-airport-matrix">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[#e2b740] animate-pulse" />
           <span className="text-[#e2b740] font-black tracking-[0.25em] text-xs sm:text-sm">
-            NOVEDADES
+            MDQ LINE UP
           </span>
         </div>
       </div>
