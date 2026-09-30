@@ -46,166 +46,43 @@ function parseAirportDateParts(dateInput?: string | string[]): { day: string; mo
 }
 
 /**
- * Casilla de split-flap auténtica:
- * - Siempre muestra de forma determinista el caracter correspondiente.
- * - Antes del giro (isFlapping = false): muestra EXACTAMENTE oldChar. NUNCA newChar.
- * - Al arrancar el giro (isFlapping = true):
- *     0 a 200ms: se pliega la aleta superior mostrando oldChar.
- *     a los 200ms: en el punto ciego (pliegue plano), conmuta a newChar.
- *     200ms a 400ms: cae la nueva aleta revelando newChar.
- * - Al terminar el giro (isFlapping = false y ya rotó): muestra newChar fijo.
+ * Tile split-flap 100% determinista sin estados locales frágiles:
+ * - Recibe 'char': el caracter que DEBE mostrarse ahora mismo.
+ * - Recibe 'isFlipping': true si está girando mecánicamente.
+ * - Recibe 'isFolded': true si la aleta está doblada (a 90°, plano ciego vertical).
  */
-const FlipTile: React.FC<{
-  oldChar: string;
-  newChar: string;
-  isFlapping: boolean;
-  hasFlipped: boolean;
+const MechanicalTile: React.FC<{
+  char: string;
+  isFlipping: boolean;
+  isFolded: boolean;
   widthClass: string;
-  delayMs?: number;
-}> = ({ oldChar, newChar, isFlapping, hasFlipped, widthClass, delayMs = 0 }) => {
-  const [showNew, setShowNew] = useState(false);
-
-  useEffect(() => {
-    if (!isFlapping) {
-      setShowNew(hasFlipped);
-      return;
-    }
-
-    // Comienza el giro mostrando oldChar
-    setShowNew(false);
-
-    // Conmuta a newChar exactamente en la mitad del giro mecánico
-    const timer = setTimeout(() => {
-      setShowNew(true);
-    }, delayMs + 220);
-
-    return () => clearTimeout(timer);
-  }, [isFlapping, hasFlipped, delayMs]);
-
-  // Si no está rotando y ya rotó, muestra newChar; de lo contrario muestra oldChar (o showNew a mitad del giro)
-  const charToDisplay = isFlapping 
-    ? (showNew ? newChar : oldChar) 
-    : (hasFlipped ? newChar : oldChar);
-
+}> = ({ char, isFlipping, isFolded, widthClass }) => {
   return (
     <div
-      className={`${widthClass} h-[22px] sm:h-[26px] md:h-[28px] bg-[#151515] border border-[#242424] rounded-[2px] flex items-center justify-center text-white text-xs sm:text-sm md:text-base font-bold shadow-inner shadow-black relative overflow-hidden transition-all duration-350 ease-in-out ${
-        isFlapping && !showNew
+      className={`${widthClass} h-[22px] sm:h-[26px] md:h-[28px] bg-[#151515] border border-[#242424] rounded-[2px] flex items-center justify-center text-white text-xs sm:text-sm md:text-base font-bold shadow-inner shadow-black relative overflow-hidden transition-transform duration-250 ease-in-out ${
+        isFolded
           ? 'rotate-x-90 scale-y-0 opacity-40 shadow-none'
-          : isFlapping && showNew
-          ? 'rotate-x-0 scale-y-100 opacity-100 shadow-inner'
           : 'rotate-x-0 scale-y-100 opacity-100 shadow-inner'
       }`}
       style={{
-        transitionDelay: `${delayMs}ms`,
         transformOrigin: 'center center',
       }}
     >
       {/* Ranura central de división del flap */}
       <div className="absolute inset-x-0 top-1/2 h-[1px] bg-[#090909] z-10 pointer-events-none" />
       <span className="relative z-0 leading-none">
-        {charToDisplay === ' ' ? '\u00A0' : charToDisplay}
+        {char === ' ' ? '\u00A0' : char}
       </span>
     </div>
   );
 };
 
-/**
- * Fila de Cartelera:
- * Mientras está en reposo ('idle'):
- * - Muestra estrictamente el show actual (oldShow).
- * Durante la rotación:
- * - 1º Rota DÍA: Día conmuta a newShow, mientras Mes y Artista siguen mostrando oldShow intacto.
- * - 2º Rota MES: Mes conmuta a newShow, mientras Artista sigue mostrando oldShow intacto.
- * - 3º Rota ARTISTA: Artista conmuta a newShow.
- * Al finalizar:
- * - Toda la fila queda con newShow asentado.
- */
-const AirportBoardRow: React.FC<{
-  currentShow: Show;
-  targetShow: Show;
-  flapPhase: 'idle' | 'day' | 'month' | 'band';
-}> = ({ currentShow, targetShow, flapPhase }) => {
-  const currentEarliestDate = Array.isArray(currentShow.dates) && currentShow.dates.length > 0 
-    ? [...currentShow.dates].sort()[0] 
-    : '';
-  const targetEarliestDate = Array.isArray(targetShow.dates) && targetShow.dates.length > 0 
-    ? [...targetShow.dates].sort()[0] 
-    : '';
-
-  const oldDate = parseAirportDateParts(currentEarliestDate);
-  const newDate = parseAirportDateParts(targetEarliestDate);
-
-  const oldCleanBand = (currentShow.band || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  const newCleanBand = (targetShow.band || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-
-  const oldPaddedBand = oldCleanBand.padEnd(15, ' ').slice(0, 15);
-  const newPaddedBand = newCleanBand.padEnd(15, ' ').slice(0, 15);
-
-  const isDayFlapping = flapPhase === 'day';
-  const hasDayFlipped = flapPhase === 'month' || flapPhase === 'band';
-
-  const isMonthFlapping = flapPhase === 'month';
-  const hasMonthFlipped = flapPhase === 'band';
-
-  const isBandFlapping = flapPhase === 'band';
-  const hasBandFlipped = false;
-
-  return (
-    <div className="flex items-center justify-between w-full bg-[#0e0e0e] font-airport-matrix select-none border-b border-[#1c1c1c] last:border-b-0 py-0.5 sm:py-1 px-1 sm:px-2">
-      {/* Columna Fecha: Día + Separador + Mes */}
-      <div className="flex items-center gap-[2px] shrink-0">
-        {/* 1º: DÍA */}
-        {oldDate.day.split('').map((char, i) => (
-          <FlipTile
-            key={`day-${i}`}
-            oldChar={char}
-            newChar={newDate.day[i] || ' '}
-            isFlapping={isDayFlapping}
-            hasFlipped={hasDayFlipped}
-            widthClass="w-[13px] sm:w-[16px] md:w-[18px]"
-            delayMs={i * 35}
-          />
-        ))}
-
-        <div className="w-[3px] sm:w-[4px]" />
-
-        {/* 2º: MES */}
-        {oldDate.month.split('').map((char, i) => (
-          <FlipTile
-            key={`month-${i}`}
-            oldChar={char}
-            newChar={newDate.month[i] || ' '}
-            isFlapping={isMonthFlapping}
-            hasFlipped={hasMonthFlipped}
-            widthClass="w-[13px] sm:w-[16px] md:w-[18px]"
-            delayMs={i * 35}
-          />
-        ))}
-      </div>
-
-      {/* Separador central */}
-      <div className="flex items-center gap-[2px] mx-0.5 sm:mx-1 shrink-0">
-        <div className="w-[6px] sm:w-[8px] h-[22px] sm:h-[26px] md:h-[28px] bg-[#121212] border border-[#202020] rounded-[2px]" />
-      </div>
-
-      {/* 3º: ARTISTA */}
-      <div className="flex items-center gap-[2px] shrink-0">
-        {oldPaddedBand.split('').map((char, i) => (
-          <FlipTile
-            key={`band-${i}`}
-            oldChar={char}
-            newChar={newPaddedBand[i] || ' '}
-            isFlapping={isBandFlapping}
-            hasFlipped={hasBandFlipped}
-            widthClass="w-[12px] sm:w-[15px] md:w-[17px]"
-            delayMs={i * 25}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
+interface RowState {
+  show: Show;
+  dayFolded: boolean;
+  monthFolded: boolean;
+  bandFolded: boolean;
+}
 
 export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = [] }) => {
   const displayShows = React.useMemo(() => {
@@ -232,15 +109,43 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
 
   const ROWS_TO_SHOW = 5;
 
-  // Estado del show visible actual en cada una de las 5 filas
-  const [currentIndices, setCurrentIndices] = useState<number[]>([0, 1, 2, 3, 4]);
-  // Estado del nuevo show hacia el cual rotará la fila
-  const [targetIndices, setTargetIndices] = useState<number[]>([0, 1, 2, 3, 4]);
+  // Estado explícito e inmutable de cada fila
+  const [rows, setRows] = useState<RowState[]>(() => {
+    return Array.from({ length: ROWS_TO_SHOW }, (_, i) => ({
+      show: displayShows[i % Math.max(displayShows.length, 1)] || {
+        id: `empty-${i}`,
+        band: '',
+        tourName: '',
+        image: '',
+        genre: '',
+        city: 'Mar del Plata',
+        venue: '',
+        venueAddress: '',
+        dates: [],
+        time: '',
+        ticketUrl: '',
+        ticketPortalName: '',
+        ticketPriceRange: '',
+        ticketStatus: 'disponibles',
+        description: '',
+      },
+      dayFolded: false,
+      monthFolded: false,
+      bandFolded: false,
+    }));
+  });
 
-  type FlapPhase = 'idle' | 'day' | 'month' | 'band';
-  const [rowFlapPhases, setRowFlapPhases] = useState<FlapPhase[]>([
-    'idle', 'idle', 'idle', 'idle', 'idle'
-  ]);
+  // Si displayShows cambia o se carga por primera vez
+  useEffect(() => {
+    if (displayShows.length > 0) {
+      setRows((prev) =>
+        prev.map((r, i) => ({
+          ...r,
+          show: r.show.band ? r.show : (displayShows[i % displayShows.length] || r.show),
+        }))
+      );
+    }
+  }, [displayShows]);
 
   useEffect(() => {
     if (displayShows.length <= ROWS_TO_SHOW) return;
@@ -248,88 +153,154 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
     let isCancelled = false;
     const timeouts: NodeJS.Timeout[] = [];
 
-    const DAY_DURATION = 350;
-    const MONTH_DURATION = 350;
-    const BAND_DURATION = 650;
-    const PAUSE_BETWEEN_ROWS = 2000; // 2 segundos constantes entre cada fila
+    // Tiempos exactos de animación (en ms)
+    const FOLD_TIME = 220;   // Tiempo para plegarse a 90°
+    const UNFOLD_TIME = 220; // Tiempo para abrirse a 0° con el nuevo dato
+    const PAUSE_BETWEEN_ROWS = 2000; // 2 segundos constantes entre fila y fila
 
-    let activeRow = 0;
+    // Índices globales de qué show le toca a cada una de las 5 filas
+    const currentPoolIndices = [0, 1, 2, 3, 4];
+    let currentRowToFlip = 0;
 
-    const scheduleNextRow = () => {
+    const animateNextRow = () => {
       if (isCancelled) return;
 
-      const r = activeRow;
+      const r = currentRowToFlip;
+      // Calculamos el siguiente show del pool para esta fila
+      currentPoolIndices[r] = (currentPoolIndices[r] + ROWS_TO_SHOW) % displayShows.length;
+      const nextShow = displayShows[currentPoolIndices[r]];
 
-      // 1. Configuramos el targetIndex SOLO para la fila que va a rotar
-      setTargetIndices((prevTargets) => {
-        const next = [...prevTargets];
-        next[r] = (currentIndices[r] + ROWS_TO_SHOW) % displayShows.length;
-        return next;
-      });
+      const nextDate = parseAirportDateParts(nextShow.dates?.[0]);
+      const nextBand = (nextShow.band || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
-      // 2. Inicia giro del DÍA: mientras tanto, el mes y el artista siguen mostrando el actual
-      setRowFlapPhases((prev) => {
+      // ==========================================
+      // ETAPA 1: DÍA
+      // ==========================================
+      // 1.1 Doblar el DÍA viejo a 90° (se pliega mostrando el día viejo)
+      setRows((prev) => {
         const next = [...prev];
-        next[r] = 'day';
+        next[r] = { ...next[r], dayFolded: true };
         return next;
       });
 
-      // 3. Termina DÍA, inicia giro del MES
+      // 1.2 A los FOLD_TIME (en el punto ciego vertical): actualizamos el DÍA a nextShow y desdoblamos
       timeouts.push(
         setTimeout(() => {
           if (isCancelled) return;
-          setRowFlapPhases((prev) => {
+          setRows((prev) => {
             const next = [...prev];
-            next[r] = 'month';
+            const currentShowCopy = { ...next[r].show };
+            // Cambiamos solo la porción del día en las fechas del show de esa fila
+            const curDate = parseAirportDateParts(currentShowCopy.dates?.[0]);
+            currentShowCopy.dates = [`2026-11-${nextDate.day}`]; // Usamos token con el nuevo día
+            next[r] = {
+              ...next[r],
+              show: {
+                ...currentShowCopy,
+                // Truco limpio: asociamos un objeto show con el día nuevo pero mes y banda viejos
+                _overrideDay: nextDate.day,
+              } as Show & { _overrideDay?: string; _overrideMonth?: string; _overrideBand?: string },
+              dayFolded: false,
+            };
             return next;
           });
-        }, DAY_DURATION)
+        }, FOLD_TIME)
       );
 
-      // 4. Termina MES, inicia giro del ARTISTA
+      // ==========================================
+      // ETAPA 2: MES (empieza al terminar el desdoble del día)
+      // ==========================================
+      const START_MONTH = FOLD_TIME + UNFOLD_TIME + 80;
+
+      // 2.1 Doblar el MES viejo a 90°
       timeouts.push(
         setTimeout(() => {
           if (isCancelled) return;
-          setRowFlapPhases((prev) => {
+          setRows((prev) => {
             const next = [...prev];
-            next[r] = 'band';
+            next[r] = { ...next[r], monthFolded: true };
             return next;
           });
-        }, DAY_DURATION + MONTH_DURATION)
+        }, START_MONTH)
       );
 
-      // 5. Termina ARTISTA: Fila r asienta el nuevo show en currentIndices y vuelve a 'idle'
+      // 2.2 En el punto ciego: actualizamos el MES a nextShow y desdoblamos
       timeouts.push(
         setTimeout(() => {
           if (isCancelled) return;
-          setCurrentIndices((prevCurrent) => {
-            const next = [...prevCurrent];
-            next[r] = (prevCurrent[r] + ROWS_TO_SHOW) % displayShows.length;
-            return next;
-          });
-          setRowFlapPhases((prev) => {
+          setRows((prev) => {
             const next = [...prev];
-            next[r] = 'idle';
+            const currentShowCopy = { ...next[r].show } as any;
+            currentShowCopy._overrideMonth = nextDate.month;
+            next[r] = {
+              ...next[r],
+              show: currentShowCopy,
+              monthFolded: false,
+            };
             return next;
           });
+        }, START_MONTH + FOLD_TIME)
+      );
 
+      // ==========================================
+      // ETAPA 3: ARTISTA (empieza al terminar el desdoble del mes)
+      // ==========================================
+      const START_BAND = START_MONTH + FOLD_TIME + UNFOLD_TIME + 80;
+
+      // 3.1 Doblar el ARTISTA viejo a 90° (todavía muestra el nombre anterior mientras se dobla)
+      timeouts.push(
+        setTimeout(() => {
+          if (isCancelled) return;
+          setRows((prev) => {
+            const next = [...prev];
+            next[r] = { ...next[r], bandFolded: true };
+            return next;
+          });
+        }, START_BAND)
+      );
+
+      // 3.2 En el punto ciego: actualizamos por completo el show al nuevo nextShow y desdoblamos
+      timeouts.push(
+        setTimeout(() => {
+          if (isCancelled) return;
+          setRows((prev) => {
+            const next = [...prev];
+            // Ahora la fila r tiene completa y formalmente el nextShow
+            next[r] = {
+              ...next[r],
+              show: nextShow,
+              bandFolded: false,
+            };
+            return next;
+          });
+        }, START_BAND + FOLD_TIME)
+      );
+
+      // ==========================================
+      // ETAPA 4: FIN DE FILA Y PAUSA DE 2 SEGUNDOS
+      // ==========================================
+      const ROW_CYCLE_COMPLETE = START_BAND + FOLD_TIME + UNFOLD_TIME;
+
+      timeouts.push(
+        setTimeout(() => {
+          if (isCancelled) return;
           // Avanzamos al siguiente renglón (0 -> 1 -> 2 -> 3 -> 4 -> 0...)
-          activeRow = (activeRow + 1) % ROWS_TO_SHOW;
+          currentRowToFlip = (currentRowToFlip + 1) % ROWS_TO_SHOW;
 
-          // PAUSA DE 2 SEGUNDOS antes de que empiece a rotar la siguiente fila
+          // PAUSA EXACTA DE 2 SEGUNDOS antes de que empiece la siguiente fila
           timeouts.push(
             setTimeout(() => {
               if (isCancelled) return;
-              scheduleNextRow();
+              animateNextRow();
             }, PAUSE_BETWEEN_ROWS)
           );
-        }, DAY_DURATION + MONTH_DURATION + BAND_DURATION)
+        }, ROW_CYCLE_COMPLETE)
       );
     };
 
-    // Pausa inicial antes del primer ciclo
+    // Pausa inicial de arranque
     const initialDelay = setTimeout(() => {
-      scheduleNextRow();
+      animateNextRow();
     }, 4000);
     timeouts.push(initialDelay);
 
@@ -337,7 +308,7 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
       isCancelled = true;
       timeouts.forEach(clearTimeout);
     };
-  }, [displayShows.length]);
+  }, [displayShows]);
 
   if (displayShows.length === 0) return null;
 
@@ -355,18 +326,66 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
 
       {/* Contenedor principal con las 5 FILAS exactas */}
       <div className="bg-[#0b0c0e] border border-[#1a1c20] rounded-lg overflow-hidden shadow-inner flex-1 flex flex-col justify-around my-auto">
-        {currentIndices.map((currentIdx, rowPos) => {
-          const currentShow = displayShows[currentIdx % displayShows.length] || displayShows[0];
-          const targetIdx = targetIndices[rowPos];
-          const targetShow = displayShows[targetIdx % displayShows.length] || displayShows[0];
+        {rows.map((rowState, rowPos) => {
+          const { show, dayFolded, monthFolded, bandFolded } = rowState;
+          const showAny = show as any;
+
+          const defaultParts = parseAirportDateParts(show.dates?.[0]);
+          const dayStr = (showAny._overrideDay || defaultParts.day || '  ').slice(0, 2);
+          const monthStr = (showAny._overrideMonth || defaultParts.month || '   ').slice(0, 3);
+          const cleanBand = (show.band || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+          const bandStr = cleanBand.padEnd(15, ' ').slice(0, 15);
 
           return (
-            <AirportBoardRow
+            <div
               key={`row-${rowPos}`}
-              currentShow={currentShow}
-              targetShow={targetShow}
-              flapPhase={rowFlapPhases[rowPos] || 'idle'}
-            />
+              className="flex items-center justify-between w-full bg-[#0e0e0e] font-airport-matrix select-none border-b border-[#1c1c1c] last:border-b-0 py-0.5 sm:py-1 px-1 sm:px-2"
+            >
+              {/* Columna Fecha: Día + Separador + Mes */}
+              <div className="flex items-center gap-[2px] shrink-0">
+                {/* DÍA */}
+                {dayStr.split('').map((char, i) => (
+                  <MechanicalTile
+                    key={`day-${rowPos}-${i}`}
+                    char={char}
+                    isFlipping={dayFolded}
+                    isFolded={dayFolded}
+                    widthClass="w-[13px] sm:w-[16px] md:w-[18px]"
+                  />
+                ))}
+
+                <div className="w-[3px] sm:w-[4px]" />
+
+                {/* MES */}
+                {monthStr.split('').map((char, i) => (
+                  <MechanicalTile
+                    key={`month-${rowPos}-${i}`}
+                    char={char}
+                    isFlipping={monthFolded}
+                    isFolded={monthFolded}
+                    widthClass="w-[13px] sm:w-[16px] md:w-[18px]"
+                  />
+                ))}
+              </div>
+
+              {/* Separador central */}
+              <div className="flex items-center gap-[2px] mx-0.5 sm:mx-1 shrink-0">
+                <div className="w-[6px] sm:w-[8px] h-[22px] sm:h-[26px] md:h-[28px] bg-[#121212] border border-[#202020] rounded-[2px]" />
+              </div>
+
+              {/* ARTISTA */}
+              <div className="flex items-center gap-[2px] shrink-0">
+                {bandStr.split('').map((char, i) => (
+                  <MechanicalTile
+                    key={`band-${rowPos}-${i}`}
+                    char={char}
+                    isFlipping={bandFolded}
+                    isFolded={bandFolded}
+                    widthClass="w-[12px] sm:w-[15px] md:w-[17px]"
+                  />
+                ))}
+              </div>
+            </div>
           );
         })}
       </div>
