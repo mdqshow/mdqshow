@@ -12,9 +12,8 @@ const MONTH_NAMES = [
 ];
 
 /**
- * Función robusta para formatear cualquier fecha en 5 casilleros exactos de aeropuerto:
- * 2 dígitos de DÍA + 3 letras de MES (ej: "20NOV", "07NOV", "15ENE").
- * Soporta formatos ISO (YYYY-MM-DD), formato latino (DD/MM/YYYY o DD-MM-YYYY), o fechas libres.
+ * Función robusta para formatear cualquier fecha en 6 casilleros de aeropuerto:
+ * 2 dígitos de DÍA + 1 espacio + 3 letras de MES (ej: "20 NOV", "07 NOV", "15 ENE").
  */
 function formatAirportDate(dateInput?: string | string[]): string {
   if (!dateInput) return 'PRÓX';
@@ -29,7 +28,7 @@ function formatAirportDate(dateInput?: string | string[]): string {
     const monthNum = parseInt(isoMatch[2], 10);
     const day = isoMatch[3].padStart(2, '0');
     const month = MONTH_NAMES[monthNum - 1] || '---';
-    return `${day}${month}`;
+    return `${day} ${month}`;
   }
 
   // Caso 2: Formato latino DD/MM/YYYY o DD-MM-YYYY (ej: "20/11/2026")
@@ -38,7 +37,7 @@ function formatAirportDate(dateInput?: string | string[]): string {
     const day = latamMatch[1].padStart(2, '0');
     const monthNum = parseInt(latamMatch[2], 10);
     const month = MONTH_NAMES[monthNum - 1] || '---';
-    return `${day}${month}`;
+    return `${day} ${month}`;
   }
 
   // Caso 3: Fallback con objeto Date
@@ -47,52 +46,46 @@ function formatAirportDate(dateInput?: string | string[]): string {
     const d = new Date(parsedTimestamp);
     const day = String(d.getUTCDate()).padStart(2, '0');
     const month = MONTH_NAMES[d.getUTCMonth()] || '---';
-    return `${day}${month}`;
+    return `${day} ${month}`;
   }
 
-  // Fallback si no tiene formato reconocible
-  return clean.toUpperCase().replace(/\s+/g, '').padEnd(5, ' ').slice(0, 5);
+  return clean.toUpperCase().replace(/\s+/g, ' ').padEnd(6, ' ').slice(0, 6);
 }
 
 /**
  * Fila de Cartelera de Aeropuerto:
  * - Color BLANCO en fecha y artista (#ffffff)
- * - 6 casilleros de fecha (2 para día + 1 espacio + 3 para mes, ej: "20 NOV", "07 NOV")
- *   para garantizar legibilidad perfecta y que nunca quede pegado el día al mes
- * - Separador de casillero
- * - Hasta 15 casilleros para el artista
+ * - Giro lento individual y progresivo de aleta mecánica (Split-Flap)
+ * - Cada casilla rota con un leve retardo escalonado característico de las terminales de Solari / Aeropuerto
  */
 const AirportBoardRow: React.FC<{
   dateStr: string;
   band: string;
   isFlapping: boolean;
 }> = ({ dateStr, band, isFlapping }) => {
-  // Aseguramos formato "DD MES" (ej: "20 NOV" o "07 NOV") de 6 caracteres
-  let formattedDisplayDate = dateStr;
-  if (dateStr.length === 5 && !dateStr.includes(' ')) {
-    // Si viene "20NOV" -> "20 NOV"
-    formattedDisplayDate = `${dateStr.slice(0, 2)} ${dateStr.slice(2)}`;
-  }
-  const paddedDate = formattedDisplayDate.padEnd(6, ' ').slice(0, 6).toUpperCase();
-
-  // Limpiamos acentos para respetar el set de caracteres de la terminal de vuelo
+  const paddedDate = dateStr.padEnd(6, ' ').slice(0, 6).toUpperCase();
   const cleanBand = band.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  // Hasta 15 casilleros para el nombre del artista/grupo
   const paddedBand = cleanBand.padEnd(15, ' ').slice(0, 15);
 
   return (
     <div className="flex items-center justify-between w-full bg-[#0e0e0e] font-airport-matrix select-none border-b border-[#1c1c1c] last:border-b-0 py-0.5 sm:py-1 px-1 sm:px-2">
-      {/* Columna Fecha: 6 casilleros en BLANCO (ej: "20 NOV") */}
+      {/* Columna Fecha: 6 casilleros en BLANCO (ej: "20 NOV") con giro individual lento */}
       <div className="flex items-center gap-[2px] shrink-0">
         {paddedDate.split('').map((char, i) => (
           <div
             key={i}
-            className={`w-[13px] sm:w-[16px] md:w-[18px] h-[22px] sm:h-[26px] md:h-[28px] bg-[#151515] border border-[#242424] rounded-[2px] flex items-center justify-center text-white text-xs sm:text-sm md:text-base font-bold shadow-inner shadow-black relative overflow-hidden transition-transform duration-300 ${
-              isFlapping ? 'scale-y-0 opacity-40' : 'scale-y-100 opacity-100'
+            className={`w-[13px] sm:w-[16px] md:w-[18px] h-[22px] sm:h-[26px] md:h-[28px] bg-[#151515] border border-[#242424] rounded-[2px] flex items-center justify-center text-white text-xs sm:text-sm md:text-base font-bold shadow-inner shadow-black relative overflow-hidden transition-all duration-500 ease-in-out ${
+              isFlapping 
+                ? 'rotate-x-90 scale-y-0 opacity-30 shadow-none' 
+                : 'rotate-x-0 scale-y-100 opacity-100 shadow-inner'
             }`}
+            style={{ 
+              transitionDelay: `${i * 35}ms`,
+              transformOrigin: 'center center'
+            }}
           >
             {/* Ranura horizontal divisoria del split-flap */}
-            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-[#0c0c0c] z-10 pointer-events-none" />
+            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-[#090909] z-10 pointer-events-none" />
             <span className="relative z-0 leading-none">
               {char === ' ' ? '\u00A0' : char}
             </span>
@@ -105,18 +98,23 @@ const AirportBoardRow: React.FC<{
         <div className="w-[6px] sm:w-[8px] h-[22px] sm:h-[26px] md:h-[28px] bg-[#121212] border border-[#202020] rounded-[2px]" />
       </div>
 
-      {/* Columna Artista / Grupo: casilleros en BLANCO */}
+      {/* Columna Artista / Grupo: casilleros en BLANCO con giro lento escalonado de izquierda a derecha */}
       <div className="flex items-center gap-[2px] shrink-0">
         {paddedBand.split('').map((char, i) => (
           <div
             key={i}
-            className={`w-[12px] sm:w-[15px] md:w-[17px] h-[22px] sm:h-[26px] md:h-[28px] bg-[#151515] border border-[#242424] rounded-[2px] flex items-center justify-center text-white text-xs sm:text-sm md:text-base font-bold shadow-inner shadow-black relative overflow-hidden transition-transform duration-300 ${
-              isFlapping ? 'scale-y-0 opacity-40' : 'scale-y-100 opacity-100'
+            className={`w-[12px] sm:w-[15px] md:w-[17px] h-[22px] sm:h-[26px] md:h-[28px] bg-[#151515] border border-[#242424] rounded-[2px] flex items-center justify-center text-white text-xs sm:text-sm md:text-base font-bold shadow-inner shadow-black relative overflow-hidden transition-all duration-500 ease-in-out ${
+              isFlapping 
+                ? 'rotate-x-90 scale-y-0 opacity-30 shadow-none' 
+                : 'rotate-x-0 scale-y-100 opacity-100 shadow-inner'
             }`}
-            style={{ transitionDelay: `${i * 12}ms` }}
+            style={{ 
+              transitionDelay: `${150 + i * 25}ms`,
+              transformOrigin: 'center center'
+            }}
           >
             {/* Ranura horizontal divisoria del split-flap */}
-            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-[#0c0c0c] z-10 pointer-events-none" />
+            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-[#090909] z-10 pointer-events-none" />
             <span className="relative z-0 leading-none">
               {char === ' ' ? '\u00A0' : char}
             </span>
@@ -129,21 +127,19 @@ const AirportBoardRow: React.FC<{
 
 /**
  * Cartelera de Aeropuerto:
+ * - Rotación cada 15 SEGUNDOS
+ * - Los renglones cambian DE A UNO en cascada secuencial (renglón 1, luego 2, 3, 4 y 5)
+ * - Giro lento individual y progresivo de las aletas de cada renglón
  * - Color BLANCO en fecha y artista
- * - "NOVEDADES" con el color amarillo/ámbar vintage anterior (#e2b740)
- * - 5 filas ordenadas cronológicamente por la fecha más próxima del recital
- * - Soporte universal para fechas YYYY-MM-DD y arrays de fechas
+ * - "NOVEDADES" con color ámbar (#e2b740)
  */
 export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = [] }) => {
-  // Obtenemos los shows de novedades o los shows con fecha futura, ORDENADOS POR FECHA CRONOLÓGICA
   const displayShows = React.useMemo(() => {
     if (!shows || shows.length === 0) return [];
     
-    // Shows marcados explícitamente con Novedad
     const explicitlyMarked = shows.filter(s => s.isNewBadge === true);
     const pool = explicitlyMarked.length >= 5 ? explicitlyMarked : shows;
 
-    // Helper para obtener la fecha más temprana de un show
     const getShowEarliestDate = (s: Show): string => {
       if (Array.isArray(s.dates) && s.dates.length > 0) {
         return [...s.dates].sort()[0];
@@ -151,7 +147,6 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
       return '9999-99-99';
     };
 
-    // Ordenar cronológicamente por la fecha del show (la más próxima primero)
     const sortedByDate = [...pool].sort((a, b) => {
       const dateA = getShowEarliestDate(a);
       const dateB = getShowEarliestDate(b);
@@ -161,28 +156,59 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
     return sortedByDate;
   }, [shows]);
 
-  // Exactamente 5 FILAS de shows
   const ROWS_TO_SHOW = 5;
   const [startIndex, setStartIndex] = useState(0);
-  const [isFlapping, setIsFlapping] = useState(false);
+
+  // Estado de giro independiente para cada uno de los 5 renglones
+  const [rowFlapping, setRowFlapping] = useState<boolean[]>([false, false, false, false, false]);
 
   useEffect(() => {
     if (displayShows.length <= ROWS_TO_SHOW) return;
 
+    // Rotación principal cada 15 segundos
     const interval = setInterval(() => {
-      setIsFlapping(true);
+      // Secuencia en cascada renglón por renglón con giro lento individual:
+      // Fila 0 gira en t = 0ms
+      // Fila 1 gira en t = 220ms
+      // Fila 2 gira en t = 440ms
+      // Fila 3 gira en t = 660ms
+      // Fila 4 gira en t = 880ms
+      const ROW_STEP_DELAY = 220;
+      const FLAP_DURATION = 550;
+
+      for (let r = 0; r < ROWS_TO_SHOW; r++) {
+        setTimeout(() => {
+          setRowFlapping((prev) => {
+            const next = [...prev];
+            next[r] = true;
+            return next;
+          });
+        }, r * ROW_STEP_DELAY);
+      }
+
+      // En la mitad del giro de la última fila, actualizamos el índice de datos
+      const switchTime = (ROWS_TO_SHOW * ROW_STEP_DELAY) + (FLAP_DURATION / 2);
       setTimeout(() => {
         setStartIndex((prev) => (prev + ROWS_TO_SHOW) % displayShows.length);
-        setIsFlapping(false);
-      }, 350);
-    }, 6000);
+      }, switchTime);
+
+      // Desactivamos el flapping progresivamente a medida que cada renglón revela su nuevo texto
+      for (let r = 0; r < ROWS_TO_SHOW; r++) {
+        setTimeout(() => {
+          setRowFlapping((prev) => {
+            const next = [...prev];
+            next[r] = false;
+            return next;
+          });
+        }, switchTime + (r * ROW_STEP_DELAY));
+      }
+    }, 15000); // 15 SEGUNDOS exactos
 
     return () => clearInterval(interval);
   }, [displayShows.length]);
 
   if (displayShows.length === 0) return null;
 
-  // Calculamos los 5 shows visibles
   const currentRows: Show[] = [];
   for (let i = 0; i < ROWS_TO_SHOW; i++) {
     if (displayShows.length > 0) {
@@ -214,7 +240,7 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
               key={`${show.id}-${idx}-${startIndex}`}
               dateStr={formatAirportDate(earliestDate)}
               band={show.band}
-              isFlapping={isFlapping}
+              isFlapping={rowFlapping[idx] || false}
             />
           );
         })}
