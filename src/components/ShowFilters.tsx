@@ -17,6 +17,7 @@ export const ShowFilters: React.FC<ShowFiltersProps> = ({
   filters,
   onFilterChange,
   onResetFilters,
+  availableVenues = [],
   totalMatches,
   totalShows,
   shows = [],

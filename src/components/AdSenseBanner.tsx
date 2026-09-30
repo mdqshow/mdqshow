@@ -112,7 +112,7 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
 
   // Cuadradito inferior / derecha: desfasado 5 segundos para que NUNCA cambien al mismo tiempo
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     const initialDelay = setTimeout(() => {
       setIsBottomFading(true);
       setTimeout(() => {
