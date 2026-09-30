@@ -54,75 +54,136 @@ function parseAirportDateParts(dateInput?: string | string[]): { day: string; mo
 }
 
 /**
+ * Casillero mecánico de split-flap auténtico:
+ * Conoce el caracter anterior (oldChar) y el nuevo caracter al que transiciona (newChar).
+ * - En la 1ª mitad del giro (0deg -> 90deg), la aleta muestra el caracter viejo saliendo.
+ * - Exactamente en los 90deg (punto ciego vertical), conmuta instantáneamente al caracter nuevo.
+ * - En la 2ª mitad del giro (90deg -> 0deg), la aleta se abre revelando el nuevo caracter.
+ * Esto elimina por completo el salto visual de "muestra un dato antes de girar y otro después".
+ */
+const FlipTile: React.FC<{
+  oldChar: string;
+  newChar: string;
+  isFlapping: boolean;
+  widthClass: string;
+  delayMs?: number;
+}> = ({ oldChar, newChar, isFlapping, widthClass, delayMs = 0 }) => {
+  const [displayedChar, setDisplayedChar] = useState(oldChar);
+  const [isHalfway, setIsHalfway] = useState(false);
+
+  useEffect(() => {
+    if (isFlapping) {
+      // Inicia giro: mostramos el viejo caracter plegándose
+      setIsHalfway(false);
+      setDisplayedChar(oldChar);
+
+      // A la mitad del giro mecánico (~220ms), cambiamos la letra por la nueva
+      const halfTimer = setTimeout(() => {
+        setIsHalfway(true);
+        setDisplayedChar(newChar);
+      }, delayMs + 200);
+
+      // Al completar el giro, se restablece
+      const endTimer = setTimeout(() => {
+        setIsHalfway(false);
+        setDisplayedChar(newChar);
+      }, delayMs + 450);
+
+      return () => {
+        clearTimeout(halfTimer);
+        clearTimeout(endTimer);
+      };
+    } else {
+      setDisplayedChar(newChar);
+      setIsHalfway(false);
+    }
+  }, [isFlapping, oldChar, newChar, delayMs]);
+
+  return (
+    <div
+      className={`${widthClass} h-[22px] sm:h-[26px] md:h-[28px] bg-[#151515] border border-[#242424] rounded-[2px] flex items-center justify-center text-white text-xs sm:text-sm md:text-base font-bold shadow-inner shadow-black relative overflow-hidden transition-all duration-400 ease-in-out ${
+        isFlapping && isHalfway
+          ? 'rotate-x-0 scale-y-100 opacity-100'
+          : isFlapping
+          ? 'rotate-x-90 scale-y-0 opacity-40 shadow-none'
+          : 'rotate-x-0 scale-y-100 opacity-100 shadow-inner'
+      }`}
+      style={{
+        transitionDelay: `${delayMs}ms`,
+        transformOrigin: 'center center',
+      }}
+    >
+      {/* Ranura divisoria horizontal central de la aleta */}
+      <div className="absolute inset-x-0 top-1/2 h-[1px] bg-[#090909] z-10 pointer-events-none" />
+      <span className="relative z-0 leading-none">
+        {displayedChar === ' ' ? '\u00A0' : displayedChar}
+      </span>
+    </div>
+  );
+};
+
+/**
  * Fila de Cartelera de Aeropuerto:
  * - Color BLANCO en fecha y artista (#ffffff)
- * - Giro mecánico individual en 3 etapas:
+ * - Transición sincronizada entre oldShow y newShow:
  *   1º Gira el DÍA (2 casillas)
  *   2º Gira el MES (3 casillas)
  *   3º Gira el ARTISTA (hasta 15 casillas)
  */
 const AirportBoardRow: React.FC<{
-  show: Show;
-  flapPhase: 'idle' | 'day' | 'month' | 'band' | 'all';
-}> = ({ show, flapPhase }) => {
-  const earliestDate = Array.isArray(show.dates) && show.dates.length > 0 
-    ? [...show.dates].sort()[0] 
+  currentShow: Show;
+  targetShow: Show;
+  flapPhase: 'idle' | 'day' | 'month' | 'band';
+}> = ({ currentShow, targetShow, flapPhase }) => {
+  const currentEarliestDate = Array.isArray(currentShow.dates) && currentShow.dates.length > 0 
+    ? [...currentShow.dates].sort()[0] 
     : '';
-  const { day, month } = parseAirportDateParts(earliestDate);
-  const cleanBand = (show.band || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  const paddedBand = cleanBand.padEnd(15, ' ').slice(0, 15);
+  const targetEarliestDate = Array.isArray(targetShow.dates) && targetShow.dates.length > 0 
+    ? [...targetShow.dates].sort()[0] 
+    : '';
 
-  const isDayFlapping = flapPhase === 'day' || flapPhase === 'all';
-  const isMonthFlapping = flapPhase === 'month' || flapPhase === 'all';
-  const isBandFlapping = flapPhase === 'band' || flapPhase === 'all';
+  const oldDate = parseAirportDateParts(currentEarliestDate);
+  const newDate = parseAirportDateParts(targetEarliestDate);
+
+  const oldCleanBand = (currentShow.band || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const newCleanBand = (targetShow.band || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+
+  const oldPaddedBand = oldCleanBand.padEnd(15, ' ').slice(0, 15);
+  const newPaddedBand = newCleanBand.padEnd(15, ' ').slice(0, 15);
+
+  const isDayFlapping = flapPhase === 'day';
+  const isMonthFlapping = flapPhase === 'month';
+  const isBandFlapping = flapPhase === 'band';
 
   return (
     <div className="flex items-center justify-between w-full bg-[#0e0e0e] font-airport-matrix select-none border-b border-[#1c1c1c] last:border-b-0 py-0.5 sm:py-1 px-1 sm:px-2">
       {/* Columna Fecha: Día + Separador sutil + Mes */}
       <div className="flex items-center gap-[2px] shrink-0">
-        {/* 1º: DÍA (2 casilleros que rotan primero) */}
-        {day.split('').map((char, i) => (
-          <div
+        {/* 1º: DÍA (2 casilleros) */}
+        {oldDate.day.split('').map((char, i) => (
+          <FlipTile
             key={`day-${i}`}
-            className={`w-[13px] sm:w-[16px] md:w-[18px] h-[22px] sm:h-[26px] md:h-[28px] bg-[#151515] border border-[#242424] rounded-[2px] flex items-center justify-center text-white text-xs sm:text-sm md:text-base font-bold shadow-inner shadow-black relative overflow-hidden transition-all duration-350 ease-in-out ${
-              isDayFlapping 
-                ? 'rotate-x-90 scale-y-0 opacity-25 shadow-none' 
-                : 'rotate-x-0 scale-y-100 opacity-100 shadow-inner'
-            }`}
-            style={{ 
-              transitionDelay: `${i * 35}ms`,
-              transformOrigin: 'center center'
-            }}
-          >
-            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-[#090909] z-10 pointer-events-none" />
-            <span className="relative z-0 leading-none">
-              {char}
-            </span>
-          </div>
+            oldChar={char}
+            newChar={newDate.day[i] || ' '}
+            isFlapping={isDayFlapping}
+            widthClass="w-[13px] sm:w-[16px] md:w-[18px]"
+            delayMs={i * 35}
+          />
         ))}
 
-        {/* Separador entre día y mes */}
+        {/* Separador sutil entre día y mes */}
         <div className="w-[3px] sm:w-[4px]" />
 
-        {/* 2º: MES (3 casilleros que rotan a continuación) */}
-        {month.split('').map((char, i) => (
-          <div
+        {/* 2º: MES (3 casilleros) */}
+        {oldDate.month.split('').map((char, i) => (
+          <FlipTile
             key={`month-${i}`}
-            className={`w-[13px] sm:w-[16px] md:w-[18px] h-[22px] sm:h-[26px] md:h-[28px] bg-[#151515] border border-[#242424] rounded-[2px] flex items-center justify-center text-white text-xs sm:text-sm md:text-base font-bold shadow-inner shadow-black relative overflow-hidden transition-all duration-350 ease-in-out ${
-              isMonthFlapping 
-                ? 'rotate-x-90 scale-y-0 opacity-25 shadow-none' 
-                : 'rotate-x-0 scale-y-100 opacity-100 shadow-inner'
-            }`}
-            style={{ 
-              transitionDelay: `${i * 35}ms`,
-              transformOrigin: 'center center'
-            }}
-          >
-            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-[#090909] z-10 pointer-events-none" />
-            <span className="relative z-0 leading-none">
-              {char}
-            </span>
-          </div>
+            oldChar={char}
+            newChar={newDate.month[i] || ' '}
+            isFlapping={isMonthFlapping}
+            widthClass="w-[13px] sm:w-[16px] md:w-[18px]"
+            delayMs={i * 35}
+          />
         ))}
       </div>
 
@@ -131,26 +192,17 @@ const AirportBoardRow: React.FC<{
         <div className="w-[6px] sm:w-[8px] h-[22px] sm:h-[26px] md:h-[28px] bg-[#121212] border border-[#202020] rounded-[2px]" />
       </div>
 
-      {/* 3º: ARTISTA (rota en tercer lugar, tras el día y el mes) */}
+      {/* 3º: ARTISTA (hasta 15 casilleros) */}
       <div className="flex items-center gap-[2px] shrink-0">
-        {paddedBand.split('').map((char, i) => (
-          <div
+        {oldPaddedBand.split('').map((char, i) => (
+          <FlipTile
             key={`band-${i}`}
-            className={`w-[12px] sm:w-[15px] md:w-[17px] h-[22px] sm:h-[26px] md:h-[28px] bg-[#151515] border border-[#242424] rounded-[2px] flex items-center justify-center text-white text-xs sm:text-sm md:text-base font-bold shadow-inner shadow-black relative overflow-hidden transition-all duration-350 ease-in-out ${
-              isBandFlapping 
-                ? 'rotate-x-90 scale-y-0 opacity-25 shadow-none' 
-                : 'rotate-x-0 scale-y-100 opacity-100 shadow-inner'
-            }`}
-            style={{ 
-              transitionDelay: `${i * 25}ms`,
-              transformOrigin: 'center center'
-            }}
-          >
-            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-[#090909] z-10 pointer-events-none" />
-            <span className="relative z-0 leading-none">
-              {char === ' ' ? '\u00A0' : char}
-            </span>
-          </div>
+            oldChar={char}
+            newChar={newPaddedBand[i] || ' '}
+            isFlapping={isBandFlapping}
+            widthClass="w-[12px] sm:w-[15px] md:w-[17px]"
+            delayMs={i * 25}
+          />
         ))}
       </div>
     </div>
@@ -159,10 +211,10 @@ const AirportBoardRow: React.FC<{
 
 /**
  * Cartelera de Aeropuerto:
- * - Los 5 primeros recitales quedan quietos 10 SEGUNDOS completos para una lectura tranquila.
- * - Luego comienza la rotación: cambia primero la Fila 0 (Día -> Mes -> Artista).
- * - Entre fila y fila pasan exactamente 2 SEGUNDOS de pausa quieta, evitando el efecto de cambio continuo.
- * - Al terminar las 5 filas, vuelve a descansar 10 segundos antes de la siguiente tanda.
+ * - Cadencia continua: entre fila y fila siempre hay exactamente 2 SEGUNDOS de pausa quieta.
+ *   Incluso tras terminar de rotar la Fila 5: pasan 2 segundos y comienza a rotar la Fila 1.
+ * - Cada casilla rota con su caracter original y conmuta mecánicamente al nuevo en el giro.
+ * - Secuencia fija por fila: Día -> Mes -> Artista.
  */
 export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = [] }) => {
   const displayShows = React.useMemo(() => {
@@ -189,11 +241,13 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
 
   const ROWS_TO_SHOW = 5;
 
-  // Cada renglón mantiene su propio índice en el array general de shows
-  const [rowShowIndices, setRowShowIndices] = useState<number[]>([0, 1, 2, 3, 4]);
+  // Estado del show actual visible en cada fila
+  const [currentIndices, setCurrentIndices] = useState<number[]>([0, 1, 2, 3, 4]);
+  // Estado del show objetivo (hacia el cual está girando cada fila)
+  const [targetIndices, setTargetIndices] = useState<number[]>([0, 1, 2, 3, 4]);
 
-  // Fase de animación para cada una de las 5 filas
-  type FlapPhase = 'idle' | 'day' | 'month' | 'band' | 'all';
+  // Fase de animación para cada fila
+  type FlapPhase = 'idle' | 'day' | 'month' | 'band';
   const [rowFlapPhases, setRowFlapPhases] = useState<FlapPhase[]>([
     'idle', 'idle', 'idle', 'idle', 'idle'
   ]);
@@ -204,98 +258,95 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
     let isCancelled = false;
     const timeouts: NodeJS.Timeout[] = [];
 
-    // Duraciones de giro para cada sub-etapa
-    const DAY_DURATION = 350;
-    const MONTH_DURATION = 350;
-    const BAND_DURATION = 550;
-    const ROW_ANIMATION_TIME = DAY_DURATION + MONTH_DURATION + BAND_DURATION; // ~1250ms
-    const PAUSE_BETWEEN_ROWS = 2000; // 2 SEGUNDOS exactos entre fila y fila
-    const PAUSE_FULL_BOARD = 10000;  // 10 SEGUNDOS de quietud para leer las 5 filas completas
+    // Duración de cada fase en milisegundos
+    const DAY_DURATION = 380;
+    const MONTH_DURATION = 380;
+    const BAND_DURATION = 580;
+    const ROW_ANIMATION_TOTAL = DAY_DURATION + MONTH_DURATION + BAND_DURATION; // ~1340ms
+    const PAUSE_BETWEEN_ROWS = 2000; // Exactamente 2 SEGUNDOS entre fila y fila en todo momento
 
-    // Función que corre un ciclo completo: 10s de espera inicial y luego fila por fila con 2s entre cada una
-    const runCycle = () => {
+    // Puntero de fila actual a rotar (0, 1, 2, 3, 4, y luego 0 otra vez tras 2 segundos)
+    let activeRow = 0;
+
+    const scheduleNextRow = () => {
       if (isCancelled) return;
 
-      // Esperar los 10 segundos de quietud inicial antes de empezar a girar
-      const startTimer = setTimeout(() => {
-        if (isCancelled) return;
+      const r = activeRow;
 
-        // Iterar las 5 filas secuencialmente con 2 segundos de pausa entre cada una
-        for (let r = 0; r < ROWS_TO_SHOW; r++) {
-          const rowStartTime = r * (ROW_ANIMATION_TIME + PAUSE_BETWEEN_ROWS);
+      // Determinamos cuál es el nuevo show que ocupará la fila r
+      setTargetIndices((prevTargets) => {
+        const next = [...prevTargets];
+        // Avanzamos al siguiente show disponible en el pool
+        next[r] = (prevTargets[r] + ROWS_TO_SHOW) % displayShows.length;
+        return next;
+      });
 
-          // 1. Inicia giro del DÍA
+      // 1. Inicia giro del DÍA
+      setRowFlapPhases((prev) => {
+        const next = [...prev];
+        next[r] = 'day';
+        return next;
+      });
+
+      // 2. Termina DÍA, inicia giro del MES
+      timeouts.push(
+        setTimeout(() => {
+          if (isCancelled) return;
+          setRowFlapPhases((prev) => {
+            const next = [...prev];
+            next[r] = 'month';
+            return next;
+          });
+        }, DAY_DURATION)
+      );
+
+      // 3. Termina MES, inicia giro del ARTISTA
+      timeouts.push(
+        setTimeout(() => {
+          if (isCancelled) return;
+          setRowFlapPhases((prev) => {
+            const next = [...prev];
+            next[r] = 'band';
+            return next;
+          });
+        }, DAY_DURATION + MONTH_DURATION)
+      );
+
+      // 4. Termina ARTISTA: Fila r concluye su rotación y se asienta
+      timeouts.push(
+        setTimeout(() => {
+          if (isCancelled) return;
+          // Asentamos el nuevo show como el actual
+          setCurrentIndices((prevCurrent) => {
+            const next = [...prevCurrent];
+            next[r] = (prevCurrent[r] + ROWS_TO_SHOW) % displayShows.length;
+            return next;
+          });
+          setRowFlapPhases((prev) => {
+            const next = [...prev];
+            next[r] = 'idle';
+            return next;
+          });
+
+          // Avanzamos al siguiente renglón (0 -> 1 -> 2 -> 3 -> 4 -> 0...)
+          activeRow = (activeRow + 1) % ROWS_TO_SHOW;
+
+          // PAUSA DE EXACTAMENTE 2 SEGUNDOS antes de que empiece a rotar la siguiente fila
           timeouts.push(
             setTimeout(() => {
               if (isCancelled) return;
-              setRowFlapPhases((prev) => {
-                const next = [...prev];
-                next[r] = 'day';
-                return next;
-              });
-            }, rowStartTime)
+              scheduleNextRow();
+            }, PAUSE_BETWEEN_ROWS)
           );
-
-          // 2. Termina DÍA, inicia giro del MES
-          timeouts.push(
-            setTimeout(() => {
-              if (isCancelled) return;
-              setRowFlapPhases((prev) => {
-                const next = [...prev];
-                next[r] = 'month';
-                return next;
-              });
-            }, rowStartTime + DAY_DURATION)
-          );
-
-          // 3. Termina MES, inicia giro del ARTISTA (actualizamos datos de esa fila)
-          timeouts.push(
-            setTimeout(() => {
-              if (isCancelled) return;
-              setRowShowIndices((prev) => {
-                const next = [...prev];
-                next[r] = (next[r] + ROWS_TO_SHOW) % displayShows.length;
-                return next;
-              });
-              setRowFlapPhases((prev) => {
-                const next = [...prev];
-                next[r] = 'band';
-                return next;
-              });
-            }, rowStartTime + DAY_DURATION + MONTH_DURATION)
-          );
-
-          // 4. Termina ARTISTA: Fila r queda en reposo ('idle')
-          // Aquí arranca la pausa quieta de 2 segundos antes de que le toque a la siguiente fila
-          timeouts.push(
-            setTimeout(() => {
-              if (isCancelled) return;
-              setRowFlapPhases((prev) => {
-                const next = [...prev];
-                next[r] = 'idle';
-                return next;
-              });
-            }, rowStartTime + ROW_ANIMATION_TIME)
-          );
-        }
-
-        // Tiempo total de animación de las 5 filas + pausas entre ellas
-        const totalAnimationDuration = (ROWS_TO_SHOW - 1) * (ROW_ANIMATION_TIME + PAUSE_BETWEEN_ROWS) + ROW_ANIMATION_TIME;
-
-        // Al finalizar la 5ª fila, programamos el siguiente ciclo (que volverá a esperar 10 segundos)
-        timeouts.push(
-          setTimeout(() => {
-            if (isCancelled) return;
-            runCycle();
-          }, totalAnimationDuration)
-        );
-
-      }, PAUSE_FULL_BOARD); // 10 segundos iniciales
-
-      timeouts.push(startTimer);
+        }, ROW_ANIMATION_TOTAL)
+      );
     };
 
-    runCycle();
+    // Al inicio, dejamos una lectura previa y luego arranca el ciclo continuo con pausa de 2s
+    const initialDelay = setTimeout(() => {
+      scheduleNextRow();
+    }, 6000);
+    timeouts.push(initialDelay);
 
     return () => {
       isCancelled = true;
@@ -319,12 +370,16 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
 
       {/* Contenedor principal con las 5 FILAS exactas */}
       <div className="bg-[#0b0c0e] border border-[#1a1c20] rounded-lg overflow-hidden shadow-inner flex-1 flex flex-col justify-around my-auto">
-        {rowShowIndices.map((showIndex, rowPos) => {
-          const show = displayShows[showIndex % displayShows.length] || displayShows[0];
+        {currentIndices.map((showIndex, rowPos) => {
+          const currentShow = displayShows[showIndex % displayShows.length] || displayShows[0];
+          const targetIndex = targetIndices[rowPos];
+          const targetShow = displayShows[targetIndex % displayShows.length] || displayShows[0];
+
           return (
             <AirportBoardRow
-              key={`row-${rowPos}-${show.id}`}
-              show={show}
+              key={`row-${rowPos}`}
+              currentShow={currentShow}
+              targetShow={targetShow}
               flapPhase={rowFlapPhases[rowPos] || 'idle'}
             />
           );
