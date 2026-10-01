@@ -583,11 +583,11 @@ export default function App() {
                       'Arena Mar del Plata',
                       'Auditorium',
                       'Bendu Arena',
-                      'Once Unidos',
+                      'Bruto',
+                      'Mute',
                       'Plaza de la Música',
                       'Polideportivo',
                       'Radio City',
-                      'Teatro Colón',
                       'Teatro Tronador',
                       'Vorterix'
                     ].map((venueShort) => {
@@ -632,7 +632,7 @@ export default function App() {
                       'Arena Mar del Plata',
                       'Auditorium',
                       'Bendu Arena',
-                      'Once Unidos',
+                      'Bruto',
                     ].map((venueShort) => {
                       const isActive = filters.venue !== 'all' && filters.venue.toLowerCase().includes(venueShort.toLowerCase());
                       return (
@@ -667,10 +667,10 @@ export default function App() {
                   {/* Renglón 2: Resto de los lugares centrado respecto al renglón superior */}
                   <div className="flex flex-wrap items-center justify-center gap-2 w-full">
                     {[
+                      'Mute',
                       'Plaza de la Música',
                       'Polideportivo',
                       'Radio City',
-                      'Teatro Colón',
                       'Teatro Tronador',
                       'Vorterix'
                     ].map((venueShort) => {

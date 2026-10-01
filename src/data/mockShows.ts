@@ -379,22 +379,34 @@ export const PRESET_VENUES: PresetVenue[] = [
     ticketUrl: 'https://www.allaccess.com.ar'
   },
   { 
+    name: 'Auditorium (Centro Provincial de las Artes)', 
+    address: 'Av. Patricio Peralta Ramos 2280', 
+    defaultTicketPortal: 'Plateanet',
+    ticketUrl: 'https://www.plateanet.com'
+  },
+  { 
     name: 'Bendu Arena', 
     address: 'Av. Juan B. Justo y Av. de los Trabajadores', 
     defaultTicketPortal: 'Ticketek',
     ticketUrl: 'https://www.ticketek.com.ar'
   },
   { 
-    name: 'Once Unidos', 
-    address: 'Falkner y Belisario Roldán', 
-    defaultTicketPortal: 'Articket',
-    ticketUrl: 'https://www.articket.com.ar'
+    name: 'Bruto Playa Grande', 
+    address: 'Playa Grande', 
+    defaultTicketPortal: 'Ticketek',
+    ticketUrl: 'https://www.ticketek.com.ar'
   },
   { 
     name: 'Estadio José María Minella', 
     address: 'Av. Pedro Luro y Canosa', 
     defaultTicketPortal: 'Ticketek',
     ticketUrl: 'https://www.ticketek.com.ar'
+  },
+  { 
+    name: 'Mute Club de Mar', 
+    address: 'Ruta 11, Paraje Alfar', 
+    defaultTicketPortal: 'Passline',
+    ticketUrl: 'https://www.passline.com'
   },
   { 
     name: 'Plaza de la Música Mar del Plata', 
@@ -407,18 +419,6 @@ export const PRESET_VENUES: PresetVenue[] = [
     address: 'Av. Juan B. Justo y España', 
     defaultTicketPortal: 'Ticketek',
     ticketUrl: 'https://www.ticketek.com.ar'
-  },
-  { 
-    name: 'Teatro Auditorium (Centro Provincial de las Artes)', 
-    address: 'Av. Patricio Peralta Ramos 2280', 
-    defaultTicketPortal: 'Plateanet',
-    ticketUrl: 'https://www.plateanet.com'
-  },
-  { 
-    name: 'Teatro Colón Mar del Plata', 
-    address: 'Hipólito Yrigoyen 1665', 
-    defaultTicketPortal: 'Boletería del Teatro',
-    ticketUrl: 'https://www.mardelplata.gob.ar'
   },
   { 
     name: 'Teatro Radio City + Roxy + Melany', 
