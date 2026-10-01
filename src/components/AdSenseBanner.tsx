@@ -120,30 +120,66 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   className = '',
   initialOffset = 0,
 }) => {
-  // Rotación suave de los 7 espacios cada 10 segundos con transición de esfumado
-  const [rotationIndex, setRotationIndex] = useState(initialOffset);
-  const [isFading, setIsFading] = useState(false);
+  // Rotación desfasada independiente para cada columna (izq y der)
+  // Tarjeta Izquierda (columna 1): arranca en initialOffset
+  const [leftIndex, setLeftIndex] = useState(initialOffset % VENUE_SPONSORS.length);
+  const [isLeftFading, setIsLeftFading] = useState(false);
 
+  // Tarjeta Derecha (columna 2): arranca desfasada respecto a la izquierda
+  const [rightIndex, setRightIndex] = useState((initialOffset + 1) % VENUE_SPONSORS.length);
+  const [isRightFading, setIsRightFading] = useState(false);
+
+  // Ciclo para la tarjeta IZQUIERDA: cambia cada 10 segundos
   useEffect(() => {
-    const interval = setInterval(() => {
-      // Inicia el esfumado suave (fade-out)
-      setIsFading(true);
+    const leftInterval = setInterval(() => {
+      setIsLeftFading(true);
       setTimeout(() => {
-        setRotationIndex((prev) => (prev + 2) % VENUE_SPONSORS.length);
-        // Retorna a visible con la nueva sala (fade-in)
-        setIsFading(false);
-      }, 500); // 500ms para esfumar
-    }, 10000); // Cada 10 segundos
+        setLeftIndex((prev) => {
+          // Asegura avanzar y no coincidir con el que está en la derecha
+          let next = (prev + 2) % VENUE_SPONSORS.length;
+          return next;
+        });
+        setIsLeftFading(false);
+      }, 500);
+    }, 10000);
 
-    return () => clearInterval(interval);
+    return () => clearInterval(leftInterval);
   }, []);
 
-  // Seleccionamos los dos lugares que se muestran lado a lado en este ciclo
-  const firstAd = VENUE_SPONSORS[rotationIndex % VENUE_SPONSORS.length];
-  const secondAd = VENUE_SPONSORS[(rotationIndex + 1) % VENUE_SPONSORS.length];
+  // Ciclo para la tarjeta DERECHA: desfasado 5 segundos (a mitad de tiempo del izquierdo)
+  useEffect(() => {
+    let rightInterval: NodeJS.Timeout;
+    // Delay inicial de 5 segundos para que no cambien nunca juntas
+    const timeout = setTimeout(() => {
+      // Primer cambio de la derecha
+      setIsRightFading(true);
+      setTimeout(() => {
+        setRightIndex((prev) => (prev + 2) % VENUE_SPONSORS.length);
+        setIsRightFading(false);
+      }, 500);
+
+      // Intervalo recurrente cada 10 segundos a partir de ese offset
+      rightInterval = setInterval(() => {
+        setIsRightFading(true);
+        setTimeout(() => {
+          setRightIndex((prev) => (prev + 2) % VENUE_SPONSORS.length);
+          setIsRightFading(false);
+        }, 500);
+      }, 10000);
+    }, 5000);
+
+    return () => {
+      clearTimeout(timeout);
+      if (rightInterval) clearInterval(rightInterval);
+    };
+  }, []);
+
+  // Seleccionamos los dos lugares que se muestran en este ciclo
+  const firstAd = VENUE_SPONSORS[leftIndex % VENUE_SPONSORS.length];
+  const secondAd = VENUE_SPONSORS[rightIndex % VENUE_SPONSORS.length];
 
   // Render individual card con nombre en renglón 1 y dirección en renglón 2
-  const renderVenueCard = (venue: SponsorVenueAd, heightClass: string) => {
+  const renderVenueCard = (venue: SponsorVenueAd, heightClass: string, isFading: boolean) => {
     return (
       <a
         href={venue.link}
@@ -273,8 +309,8 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
       className={`w-full my-6 ${className}`}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {renderVenueCard(firstAd, 'h-28 sm:h-32')}
-        {renderVenueCard(secondAd, 'h-28 sm:h-32')}
+        {renderVenueCard(firstAd, 'h-28 sm:h-32', isLeftFading)}
+        {renderVenueCard(secondAd, 'h-28 sm:h-32', isRightFading)}
       </div>
     </aside>
   );
