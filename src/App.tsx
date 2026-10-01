@@ -25,7 +25,9 @@ import { HeroShowcase } from './components/HeroShowcase';
 import { AirportBoardHeader } from './components/AirportBoardHeader';
 import { 
   subscribeToMetrics, 
+  subscribeToBannerMetrics,
   ShowMetrics, 
+  BannerMetrics,
   trackFavoriteEvent 
 } from './services/metricsService';
 import { 
@@ -173,13 +175,20 @@ export default function App() {
 
   // Métricas en tiempo real de Firebase
   const [metricsMap, setMetricsMap] = useState<Record<string, ShowMetrics>>({});
+  const [bannerMetricsMap, setBannerMetricsMap] = useState<Record<string, BannerMetrics>>({});
   const [isAdminMetricsOpen, setIsAdminMetricsOpen] = useState(false);
 
   useEffect(() => {
     const unsubMetrics = subscribeToMetrics((map) => {
       setMetricsMap(map);
     });
-    return () => unsubMetrics();
+    const unsubBannerMetrics = subscribeToBannerMetrics((bMap) => {
+      setBannerMetricsMap(bMap);
+    });
+    return () => {
+      unsubMetrics();
+      unsubBannerMetrics();
+    };
   }, []);
 
   // Suscriptores para KPIs del Admin
@@ -971,6 +980,7 @@ export default function App() {
         onClose={() => setIsAdminMetricsOpen(false)}
         shows={shows}
         metricsMap={metricsMap}
+        bannerMetricsMap={bannerMetricsMap}
         subscribers={subscribers}
       />
 

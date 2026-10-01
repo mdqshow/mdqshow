@@ -946,11 +946,8 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                   className="w-4 h-4 text-amber-500 rounded bg-slate-900 border-slate-700 focus:ring-amber-500 cursor-pointer"
                 />
                 <div>
-                  <span className="text-xs font-semibold text-slate-200 block">
-                    Mostrar en NOVEDADES (Banner superior del sitio)
-                  </span>
-                  <span className="text-[11px] text-slate-400 block">
-                    Aparece entre los shows que rotan en el Head principal de novedades.
+                  <span className="text-xs font-bold text-slate-200 block uppercase tracking-wide">
+                    MDQ LINE UP
                   </span>
                 </div>
               </label>
@@ -963,11 +960,8 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                   className="w-4 h-4 text-rose-600 rounded bg-slate-900 border-slate-700 focus:ring-rose-500 cursor-pointer"
                 />
                 <div>
-                  <span className="text-xs font-semibold text-slate-200 block">
-                    Show Destacado Estrella (Popup de bienvenida inicial)
-                  </span>
-                  <span className="text-[11px] text-slate-400 block">
-                    Se abre automáticamente en el popup promocional para los visitantes.
+                  <span className="text-xs font-bold text-slate-200 block uppercase tracking-wide">
+                    MDQ POP UP
                   </span>
                 </div>
               </label>

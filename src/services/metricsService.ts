@@ -155,3 +155,127 @@ export async function trackFavoriteEvent(showId: string, bandName?: string, delt
     console.error('Error registrando favorite event en Firestore:', error);
   }
 }
+
+export interface BannerMetrics {
+  venueId: string;
+  venueName: string;
+  venueAddress?: string;
+  impressions: number;
+  clicks: number;
+  lastImpressionAt?: string;
+}
+
+const BANNER_METRICS_COLLECTION = 'banner_metrics';
+const STORAGE_KEY_BANNER_METRICS = 'mdqshow_banner_metrics_cache_v1';
+
+/**
+ * Escucha en tiempo real las impresiones/publicaciones de cada banner
+ */
+export function subscribeToBannerMetrics(
+  onUpdate: (bannerMetricsMap: Record<string, BannerMetrics>) => void
+): () => void {
+  const colRef = collection(db, BANNER_METRICS_COLLECTION);
+
+  try {
+    const cached = localStorage.getItem(STORAGE_KEY_BANNER_METRICS);
+    if (cached) {
+      onUpdate(JSON.parse(cached));
+    }
+  } catch {
+    // ignore
+  }
+
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const map: Record<string, BannerMetrics> = {};
+      snapshot.forEach((d) => {
+        const data = d.data();
+        map[d.id] = {
+          venueId: d.id,
+          venueName: data.venueName || d.id.toUpperCase(),
+          venueAddress: data.venueAddress || '',
+          impressions: data.impressions || 0,
+          clicks: data.clicks || 0,
+          lastImpressionAt: data.lastImpressionAt || '',
+        };
+      });
+
+      try {
+        localStorage.setItem(STORAGE_KEY_BANNER_METRICS, JSON.stringify(map));
+      } catch {
+        // ignore
+      }
+
+      onUpdate(map);
+    },
+    (err) => {
+      console.warn('Firestore banner metrics listener en modo local:', err.message || err);
+      try {
+        const cached = localStorage.getItem(STORAGE_KEY_BANNER_METRICS);
+        if (cached) onUpdate(JSON.parse(cached));
+      } catch {
+        // ignore
+      }
+    }
+  );
+}
+
+/**
+ * Registra una impresión/publicación cuando un banner se muestra en pantalla
+ */
+export async function trackBannerImpression(venueId: string, venueName: string, venueAddress?: string): Promise<void> {
+  // Actualizar caché local de inmediato
+  try {
+    const cached = localStorage.getItem(STORAGE_KEY_BANNER_METRICS);
+    const map: Record<string, BannerMetrics> = cached ? JSON.parse(cached) : {};
+    if (!map[venueId]) {
+      map[venueId] = { venueId, venueName, venueAddress, impressions: 0, clicks: 0 };
+    }
+    map[venueId].impressions = (map[venueId].impressions || 0) + 1;
+    map[venueId].venueName = venueName;
+    map[venueId].lastImpressionAt = new Date().toISOString();
+    localStorage.setItem(STORAGE_KEY_BANNER_METRICS, JSON.stringify(map));
+  } catch {
+    // ignore
+  }
+
+  // Persistir en Firebase Firestore
+  try {
+    const docRef = doc(db, BANNER_METRICS_COLLECTION, venueId);
+    await setDoc(
+      docRef,
+      {
+        venueId,
+        venueName,
+        venueAddress: venueAddress || '',
+        impressions: increment(1),
+        lastImpressionAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error('Error registrando banner impression en Firestore:', error);
+  }
+}
+
+/**
+ * Registra un clic en el banner del lugar
+ */
+export async function trackBannerClick(venueId: string, venueName: string): Promise<void> {
+  try {
+    const docRef = doc(db, BANNER_METRICS_COLLECTION, venueId);
+    await setDoc(
+      docRef,
+      {
+        venueId,
+        venueName,
+        clicks: increment(1),
+        lastClickAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error('Error registrando banner click en Firestore:', error);
+  }
+}

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { trackBannerImpression, trackBannerClick } from '../services/metricsService';
 
 export interface SponsorVenueAd {
   id: string;
@@ -178,6 +179,20 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   const firstAd = VENUE_SPONSORS[leftIndex % VENUE_SPONSORS.length];
   const secondAd = VENUE_SPONSORS[rightIndex % VENUE_SPONSORS.length];
 
+  // Registrar impresión / publicación en pantalla de la tarjeta izquierda
+  useEffect(() => {
+    if (firstAd) {
+      trackBannerImpression(firstAd.id, firstAd.name, firstAd.address);
+    }
+  }, [leftIndex]);
+
+  // Registrar impresión / publicación en pantalla de la tarjeta derecha
+  useEffect(() => {
+    if (secondAd) {
+      trackBannerImpression(secondAd.id, secondAd.name, secondAd.address);
+    }
+  }, [rightIndex]);
+
   // Render individual card con nombre en renglón 1 y dirección en renglón 2
   const renderVenueCard = (venue: SponsorVenueAd, heightClass: string, isFading: boolean) => {
     return (
@@ -185,6 +200,9 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
         href={venue.link}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => {
+          trackBannerClick(venue.id, venue.name);
+        }}
         className={`relative ${heightClass} rounded-2xl overflow-hidden transition-all duration-500 group block cursor-pointer select-none ${venue.bgColor} hover:scale-[1.01] ${
           isFading ? 'opacity-0 scale-[0.98]' : 'opacity-100 scale-100'
         }`}

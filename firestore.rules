@@ -10,5 +10,8 @@ service cloud.firestore {
     match /metrics/{metricId} {
       allow read, write: if true;
     }
+    match /banner_metrics/{venueId} {
+      allow read, write: if true;
+    }
   }
 }
