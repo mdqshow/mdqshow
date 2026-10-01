@@ -234,16 +234,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
               </div>
-            ) : (
-              <button
-                onClick={onAdminLogout}
-                className="flex items-center gap-1.5 p-2 px-3 text-xs text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 rounded-xl transition-colors active:scale-95 border border-slate-700/60"
-                title="Volver a bloquear y salir a la pantalla de Próximamente"
-              >
-                <LogOut className="w-3.5 h-3.5 text-rose-400" />
-                <span className="hidden sm:inline">Salir</span>
-              </button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
