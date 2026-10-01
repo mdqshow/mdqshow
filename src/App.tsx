@@ -7,7 +7,8 @@ import {
   deleteShowFromCloud, 
   getLocalFallbackShows,
   markShowAsDeletedLocally,
-  unmarkShowAsDeletedLocally
+  unmarkShowAsDeletedLocally,
+  restoreShowsFromBackup
 } from './services/showsService';
 import { Navbar } from './components/Navbar';
 import { ShowFilters } from './components/ShowFilters';
@@ -383,6 +384,30 @@ export default function App() {
     downloadAnchor.remove();
   };
 
+  // Import / Restaurar backup handler
+  const handleImportBackup = async (file: File) => {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        alert('El archivo no contiene una lista válida de recitales.');
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `¿Confirmás restaurar ${parsed.length} recitales desde "${file.name}"?\nEsta acción actualizará la base de datos de MDQSHOW en Firebase.`
+      );
+      if (!confirmed) return;
+
+      const result = await restoreShowsFromBackup(parsed);
+      setDeleteToast(`¡Se restauraron exitosamente ${result.count} recitales desde la copia de seguridad!`);
+      setTimeout(() => setDeleteToast(null), 5000);
+    } catch (err: any) {
+      console.error('Error al importar backup:', err);
+      alert(`Error al restaurar archivo: ${err?.message || 'Formato JSON inválido'}`);
+    }
+  };
+
   // Descarga del listado rápido de shows en formato TXT (para verificación rápida)
   const handleDownloadTxt = () => {
     // Ordenar shows cronológicamente por primera fecha
@@ -540,6 +565,7 @@ export default function App() {
         onOpenNewsletter={() => setIsNewsletterModalOpen(true)}
         onOpenInstallApp={() => setIsInstallModalOpen(true)}
         onExportBackup={handleExportBackup}
+        onImportBackup={handleImportBackup}
         onDownloadTxt={handleDownloadTxt}
         onOpenMetrics={() => setIsAdminMetricsOpen(true)}
       />

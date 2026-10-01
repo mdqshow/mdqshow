@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapPin, Plus, Heart, Calendar, LayoutGrid, ShieldCheck, Lock, LogOut, Mail, Bell, Download, FileText, BarChart3, Database } from 'lucide-react';
+import React, { useRef } from 'react';
+import { MapPin, Plus, Heart, Calendar, LayoutGrid, ShieldCheck, Lock, LogOut, Mail, Bell, Download, FileText, BarChart3, Database, Upload } from 'lucide-react';
 import { MdqBrandIcon } from './MdqBrandIcon';
 import { AVAILABLE_CITIES } from '../data/mockShows';
 
@@ -19,6 +19,7 @@ interface NavbarProps {
   onOpenNewsletter: () => void;
   onOpenInstallApp: () => void;
   onExportBackup?: () => void;
+  onImportBackup?: (file: File) => void;
   onDownloadTxt?: () => void;
   onOpenMetrics?: () => void;
 }
@@ -39,9 +40,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenNewsletter,
   onOpenInstallApp,
   onExportBackup,
+  onImportBackup,
   onDownloadTxt,
   onOpenMetrics,
 }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   return (
     <header className="sticky top-0 z-40 bg-[#0e1117]/90 backdrop-blur-md border-b border-slate-800/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -214,6 +217,34 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1 shrink-0" />
                     <span className="hidden md:inline">Backup</span>
                   </button>
+                )}
+
+                {/* Botón Restaurar Backup: para cargar y restablecer shows desde un archivo JSON */}
+                {onImportBackup && (
+                  <>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept=".json,application/json"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          onImportBackup(file);
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                    <button
+                      id="admin-import-backup-btn"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center p-1.5 sm:px-2.5 sm:py-2 text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl transition-all border border-indigo-500/30 text-xs font-bold cursor-pointer"
+                      title="Restaurar recitales desde un archivo Backup .json"
+                    >
+                      <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1 shrink-0" />
+                      <span className="hidden md:inline">Restaurar</span>
+                    </button>
+                  </>
                 )}
 
                 <button

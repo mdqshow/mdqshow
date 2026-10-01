@@ -240,3 +240,51 @@ export async function deleteShowFromCloud(showId: string): Promise<void> {
   const docRef = doc(db, SHOWS_COLLECTION, showId);
   await deleteDoc(docRef);
 }
+
+/**
+ * Restaura un lote completo de shows a partir de un archivo JSON de Backup
+ */
+export async function restoreShowsFromBackup(showsToRestore: Show[]): Promise<{ count: number }> {
+  if (!Array.isArray(showsToRestore) || showsToRestore.length === 0) {
+    throw new Error('El archivo no contiene un listado válido de shows');
+  }
+
+  // 1. Limpiar eliminados locales si alguno de los que restauramos estaba marcado
+  showsToRestore.forEach((s) => {
+    if (s && s.id) unmarkShowAsDeletedLocally(s.id);
+  });
+
+  // 2. Guardar en localStorage
+  try {
+    localStorage.setItem(LOCAL_STORAGE_SHOWS_LIST, JSON.stringify(showsToRestore));
+  } catch (err) {
+    console.warn('Error guardando en localStorage:', err);
+  }
+
+  // 3. Escribir en Firestore por bloques (batches de hasta 400 docs para respetar límites de Firebase)
+  try {
+    const BATCH_SIZE = 400;
+    for (let i = 0; i < showsToRestore.length; i += BATCH_SIZE) {
+      const chunk = showsToRestore.slice(i, i + BATCH_SIZE);
+      const batch = writeBatch(db);
+      for (const show of chunk) {
+        if (show && show.id) {
+          const sanitized: Show = {
+            ...show,
+            venue: formatProperCase(show.venue),
+            venueAddress: formatProperCase(show.venueAddress),
+            ticketPortalName: formatProperCase(show.ticketPortalName) || 'Boletería Oficial',
+          };
+          const docRef = doc(db, SHOWS_COLLECTION, show.id);
+          batch.set(docRef, sanitized, { merge: true });
+        }
+      }
+      await batch.commit();
+    }
+  } catch (err) {
+    console.error('Error al restaurar lote en Firestore:', err);
+    throw err;
+  }
+
+  return { count: showsToRestore.length };
+}
