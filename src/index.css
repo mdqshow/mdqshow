@@ -98,106 +98,53 @@
 }
 
 /* 
- * 3. SURF COFFEE:
- * "SURF" entra desde la izquierda (-120% translateX) hasta el centro (0),
- * se queda fijo en el centro con la dirección esfumada durante ~4.5 segundos,
- * y luego se desvanece suavemente saliendo hacia la izquierda antes del próximo ciclo.
- * Ciclo total: 7.5 segundos (desfasado armónicamente).
+ * 3. MUTE (CLUB DE MAR / PLAYA):
+ * Ola oceánica profunda y destello esmeralda/turquesa con ligera brisa
  */
-@keyframes surfSlideLeft {
-  0% {
-    opacity: 0;
-    transform: translateX(-120%);
+@keyframes muteWavePulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.25));
   }
-  15% {
-    opacity: 1;
-    transform: translateX(0);
+  20% {
+    transform: scale(1.05) translateY(-2px);
+    filter: drop-shadow(0 0 16px rgba(52, 211, 153, 0.75)) drop-shadow(0 0 24px rgba(45, 212, 191, 0.45));
   }
-  75% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  90% {
-    opacity: 0;
-    transform: translateX(-120%);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(-120%);
+  40%, 80% {
+    transform: scale(1) translateY(0);
+    filter: drop-shadow(0 0 5px rgba(52, 211, 153, 0.3));
   }
 }
 
-.animate-surf-slide-left {
-  display: inline-block;
-  animation: surfSlideLeft 7.5s cubic-bezier(0.25, 1, 0.5, 1) infinite;
-  will-change: transform, opacity;
+.animate-mute-wave {
+  animation: muteWavePulse 8s ease-in-out infinite;
+  animation-delay: 2s;
+  will-change: transform, filter;
 }
 
 /* 
- * 4. SURF COFFEE:
- * "COFFEE" entra desde la derecha (+120% translateX) hasta el centro (0),
- * se queda fijo al centro ~4.5 segundos, y se desvanece volviendo a salir por la derecha.
+ * 4. TEATRO RADIO CITY:
+ * Marquesina teatral clásica, brillo dorado y fucsia broadway
  */
-@keyframes coffeeSlideRight {
-  0% {
-    opacity: 0;
-    transform: translateX(120%);
+@keyframes radioCityMarquee {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 3px rgba(244, 114, 182, 0.3));
   }
   15% {
-    opacity: 1;
-    transform: translateX(0);
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 16px rgba(244, 114, 182, 0.8)) drop-shadow(0 0 26px rgba(232, 121, 249, 0.6));
   }
-  75% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  90% {
-    opacity: 0;
-    transform: translateX(120%);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(120%);
+  30%, 80% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(244, 114, 182, 0.3));
   }
 }
 
-.animate-coffee-slide-right {
-  display: inline-block;
-  animation: coffeeSlideRight 7.5s cubic-bezier(0.25, 1, 0.5, 1) infinite;
-  will-change: transform, opacity;
-}
-
-/* 
- * 5. SURF COFFEE SUBTÍTULO (AVELLANEDA 1387):
- * Aparece esfumado (fade-in gradual con ligero scale) justo cuando ambas palabras se unieron al centro,
- * se queda visible, y luego se esfuma (fade-out) cuando las palabras se retiran.
- */
-@keyframes surfAddressFadeInOut {
-  0%, 15% {
-    opacity: 0;
-    transform: translateY(6px) scale(0.95);
-    filter: blur(4px);
-  }
-  28% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0px);
-  }
-  72% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0px);
-  }
-  85%, 100% {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.95);
-    filter: blur(4px);
-  }
-}
-
-.animate-surf-address {
-  animation: surfAddressFadeInOut 7.5s ease-in-out infinite;
-  will-change: transform, opacity, filter;
+.animate-radio-city {
+  animation: radioCityMarquee 8s ease-in-out infinite;
+  animation-delay: 3.5s;
+  will-change: transform, filter;
 }
 
 /* 

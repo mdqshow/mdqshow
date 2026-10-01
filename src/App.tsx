@@ -741,12 +741,11 @@ export default function App() {
           />
         </section>
 
-        {/* Espacio publicitario superior: Dos banners de sponsors locales lado a lado (BRUTO y SURF COFFEE exclusivos) */}
+        {/* Espacio publicitario superior: Dos banners de salas y estadios lado a lado con rotación suave */}
         <div className="animate-in fade-in duration-300">
           <AdSenseBanner 
             format="timeline-double" 
             initialOffset={0} 
-            isTopBanner={true}
           />
         </div>
 
@@ -828,7 +827,6 @@ export default function App() {
                         <AdSenseBanner
                           format="timeline-double"
                           initialOffset={chunkIdx * 2}
-                          isTopBanner={false}
                         />
                       </div>
                     )}

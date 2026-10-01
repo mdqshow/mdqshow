@@ -270,7 +270,6 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                     <AdSenseBanner
                       format="timeline-double"
                       initialOffset={globalIndex}
-                      isTopBanner={false}
                     />
                   )}
                 </React.Fragment>
