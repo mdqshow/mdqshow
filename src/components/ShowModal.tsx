@@ -23,6 +23,7 @@ import { formatSingleDate } from '../utils/dateHelpers';
 import { normalizePriceInput } from '../utils/priceHelpers';
 import { detectTicketPortalFromUrl } from '../utils/ticketDetectors';
 import { formatProperCase } from '../utils/textFormatting';
+import { compressImage } from '../utils/imageCompressor';
 import { SpotifyIcon } from './SpotifyIcon';
 
 interface ShowModalProps {
@@ -211,27 +212,23 @@ export const ShowModal: React.FC<ShowModalProps> = ({
     }
   };
 
-  // Image file upload helper (supports WebP, JPG, PNG, AVIF)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Image file upload helper (supports WebP, JPG, PNG, AVIF with automatic smart compression)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
         setError('El archivo seleccionado debe ser una imagen válida (WebP, JPG, PNG o AVIF)');
         return;
       }
-      // Check file size (recommend < 4MB for fast client performance)
-      if (file.size > 5 * 1024 * 1024) {
-        setError('La imagen es demasiado pesada (máx 5MB recomendado). Probá comprimirla o usar formato WebP.');
-        return;
+      try {
+        setError('');
+        // Comprime automáticamente para garantizar que guarde en Firestore de inmediato sin exceder cuota
+        const compressedDataUrl = await compressImage(file, 1200, 900, 0.82);
+        setImage(compressedDataUrl);
+      } catch (err) {
+        console.error('Error al procesar imagen:', err);
+        setError('No se pudo procesar la imagen seleccionada. Probá con otra imagen o formato JPG/PNG.');
       }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (typeof event.target?.result === 'string') {
-          setImage(event.target.result);
-          setError('');
-        }
-      };
-      reader.readAsDataURL(file);
     }
   };
 

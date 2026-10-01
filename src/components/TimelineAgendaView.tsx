@@ -101,8 +101,8 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
             {monthItems.map(({ date, show, globalIndex }) => {
               const countdown = getDaysUntil(date);
               const isFav = favorites.includes(show.id);
-              // Intercalar dos publicidades propias lado a lado cada 8 shows de forma global continua
-              const showSponsorBanner = (globalIndex + 1) % 8 === 0 && globalIndex !== rawItems.length - 1;
+              // Intercalar dos publicidades propias lado a lado cada 6 shows de forma global continua
+              const showSponsorBanner = (globalIndex + 1) % 6 === 0 && globalIndex !== rawItems.length - 1;
 
               return (
                 <React.Fragment key={`${show.id}-${date}-${globalIndex}`}>
@@ -265,11 +265,12 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Dos publicidades lado a lado en el ancho completo del cronograma cada 8 shows */}
+                  {/* Dos publicidades lado a lado en el ancho completo del cronograma cada 6 shows */}
                   {showSponsorBanner && (
                     <AdSenseBanner
                       format="timeline-double"
                       initialOffset={globalIndex}
+                      isTopBanner={false}
                     />
                   )}
                 </React.Fragment>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export interface SponsorAd {
   id: string;
@@ -16,18 +16,18 @@ export interface SponsorAd {
 }
 
 /**
- * 1. BANNERS SUPERIORES (Top / Iniciales):
+ * 1. BANNERS SUPERIORES (Top / Iniciales - únicos fijos):
  *    - BRUTO (Fondo negro, giro 3D letra por letra, PLAYA GRANDE latido esporádico)
  *    - SURF COFFEE (Fondo azul océano, "SURF" desde la izquierda, "COFFEE" desde la derecha, AVELLANEDA 1387 esfumada)
  * 
- * 2. OTROS BANNERS (Intercalados en la grilla y en el cronograma):
- *    - BENDU ARENA: Fondo índigo/dorado noche (`#1a102f`), Tilt 3D elegante con resplandor oro/ámbar.
- *    - ARENA MAR DEL PLATA: Fondo azul marino/celeste cielo (`#0a2239`), Expansión de onda horizontal.
- *    - PLAZA DE LA MÚSICA: Fondo rojo carmesí / borgoña oscuro (`#2b0d14`), Pulso rítmico musical en dos fases.
- *    - ABBEY ROAD: Fondo negro / ámbar neón rock (`#18181b`), Destello neón retro de concierto en dos renglones.
+ * 2. BANNERS DE SALAS / TEATROS (Rotan cada 10 segundos con transición suave de esfumado fade-in/out):
+ *    - BENDU ARENA: Fondo índigo/dorado noche, Tilt 3D elegante con resplandor oro/ámbar.
+ *    - ARENA MAR DEL PLATA: Fondo azul marino/celeste cielo, Expansión de onda horizontal.
+ *    - PLAZA DE LA MÚSICA: Fondo rojo carmesí / borgoña oscuro, Pulso rítmico musical en dos fases.
+ *    - ABBEY ROAD: Fondo negro / ámbar neón rock, Destello neón retro de concierto en dos renglones.
  */
 
-// Los 2 principales arriba
+// Los 2 principales fijos SOLO arriba
 export const TOP_SPONSORS: SponsorAd[] = [
   {
     id: 'bruto',
@@ -55,7 +55,7 @@ export const TOP_SPONSORS: SponsorAd[] = [
   }
 ];
 
-// Los 4 lugares para los siguientes banners
+// Los 4 teatros y salas para rotar cada 10 segundos
 export const VENUE_SPONSORS: SponsorAd[] = [
   {
     id: 'bendu',
@@ -107,39 +107,54 @@ interface AdSenseBannerProps {
   format?: 'horizontal' | 'in-feed' | 'timeline-double';
   className?: string;
   initialOffset?: number;
-  simulationVariant?: string;
-  onOpenContact?: () => void;
+  isTopBanner?: boolean;
 }
 
 export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   format = 'in-feed',
   className = '',
-  initialOffset = 0
+  initialOffset = 0,
+  isTopBanner = false
 }) => {
-  // Los dos de arriba usan siempre BRUTO y SURF COFFEE
-  // Los demás usan de a pares los venues (Bendu, Arena MDP, Plaza de la Música, Abbey Road)
-  const isTopBanner = initialOffset === 0;
+  // Rotación suave de salas cada 10 segundos para banners que NO son los superiores
+  const [rotationIndex, setRotationIndex] = useState(initialOffset);
+  const [isFading, setIsFading] = useState(false);
 
+  useEffect(() => {
+    if (isTopBanner) return; // BRUTO y SURF COFFEE se mantienen fijos arriba
+
+    const interval = setInterval(() => {
+      // Iniciar desvanecimiento (fade-out)
+      setIsFading(true);
+      setTimeout(() => {
+        setRotationIndex((prev) => (prev + 2) % VENUE_SPONSORS.length);
+        // Regresar a visible (fade-in)
+        setIsFading(false);
+      }, 500); // 500ms de transición de esfumado
+    }, 10000); // Cada 10 segundos
+
+    return () => clearInterval(interval);
+  }, [isTopBanner]);
+
+  // Selección de los dos avisos a mostrar
   const firstAd = isTopBanner
     ? TOP_SPONSORS[0]
-    : VENUE_SPONSORS[(initialOffset - 1) % VENUE_SPONSORS.length];
+    : VENUE_SPONSORS[rotationIndex % VENUE_SPONSORS.length];
 
   const secondAd = isTopBanner
     ? TOP_SPONSORS[1]
-    : VENUE_SPONSORS[initialOffset % VENUE_SPONSORS.length];
+    : VENUE_SPONSORS[(rotationIndex + 1) % VENUE_SPONSORS.length];
 
   // Render individual card según el efecto configurado
-  // Altura reducida un 15%:
-  // - in-feed individual: de 220px a 185px (h-full min-h-[185px])
-  // - timeline-double: de h-36/h-40 (144px/160px) a h-28/h-32 (112px/128px)
-  // - horizontal: de h-32/h-36 a h-26/h-30
   const renderAdCard = (ad: SponsorAd, heightClass: string) => {
     return (
       <a
         href={ad.link}
         target="_blank"
         rel="noopener noreferrer"
-        className={`relative ${heightClass} rounded-2xl overflow-hidden transition-all duration-300 group block cursor-pointer select-none ${ad.bgColor} hover:scale-[1.01]`}
+        className={`relative ${heightClass} rounded-2xl overflow-hidden transition-all duration-500 group block cursor-pointer select-none ${ad.bgColor} hover:scale-[1.01] ${
+          isFading ? 'opacity-0 scale-[0.98]' : 'opacity-100 scale-100'
+        }`}
         style={{
           border: '1.5px solid rgba(245, 158, 11, 0.85)',
           boxShadow: '0 0 14px -2px rgba(245, 158, 11, 0.35)'
@@ -251,45 +266,15 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
     );
   };
 
-  // Formato In-Feed (grilla de recitales)
-  if (format === 'in-feed') {
-    return (
-      <aside 
-        aria-label="Espacio publicitario"
-        className={`h-full min-h-[390px] flex flex-col justify-between gap-3.5 ${className}`}
-      >
-        <div className="flex-1 flex flex-col">
-          {renderAdCard(firstAd, 'h-full min-h-[185px]')}
-        </div>
-        <div className="flex-1 flex flex-col">
-          {renderAdCard(secondAd, 'h-full min-h-[185px]')}
-        </div>
-      </aside>
-    );
-  }
-
-  // Formato Timeline Double (lado a lado en el cronograma)
-  if (format === 'timeline-double') {
-    return (
-      <aside 
-        aria-label="Espacio publicitario en cronograma"
-        className={`w-full my-3 grid grid-cols-1 sm:grid-cols-2 gap-3.5 ${className}`}
-      >
-        {renderAdCard(firstAd, 'h-28 sm:h-32')}
-        {renderAdCard(secondAd, 'h-28 sm:h-32')}
-      </aside>
-    );
-  }
-
-  // Formato Horizontal
+  // Formato In-Feed o Doble horizontal (siempre a lo ancho: 2 columnas limpias lado a lado)
   return (
     <aside 
       aria-label="Espacio publicitario"
-      className={`w-full my-3 ${className}`}
+      className={`w-full my-6 ${className}`}
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {renderAdCard(firstAd, 'h-26 sm:h-28')}
-        {renderAdCard(secondAd, 'h-26 sm:h-28')}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {renderAdCard(firstAd, 'h-28 sm:h-32')}
+        {renderAdCard(secondAd, 'h-28 sm:h-32')}
       </div>
     </aside>
   );

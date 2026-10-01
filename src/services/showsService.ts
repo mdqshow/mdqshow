@@ -136,13 +136,13 @@ export function subscribeToShows(
       }
 
       const deletedIds = getDeletedShowIds();
-      const showsList: Show[] = [];
+      const cloudMap = new Map<string, Show>();
+
       snapshot.forEach((docSnap) => {
         const showId = docSnap.id;
-        // Si fue marcado como eliminado, no lo incluimos
         if (!deletedIds.has(showId)) {
           const data = docSnap.data() as Show;
-          showsList.push({
+          cloudMap.set(showId, {
             ...data,
             id: showId,
             venue: formatProperCase(data.venue),
@@ -151,6 +151,16 @@ export function subscribeToShows(
           });
         }
       });
+
+      // Recuperar shows locales para no perder shows recién creados en el cliente
+      const localFallback = getLocalFallbackShows();
+      localFallback.forEach((localShow) => {
+        if (!deletedIds.has(localShow.id) && !cloudMap.has(localShow.id)) {
+          cloudMap.set(localShow.id, localShow);
+        }
+      });
+
+      const showsList: Show[] = Array.from(cloudMap.values());
 
       // Actualizar localStorage como cache de respaldo limpia
       try {
@@ -184,7 +194,7 @@ export function subscribeToShows(
 }
 
 /**
- * Guarda o actualiza un recital en la base de datos en la nube
+ * Guarda o actualiza un recital en la base de datos en la nube y en caché local permanente
  */
 export async function saveShowToCloud(show: Show): Promise<void> {
   const sanitizedShow: Show = {
@@ -193,8 +203,34 @@ export async function saveShowToCloud(show: Show): Promise<void> {
     venueAddress: formatProperCase(show.venueAddress),
     ticketPortalName: formatProperCase(show.ticketPortalName) || 'Boletería Oficial',
   };
-  const docRef = doc(db, SHOWS_COLLECTION, sanitizedShow.id);
-  await setDoc(docRef, sanitizedShow, { merge: true });
+
+  // Asegurar que quede desmarcado de eliminados
+  unmarkShowAsDeletedLocally(sanitizedShow.id);
+
+  // Actualizar inmediatamente la caché local permanente
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_SHOWS_LIST);
+    let currentList: Show[] = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(currentList)) currentList = [];
+    
+    const existingIndex = currentList.findIndex(s => s.id === sanitizedShow.id);
+    if (existingIndex >= 0) {
+      currentList[existingIndex] = sanitizedShow;
+    } else {
+      currentList.unshift(sanitizedShow);
+    }
+    localStorage.setItem(LOCAL_STORAGE_SHOWS_LIST, JSON.stringify(currentList));
+  } catch (err) {
+    console.warn('Error al guardar show en localStorage:', err);
+  }
+
+  // Guardar en Firestore Cloud
+  try {
+    const docRef = doc(db, SHOWS_COLLECTION, sanitizedShow.id);
+    await setDoc(docRef, sanitizedShow, { merge: true });
+  } catch (err) {
+    console.error('Error al guardar show en Firestore Cloud:', err);
+  }
 }
 
 /**

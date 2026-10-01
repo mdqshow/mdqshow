@@ -741,11 +741,12 @@ export default function App() {
           />
         </section>
 
-        {/* Espacio publicitario superior: Dos banners de sponsors locales lado a lado (como en el cronograma) */}
+        {/* Espacio publicitario superior: Dos banners de sponsors locales lado a lado (BRUTO y SURF COFFEE exclusivos) */}
         <div className="animate-in fade-in duration-300">
           <AdSenseBanner 
             format="timeline-double" 
             initialOffset={0} 
+            isTopBanner={true}
           />
         </div>
 
@@ -794,70 +795,46 @@ export default function App() {
               </div>
             </div>
           ) : viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredShows.map((show, index) => {
-                // Posiciones intercaladas:
-                // Bloque 1: Show 1, 2, 3 (Fila 1) + Show 4, 5 + Publicidad 1 (DERECHA en Fila 2) -> index === 4
-                // 2 filas completas de shows: 6 shows (Show 6, 7, 8, 9, 10, 11)
-                // Bloque 2: Publicidad 2 (IZQUIERDA en Fila 5) + Show 12, 13 -> insertamos antes de index 11 (después de 6 shows completos)
-                // 2 filas completas de shows: 6 shows (Show 14, 15, 16, 17, 18, 19)
-                // Bloque 3: Show 20, 21 + Publicidad 3 (DERECHA en Fila 8) -> después de index 18
-                const isAd2Before = index === 11; // Publicidad a la IZQUIERDA en la tercera fila
-                const isAd1After = index === 4;   // Publicidad a la DERECHA
-                const isAd3After = index === 19;  // Publicidad a la DERECHA tras otras 2 filas completas
-                const isAd4Before = index === 26; // Siguiente publicidad a la IZQUIERDA si hay muchos shows
+            <div className="space-y-6">
+              {(() => {
+                // Dividimos los shows en bloques de 6 para insertar un banner horizontal cada 6 shows
+                const chunks: Show[][] = [];
+                for (let i = 0; i < filteredShows.length; i += 6) {
+                  chunks.push(filteredShows.slice(i, i + 6));
+                }
 
-                return (
-                  <React.Fragment key={show.id}>
-                    {/* Publicidad intercalada a la IZQUIERDA */}
-                    {isAd2Before && (
-                      <AdSenseBanner 
-                        format="in-feed" 
-                        simulationVariant="random" 
-                        onOpenContact={() => setIsContactModalOpen(true)}
-                        initialOffset={2}
-                      />
-                    )}
-                    {isAd4Before && (
-                      <AdSenseBanner 
-                        format="in-feed" 
-                        simulationVariant="random" 
-                        onOpenContact={() => setIsContactModalOpen(true)}
-                        initialOffset={4}
-                      />
-                    )}
+                return chunks.map((chunk, chunkIdx) => (
+                  <React.Fragment key={`chunk-${chunkIdx}`}>
+                    {/* Grilla de hasta 6 shows */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {chunk.map((show) => (
+                        <ShowCard
+                          key={show.id}
+                          show={show}
+                          isFavorite={favorites.includes(show.id)}
+                          onToggleFavorite={toggleFavorite}
+                          onSelectShow={setSelectedShow}
+                          isAdmin={isAdmin}
+                          onEditShow={handleOpenEditShow}
+                          onDeleteShow={handleDeleteShow}
+                          metrics={metricsMap[show.id]}
+                        />
+                      ))}
+                    </div>
 
-                    <ShowCard
-                      show={show}
-                      isFavorite={favorites.includes(show.id)}
-                      onToggleFavorite={toggleFavorite}
-                      onSelectShow={setSelectedShow}
-                      isAdmin={isAdmin}
-                      onEditShow={handleOpenEditShow}
-                      onDeleteShow={handleDeleteShow}
-                      metrics={metricsMap[show.id]}
-                    />
-
-                    {/* Publicidad intercalada a la DERECHA */}
-                    {isAd1After && (
-                      <AdSenseBanner 
-                        format="in-feed" 
-                        simulationVariant="random" 
-                        onOpenContact={() => setIsContactModalOpen(true)}
-                        initialOffset={0}
-                      />
-                    )}
-                    {isAd3After && (
-                      <AdSenseBanner 
-                        format="in-feed" 
-                        simulationVariant="random" 
-                        onOpenContact={() => setIsContactModalOpen(true)}
-                        initialOffset={1}
-                      />
+                    {/* Banner a lo ancho de salas de teatros cada 6 shows (excepto al final de la lista) */}
+                    {chunkIdx < chunks.length - 1 && (
+                      <div className="py-2">
+                        <AdSenseBanner
+                          format="timeline-double"
+                          initialOffset={chunkIdx * 2}
+                          isTopBanner={false}
+                        />
+                      </div>
                     )}
                   </React.Fragment>
-                );
-              })}
+                ));
+              })()}
             </div>
           ) : (
             <TimelineAgendaView
