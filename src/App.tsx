@@ -71,14 +71,37 @@ export default function App() {
   });
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
 
-  // Soporte para ingresar o abrir login por URL directa (ej: tudominio.com/?admin o #admin)
+  // Soporte para ingresar o abrir login por URL directa (ej: /admin, #admin, ?admin)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('admin') === '1' || params.has('admin') || window.location.hash === '#admin') {
-      if (!isAdmin) {
-        setIsAdminLoginOpen(true);
+    const checkAdminUrl = () => {
+      const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
+      const search = window.location.search.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+
+      const isAdminRoute = 
+        path === '/admin' || 
+        path.endsWith('/admin') || 
+        hash === '#admin' || 
+        search.includes('admin');
+
+      if (isAdminRoute) {
+        // Desbloquear vista previa si estaba en modo Coming Soon
+        sessionStorage.setItem('mdqshow_preview_access', 'true');
+        setIsPreviewUnlocked(true);
+
+        if (!isAdmin) {
+          setIsAdminLoginOpen(true);
+        }
       }
-    }
+    };
+
+    checkAdminUrl();
+    window.addEventListener('popstate', checkAdminUrl);
+    window.addEventListener('hashchange', checkAdminUrl);
+    return () => {
+      window.removeEventListener('popstate', checkAdminUrl);
+      window.removeEventListener('hashchange', checkAdminUrl);
+    };
   }, [isAdmin]);
 
   const handleLoginSuccess = () => {
