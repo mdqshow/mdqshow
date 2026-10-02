@@ -305,7 +305,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       description: initialShow?.description || `${band} en vivo en ${venue}.`,
       featured,
       isNewBadge,
-      spotifyUrl: spotifyUrl.trim() || undefined,
+      spotifyUrl: spotifyUrl.trim() || '',
       createdAt: initialShow?.createdAt || new Date().toISOString(),
       isUserAdded: true,
       openingActs: initialShow?.openingActs || [],

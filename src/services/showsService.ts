@@ -119,6 +119,23 @@ export function subscribeToShows(
 }
 
 /**
+ * Elimina recursivamente cualquier campo con valor undefined para cumplir con la API de Firestore
+ */
+function cleanForFirestore<T extends Record<string, any>>(obj: T): T {
+  const result: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        result[key] = cleanForFirestore(value);
+      } else {
+        result[key] = value;
+      }
+    }
+  }
+  return result;
+}
+
+/**
  * Guarda o actualiza un recital en la base de datos en la nube y en caché local
  */
 export async function saveShowToCloud(show: Show): Promise<void> {
@@ -129,17 +146,19 @@ export async function saveShowToCloud(show: Show): Promise<void> {
     ticketPortalName: formatProperCase(show.ticketPortalName) || 'Boletería Oficial',
   };
 
+  const payload = cleanForFirestore(sanitizedShow);
+
   // Actualizar inmediatamente la caché local
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_SHOWS_LIST);
     let currentList: Show[] = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(currentList)) currentList = [];
     
-    const existingIndex = currentList.findIndex(s => s.id === sanitizedShow.id);
+    const existingIndex = currentList.findIndex(s => s.id === payload.id);
     if (existingIndex >= 0) {
-      currentList[existingIndex] = sanitizedShow;
+      currentList[existingIndex] = payload as Show;
     } else {
-      currentList.unshift(sanitizedShow);
+      currentList.unshift(payload as Show);
     }
     localStorage.setItem(LOCAL_STORAGE_SHOWS_LIST, JSON.stringify(currentList));
   } catch (err) {
@@ -147,8 +166,8 @@ export async function saveShowToCloud(show: Show): Promise<void> {
   }
 
   // Guardar en Firestore Cloud
-  const docRef = doc(db, SHOWS_COLLECTION, sanitizedShow.id);
-  await setDoc(docRef, sanitizedShow, { merge: true });
+  const docRef = doc(db, SHOWS_COLLECTION, payload.id);
+  await setDoc(docRef, payload, { merge: true });
 }
 
 /**
