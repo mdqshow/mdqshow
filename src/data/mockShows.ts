@@ -355,6 +355,8 @@ export const AVAILABLE_GENRES = [
   'Trap / Urbano',
   'Hip Hop / Rap',
   'Pop',
+  'Latino',
+  'Romántico',
   'Indie Rock / Pop',
   'Rock / Ska',
   'Cumbia / Cuarteto',

@@ -981,14 +981,13 @@ export default function App() {
             <p className="font-bold text-sm text-slate-300">
               MDQ<span className="text-rose-500">SHOW</span> — Cartelera de recitales y shows en Mar del Plata
             </p>
-            <p className="text-slate-400">
-              Email de contacto y prensa:{' '}
+            <p className="text-slate-500 text-xs">
               <button
                 type="button"
                 onClick={() => setIsContactModalOpen(true)}
-                className="text-rose-400 hover:text-rose-300 underline font-medium cursor-pointer"
+                className="text-slate-400 hover:text-rose-400 underline transition-colors cursor-pointer"
               >
-                info@mdqshow.com.ar
+                Formulario de contacto
               </button>
             </p>
             <p className="text-slate-600 text-[11px]">

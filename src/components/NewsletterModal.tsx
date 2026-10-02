@@ -30,9 +30,6 @@ export const NewsletterModal: React.FC<NewsletterModalProps> = ({
   isAdmin = false,
 }) => {
   const [email, setEmail] = useState('');
-  const [instantAlerts, setInstantAlerts] = useState(true);
-  const [weeklyDigest, setWeeklyDigest] = useState(true);
-  const [favoriteGenre, setFavoriteGenre] = useState('Todos los géneros');
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
 
@@ -107,20 +104,15 @@ export const NewsletterModal: React.FC<NewsletterModalProps> = ({
       return;
     }
 
-    if (!instantAlerts && !weeklyDigest) {
-      setError('Seleccioná al menos un tipo de notificación (alertas o resumen semanal).');
-      return;
-    }
-
     const existing = subscribers.find((s) => s.email === emailClean);
     let updated: Subscriber[];
 
     const newSubscriber: Subscriber = {
       id: existing ? existing.id : `sub-${Date.now()}`,
       email: emailClean,
-      instantAlerts,
-      weeklyDigest,
-      favoriteGenre,
+      instantAlerts: true,
+      weeklyDigest: true,
+      favoriteGenre: 'Todos los géneros',
       subscribedAt: new Date().toISOString().split('T')[0]
     };
 
@@ -333,63 +325,20 @@ export const NewsletterModal: React.FC<NewsletterModalProps> = ({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="ejemplo@correo.com"
-                    className="w-full pl-10 pr-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 transition-all"
+                    className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 transition-all text-sm"
                   />
                 </div>
               </div>
 
-              {/* Frecuencias */}
-              <div className="space-y-2 pt-1">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  ¿Qué avisos te gustaría recibir?
-                </label>
-
-                <label className="flex items-start gap-2.5 p-2.5 bg-slate-950/80 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={instantAlerts}
-                    onChange={(e) => setInstantAlerts(e.target.checked)}
-                    className="mt-0.5 rounded border-slate-700 text-amber-500 focus:ring-amber-500 cursor-pointer"
-                  />
-                  <div>
-                    <span className="block text-xs font-bold text-white">⚡ Alerta Inmediata de Nuevos Shows</span>
-                    <span className="block text-[11px] text-slate-400">Apenas se agregue una nueva fecha en MDQ.</span>
-                  </div>
-                </label>
-
-                <label className="flex items-start gap-2.5 p-2.5 bg-slate-950/80 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={weeklyDigest}
-                    onChange={(e) => setWeeklyDigest(e.target.checked)}
-                    className="mt-0.5 rounded border-slate-700 text-amber-500 focus:ring-amber-500 cursor-pointer"
-                  />
-                  <div>
-                    <span className="block text-xs font-bold text-white">📅 Resumen Semanal (Jueves)</span>
-                    <span className="block text-[11px] text-slate-400">Toda la agenda de recitales para el fin de semana.</span>
-                  </div>
-                </label>
-              </div>
-
-              {/* Género preferido */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Género Musical de Interés
-                </label>
-                <select
-                  value={favoriteGenre}
-                  onChange={(e) => setFavoriteGenre(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer"
-                >
-                  <option value="Todos los géneros">Todos los géneros (Recomendado)</option>
-                  <option value="Rock Nacional">Rock Nacional</option>
-                  <option value="Trap / Urbano">Trap / Urbano</option>
-                  <option value="Cumbia / Cuarteto">Cumbia / Cuarteto</option>
-                  <option value="Pop / Indie">Pop / Indie</option>
-                  <option value="Electrónica">Electrónica</option>
-                  <option value="Reggae / Dub">Reggae / Dub</option>
-                  <option value="Folklore / Tango">Folklore / Tango</option>
-                </select>
+              {/* Leyenda explicativa */}
+              <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 text-xs text-slate-400 leading-relaxed space-y-1">
+                <p className="text-slate-300 font-medium flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>Enterate antes que nadie de las novedades</span>
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  Te avisamos ni bien se confirmen nuevas fechas, visitas de artistas y preventas oficiales de recitales en Mar del Plata. Cero spam.
+                </p>
               </div>
 
               <button
@@ -397,7 +346,7 @@ export const NewsletterModal: React.FC<NewsletterModalProps> = ({
                 className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 font-bold text-xs sm:text-sm shadow-md shadow-amber-950/30 transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
               >
                 <Bell className="w-4 h-4" />
-                <span>Suscribirme</span>
+                <span>Suscribirme a las novedades</span>
               </button>
             </form>
           )}

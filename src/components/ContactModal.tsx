@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Send, Check, Copy, CheckCircle2, Info, X } from 'lucide-react';
+import { Mail, Send, CheckCircle2, X } from 'lucide-react';
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -12,7 +12,6 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
   const [subject, setSubject] = useState('Consulta general');
   const [message, setMessage] = useState('');
   const [isSent, setIsSent] = useState(false);
-  const [copiedEmail, setCopiedEmail] = useState(false);
 
   // Close on Escape key
   useEffect(() => {
@@ -33,20 +32,14 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
     e.preventDefault();
     if (!name.trim() || !email.trim() || !message.trim()) return;
 
-    const recipient = 'info@mdqshow.com.ar';
+    const recipient = 'info.mdqshow@gmail.com';
     const subjectLine = `[MDQSHOW Contacto] ${subject} - ${name.trim()}`;
-    const bodyContent = `Hola equipo de MDQSHOW,\n\nNombre: ${name.trim()}\nEmail: ${email.trim()}\nMotivo: ${subject}\n\nMensaje:\n${message.trim()}\n\n---\nEnviado desde MDQSHOW (mdqshow.com.ar)`;
+    const bodyContent = `Hola equipo de MDQSHOW,\n\nNombre: ${name.trim()}\nEmail: ${email.trim()}\nMotivo: ${subject}\n\nMensaje:\n${message.trim()}\n\n---\nEnviado desde el formulario web de MDQSHOW`;
 
     const mailtoUrl = `mailto:${recipient}?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(bodyContent)}`;
     window.location.href = mailtoUrl;
 
     setIsSent(true);
-  };
-
-  const handleCopyEmail = () => {
-    navigator.clipboard.writeText('info@mdqshow.com.ar');
-    setCopiedEmail(true);
-    setTimeout(() => setCopiedEmail(false), 2500);
   };
 
   const handleReset = () => {
@@ -72,7 +65,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
             <div>
               <h3 className="text-lg font-bold text-white">Contacto</h3>
               <p className="text-xs text-slate-400">
-                Escribinos a <span className="text-rose-400 font-medium">info@mdqshow.com.ar</span>
+                Envianos tu consulta o propuesta
               </p>
             </div>
           </div>
@@ -96,18 +89,10 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
               <div>
                 <h4 className="text-base font-bold text-white">¡Mensaje preparado para enviar!</h4>
                 <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">
-                  Se abrió tu cliente de correo con el mensaje dirigido a <strong className="text-slate-200">info@mdqshow.com.ar</strong>. También podés copiar nuestra dirección si querés escribir desde otra casilla.
+                  Se abrió tu cliente de correo para enviar tu mensaje al equipo de MDQSHOW.
                 </p>
               </div>
               <div className="pt-2 flex flex-wrap justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleCopyEmail}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white transition-colors cursor-pointer"
-                >
-                  {copiedEmail ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedEmail ? '¡info@mdqshow.com.ar copiado!' : 'Copiar email'}</span>
-                </button>
                 <button
                   type="button"
                   onClick={handleReset}
@@ -173,7 +158,6 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
                 >
                   <option value="Consulta general">Consulta general</option>
                   <option value="Quiero anunciar o publicar un show">Quiero anunciar o publicar un show / recital</option>
-                  <option value="Prensa y Acreditaciones">Prensa y Acreditaciones</option>
                   <option value="Sugerencia o corrección de datos">Sugerencia o corrección de cartelera</option>
                   <option value="Publicidad o Sponsors">Publicidad o Sponsors en MDQSHOW</option>
                 </select>
@@ -193,11 +177,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
                 />
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <div className="flex items-center text-[11px] text-slate-400 gap-1">
-                  <Info className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                  <span>info@mdqshow.com.ar</span>
-                </div>
+              <div className="flex items-center justify-end pt-2">
                 <button
                   type="submit"
                   className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-rose-950/40 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"

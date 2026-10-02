@@ -174,75 +174,77 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                     </div>
 
                     {/* Right: Actions */}
-                    <div className="flex items-center space-x-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800 shrink-0">
-                      {isAdmin && (
-                        <>
-                          <button
-                            onClick={() => onEditShow?.(show)}
-                            className="p-2.5 rounded-xl bg-slate-800 hover:bg-amber-500 hover:text-slate-950 border border-slate-700 text-amber-400 transition-colors shrink-0"
-                            title="Editar show"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            id={`timeline-delete-${show.id}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteShow?.(show.id);
-                            }}
-                            className="p-2.5 rounded-xl bg-slate-800 hover:bg-red-600 hover:text-white border border-slate-700 text-red-400 transition-colors cursor-pointer shrink-0"
-                            title="Eliminar este recital de la cartelera"
-                            aria-label="Eliminar show"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
+                    <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/80 shrink-0">
+                      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => onEditShow?.(show)}
+                              className="p-1.5 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-amber-500 hover:text-slate-950 border border-slate-700 text-amber-400 transition-colors shrink-0"
+                              title="Editar show"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </button>
+                            <button
+                              id={`timeline-delete-${show.id}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteShow?.(show.id);
+                              }}
+                              className="p-1.5 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-red-600 hover:text-white border border-slate-700 text-red-400 transition-colors cursor-pointer shrink-0"
+                              title="Eliminar este recital de la cartelera"
+                              aria-label="Eliminar show"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </button>
+                          </>
+                        )}
 
-                      <button
-                        onClick={() => onToggleFavorite(show.id)}
-                        className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors shrink-0"
-                        title={isFav ? 'Quitar de favoritos' : 'Guardar'}
-                      >
-                        <Heart className={`w-4 h-4 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
-                      </button>
-
-                      {/* WhatsApp share */}
-                      <button
-                        onClick={() => {
-                          trackShareEvent(show.id, show.band);
-                          window.open(getWhatsAppShareUrl(show), '_blank', 'noopener,noreferrer');
-                        }}
-                        className="p-2 sm:p-2.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/30 text-[#25D366] hover:text-[#2ee672] transition-colors cursor-pointer shrink-0"
-                        title="Compartir por WhatsApp"
-                      >
-                        <WhatsAppIcon className="w-4 h-4 shrink-0" />
-                      </button>
-
-                      {/* Spotify link (si está configurado) */}
-                      {show.spotifyUrl && (
-                        <a
-                          href={show.spotifyUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 sm:p-2.5 rounded-xl bg-green-950/40 hover:bg-green-900/50 border border-green-500/30 text-[#1DB954] hover:text-green-300 transition-colors cursor-pointer shrink-0 flex items-center justify-center"
-                          title={`Escuchar a ${show.band} en Spotify`}
+                        <button
+                          onClick={() => onToggleFavorite(show.id)}
+                          className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors shrink-0"
+                          title={isFav ? 'Quitar de favoritos' : 'Guardar'}
                         >
-                          <SpotifyIcon className="w-4 h-4" />
-                        </a>
-                      )}
+                          <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
+                        </button>
 
-                      {/* Calendario inteligente 1-clic */}
-                      <button
-                        type="button"
-                        onClick={() => addToDeviceCalendar(show, date)}
-                        className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-rose-400 transition-colors cursor-pointer shrink-0"
-                        title="Agendar esta fecha en tu calendario (detecta automáticamente Apple o Google Calendar)"
-                      >
-                        <CalendarPlus className="w-4 h-4" />
-                      </button>
+                        {/* WhatsApp share */}
+                        <button
+                          onClick={() => {
+                            trackShareEvent(show.id, show.band);
+                            window.open(getWhatsAppShareUrl(show), '_blank', 'noopener,noreferrer');
+                          }}
+                          className="p-2 sm:p-2.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/30 text-[#25D366] hover:text-[#2ee672] transition-colors cursor-pointer shrink-0"
+                          title="Compartir por WhatsApp"
+                        >
+                          <WhatsAppIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                        </button>
 
-                      <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 shrink-0">
+                        {/* Spotify link (si está configurado) */}
+                        {show.spotifyUrl && (
+                          <a
+                            href={show.spotifyUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 sm:p-2.5 rounded-xl bg-green-950/40 hover:bg-green-900/50 border border-green-500/30 text-[#1DB954] hover:text-green-300 transition-colors cursor-pointer shrink-0 flex items-center justify-center"
+                            title={`Escuchar a ${show.band} en Spotify`}
+                          >
+                            <SpotifyIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          </a>
+                        )}
+
+                        {/* Calendario inteligente 1-clic */}
+                        <button
+                          type="button"
+                          onClick={() => addToDeviceCalendar(show, date)}
+                          className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-rose-400 transition-colors cursor-pointer shrink-0"
+                          title="Agendar esta fecha en tu calendario"
+                        >
+                          <CalendarPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
                         <a
                           href={show.ticketUrl}
                           target="_blank"
@@ -250,11 +252,13 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                           onClick={() => {
                             trackTicketClick(show.id, show.band);
                           }}
-                          className="w-44 sm:w-48 flex items-center justify-center px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-900/30 transition-all cursor-pointer truncate"
+                          className="flex items-center justify-center px-2.5 sm:px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-900/30 transition-all cursor-pointer max-w-[150px] sm:max-w-none"
+                          title={`Comprar entradas en ${formatProperCase(show.ticketPortalName)}`}
                         >
-                          <Ticket className="w-3.5 h-3.5 mr-1.5 shrink-0" />
-                          <span className="truncate">Entradas en {formatProperCase(show.ticketPortalName)}</span>
-                          <ExternalLink className="w-3 h-3 ml-1.5 shrink-0 opacity-80" />
+                          <Ticket className="w-3.5 h-3.5 mr-1 shrink-0" />
+                          <span className="sm:hidden truncate">{formatProperCase(show.ticketPortalName) || 'Entradas'}</span>
+                          <span className="hidden sm:inline truncate">Entradas en {formatProperCase(show.ticketPortalName)}</span>
+                          <ExternalLink className="w-3 h-3 ml-1 shrink-0 opacity-80" />
                         </a>
                         {isAdmin && metricsMap?.[show.id] && (
                           <span className="text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 whitespace-nowrap">
