@@ -6,8 +6,6 @@ import {
   saveShowToCloud, 
   deleteShowFromCloud, 
   getLocalFallbackShows,
-  markShowAsDeletedLocally,
-  unmarkShowAsDeletedLocally,
   restoreShowsFromBackup
 } from './services/showsService';
 import { Navbar } from './components/Navbar';
@@ -111,11 +109,16 @@ export default function App() {
 
   const handleAdminLogout = () => {
     setIsAdmin(false);
-    setIsPreviewUnlocked(false);
     localStorage.removeItem(LOCAL_STORAGE_ADMIN);
-    localStorage.removeItem('mdqshow_preview_access');
-    sessionStorage.removeItem('mdqshow_preview_access');
     window.location.hash = '';
+
+    // Si estaba en /admin, pasamos suavemente a /test para que el usuario pueda ver la cartelera pública
+    const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
+    if (path.endsWith('/admin')) {
+      window.history.replaceState(null, '', '/test');
+      setIsPreviewUnlocked(true);
+      sessionStorage.setItem('mdqshow_preview_access', 'true');
+    }
   };
 
   // Modo Próximamente / Vista previa privada
@@ -321,9 +324,6 @@ export default function App() {
 
   // Save show (handles both ADD new and EDIT existing with cloud persistence)
   const handleSaveShow = async (showData: Show) => {
-    // Si estaba previamente marcado como eliminado, rehabilitarlo
-    unmarkShowAsDeletedLocally(showData.id);
-
     // Immediate optimistic local update
     setShows((prev) => {
       const exists = prev.some((s) => s.id === showData.id);
@@ -333,7 +333,6 @@ export default function App() {
       } else {
         updated = [showData, ...prev];
       }
-      localStorage.setItem(LOCAL_STORAGE_SHOWS_LIST, JSON.stringify(updated));
       return updated;
     });
 
@@ -344,12 +343,17 @@ export default function App() {
     // Save to Firebase Firestore
     try {
       await saveShowToCloud(showData);
-    } catch (err) {
+      setDeleteToast(`"${showData.band}" se guardó y sincronizó correctamente en la nube.`);
+      setTimeout(() => {
+        setDeleteToast(null);
+      }, 4000);
+    } catch (err: any) {
       console.error('Error al guardar show en Firestore:', err);
+      alert('Aviso al guardar en la nube: ' + (err?.message || 'Verificá tu conexión a internet'));
     }
   };
 
-  // Toast state for deletion feedback
+  // Toast state for feedback
   const [deleteToast, setDeleteToast] = useState<string | null>(null);
 
   // Delete show handler
@@ -357,15 +361,8 @@ export default function App() {
     const showToDelete = shows.find((s) => s.id === showId);
     const bandName = showToDelete ? showToDelete.band : 'El recital';
 
-    // Marcar como eliminado localmente para que no se resucite
-    markShowAsDeletedLocally(showId);
-
     // Immediate optimistic local update
-    setShows((prev) => {
-      const updated = prev.filter((s) => s.id !== showId);
-      localStorage.setItem(LOCAL_STORAGE_SHOWS_LIST, JSON.stringify(updated));
-      return updated;
-    });
+    setShows((prev) => prev.filter((s) => s.id !== showId));
 
     if (selectedShow && selectedShow.id === showId) {
       setSelectedShow(null);
@@ -380,7 +377,7 @@ export default function App() {
     try {
       await deleteShowFromCloud(showId);
     } catch (err) {
-      console.error('Error al eliminar show en Firestore:', err);
+      console.error('Error al eliminar show de Firestore:', err);
     }
   };
 

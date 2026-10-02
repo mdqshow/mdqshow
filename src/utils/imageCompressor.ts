@@ -4,7 +4,7 @@
  * Esto previene que una imagen de 3MB a 5MB bloquee la cuota de Firestore (máx 1MB por documento)
  * o desborde el localStorage.
  */
-export async function compressImage(file: File, maxWidth = 1200, maxHeight = 900, quality = 0.82): Promise<string> {
+export async function compressImage(file: File, maxWidth = 1000, maxHeight = 750, quality = 0.78): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Error al leer el archivo de imagen'));
@@ -30,29 +30,32 @@ export async function compressImage(file: File, maxWidth = 1200, maxHeight = 900
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          // Fallback a la imagen original si no hay canvas 2d
           resolve(readerEvent.target?.result as string);
           return;
         }
 
-        // Suavizado de imagen de alta calidad
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Convertir a WebP o JPEG ligero (típicamente 80-160 KB, ideal para Firestore y carga instantánea)
+        // Intento 1: WebP o JPEG con calidad estándar
+        let dataUrl = '';
         try {
-          const webpData = canvas.toDataURL('image/webp', quality);
-          if (webpData.startsWith('data:image/webp')) {
-            resolve(webpData);
-            return;
-          }
+          dataUrl = canvas.toDataURL('image/webp', quality);
         } catch {
-          // ignore webp fallback
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
         }
 
-        const jpegData = canvas.toDataURL('image/jpeg', quality);
-        resolve(jpegData);
+        // Si excede 500KB (aprox 680,000 chars base64), recomprimimos con calidad más ajustada
+        if (dataUrl.length > 680000) {
+          try {
+            dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+          } catch {
+            // fallback
+          }
+        }
+
+        resolve(dataUrl);
       };
 
       if (typeof readerEvent.target?.result === 'string') {

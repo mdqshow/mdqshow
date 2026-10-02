@@ -4,8 +4,7 @@ import {
   setDoc, 
   deleteDoc, 
   onSnapshot, 
-  writeBatch,
-  getDocs
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Show } from '../types';
@@ -14,66 +13,18 @@ import { formatProperCase } from '../utils/textFormatting';
 
 const SHOWS_COLLECTION = 'shows';
 const LOCAL_STORAGE_SHOWS_LIST = 'mdqshow_all_shows_v4';
-const LOCAL_STORAGE_DELETED_SHOWS = 'mdqshow_deleted_ids_v1';
-
-/**
- * Obtiene el conjunto de IDs de shows que el usuario eliminó explícitamente
- */
-export function getDeletedShowIds(): Set<string> {
-  try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_DELETED_SHOWS);
-    if (raw) {
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr)) {
-        return new Set(arr);
-      }
-    }
-  } catch {
-    // ignore
-  }
-  return new Set();
-}
-
-/**
- * Registra un show como eliminado para no resucitarlo desde cachés antiguos
- */
-export function markShowAsDeletedLocally(showId: string): void {
-  try {
-    const current = getDeletedShowIds();
-    current.add(showId);
-    localStorage.setItem(LOCAL_STORAGE_DELETED_SHOWS, JSON.stringify(Array.from(current)));
-  } catch {
-    // ignore
-  }
-}
-
-/**
- * Quita un show de los eliminados si el administrador decide crearlo o editarlo
- */
-export function unmarkShowAsDeletedLocally(showId: string): void {
-  try {
-    const current = getDeletedShowIds();
-    if (current.has(showId)) {
-      current.delete(showId);
-      localStorage.setItem(LOCAL_STORAGE_DELETED_SHOWS, JSON.stringify(Array.from(current)));
-    }
-  } catch {
-    // ignore
-  }
-}
 
 /**
  * Obtiene la lista local guardada o el fallback de shows iniciales
  */
 export function getLocalFallbackShows(): Show[] {
-  const deletedIds = getDeletedShowIds();
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_SHOWS_LIST);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed
-          .filter((s) => s && s.id && !deletedIds.has(s.id))
+          .filter((s) => s && s.id)
           .map((s) => ({
             ...s,
             venue: formatProperCase(s.venue),
@@ -85,7 +36,7 @@ export function getLocalFallbackShows(): Show[] {
   } catch {
     // fallback
   }
-  return INITIAL_SHOWS.filter((s) => !deletedIds.has(s.id)).map((s) => ({
+  return INITIAL_SHOWS.map((s) => ({
     ...s,
     venue: formatProperCase(s.venue),
     venueAddress: formatProperCase(s.venueAddress),
@@ -110,7 +61,7 @@ export async function seedInitialShows(showsToSeed: Show[]): Promise<void> {
 }
 
 /**
- * Escucha cambios en tiempo real en la colección de shows
+ * Escucha cambios en tiempo real en la colección de shows directamente desde Firestore
  */
 export function subscribeToShows(
   onUpdate: (shows: Show[]) => void,
@@ -125,7 +76,7 @@ export function subscribeToShows(
     async (snapshot) => {
       if (snapshot.empty && !isSeeding) {
         isSeeding = true;
-        // Si la base en la nube está completamente vacía por ser la primera vez, sembramos los shows locales
+        // Si la base en la nube estuviera completamente vacía, sembramos los shows reales iniciales
         const localShows = getLocalFallbackShows();
         if (localShows.length > 0) {
           await seedInitialShows(localShows);
@@ -135,34 +86,19 @@ export function subscribeToShows(
         return;
       }
 
-      const deletedIds = getDeletedShowIds();
-      const cloudMap = new Map<string, Show>();
-
+      const showsList: Show[] = [];
       snapshot.forEach((docSnap) => {
-        const showId = docSnap.id;
-        if (!deletedIds.has(showId)) {
-          const data = docSnap.data() as Show;
-          cloudMap.set(showId, {
-            ...data,
-            id: showId,
-            venue: formatProperCase(data.venue),
-            venueAddress: formatProperCase(data.venueAddress),
-            ticketPortalName: formatProperCase(data.ticketPortalName) || 'Boletería Oficial',
-          });
-        }
+        const data = docSnap.data() as Show;
+        showsList.push({
+          ...data,
+          id: docSnap.id,
+          venue: formatProperCase(data.venue),
+          venueAddress: formatProperCase(data.venueAddress),
+          ticketPortalName: formatProperCase(data.ticketPortalName) || 'Boletería Oficial',
+        });
       });
 
-      // Recuperar shows locales para no perder shows recién creados en el cliente
-      const localFallback = getLocalFallbackShows();
-      localFallback.forEach((localShow) => {
-        if (!deletedIds.has(localShow.id) && !cloudMap.has(localShow.id)) {
-          cloudMap.set(localShow.id, localShow);
-        }
-      });
-
-      const showsList: Show[] = Array.from(cloudMap.values());
-
-      // Actualizar localStorage como cache de respaldo limpia
+      // Actualizar localStorage como caché de respaldo sincronizada
       try {
         localStorage.setItem(LOCAL_STORAGE_SHOWS_LIST, JSON.stringify(showsList));
       } catch {
@@ -172,18 +108,7 @@ export function subscribeToShows(
       onUpdate(showsList);
     },
     (err) => {
-      // Manejo transparente de cuota diaria superada de Google Cloud Firestore o modo offline
-      const msg = err.message || '';
-      if (
-        msg.includes('Quota limit exceeded') ||
-        msg.includes('Quota exceeded') ||
-        msg.includes('unavailable') ||
-        msg.includes('offline')
-      ) {
-        console.warn('Firestore operando en modo caché local protegida:', msg);
-      } else {
-        console.warn('Firestore shows listener fallback:', msg);
-      }
+      console.warn('Firestore shows listener fallback:', err.message || err);
       // Servir la lista de shows desde la caché local sin interrumpir la experiencia del usuario
       onUpdate(getLocalFallbackShows());
       if (onError) onError(err);
@@ -194,7 +119,7 @@ export function subscribeToShows(
 }
 
 /**
- * Guarda o actualiza un recital en la base de datos en la nube y en caché local permanente
+ * Guarda o actualiza un recital en la base de datos en la nube y en caché local
  */
 export async function saveShowToCloud(show: Show): Promise<void> {
   const sanitizedShow: Show = {
@@ -204,10 +129,7 @@ export async function saveShowToCloud(show: Show): Promise<void> {
     ticketPortalName: formatProperCase(show.ticketPortalName) || 'Boletería Oficial',
   };
 
-  // Asegurar que quede desmarcado de eliminados
-  unmarkShowAsDeletedLocally(sanitizedShow.id);
-
-  // Actualizar inmediatamente la caché local permanente
+  // Actualizar inmediatamente la caché local
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_SHOWS_LIST);
     let currentList: Show[] = raw ? JSON.parse(raw) : [];
@@ -225,20 +147,29 @@ export async function saveShowToCloud(show: Show): Promise<void> {
   }
 
   // Guardar en Firestore Cloud
-  try {
-    const docRef = doc(db, SHOWS_COLLECTION, sanitizedShow.id);
-    await setDoc(docRef, sanitizedShow, { merge: true });
-  } catch (err) {
-    console.error('Error al guardar show en Firestore Cloud:', err);
-  }
+  const docRef = doc(db, SHOWS_COLLECTION, sanitizedShow.id);
+  await setDoc(docRef, sanitizedShow, { merge: true });
 }
 
 /**
- * Elimina un recital de la base de datos en la nube
+ * Elimina un recital de la base de datos en la nube y de la caché local
  */
 export async function deleteShowFromCloud(showId: string): Promise<void> {
   const docRef = doc(db, SHOWS_COLLECTION, showId);
   await deleteDoc(docRef);
+
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_SHOWS_LIST);
+    if (raw) {
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        const filtered = list.filter((s: Show) => s.id !== showId);
+        localStorage.setItem(LOCAL_STORAGE_SHOWS_LIST, JSON.stringify(filtered));
+      }
+    }
+  } catch {
+    // ignore
+  }
 }
 
 /**
@@ -249,19 +180,14 @@ export async function restoreShowsFromBackup(showsToRestore: Show[]): Promise<{ 
     throw new Error('El archivo no contiene un listado válido de shows');
   }
 
-  // 1. Limpiar eliminados locales si alguno de los que restauramos estaba marcado
-  showsToRestore.forEach((s) => {
-    if (s && s.id) unmarkShowAsDeletedLocally(s.id);
-  });
-
-  // 2. Guardar en localStorage
+  // 1. Guardar en localStorage
   try {
     localStorage.setItem(LOCAL_STORAGE_SHOWS_LIST, JSON.stringify(showsToRestore));
   } catch (err) {
     console.warn('Error guardando en localStorage:', err);
   }
 
-  // 3. Escribir en Firestore por bloques (batches de hasta 400 docs para respetar límites de Firebase)
+  // 2. Escribir en Firestore por bloques (batches de hasta 400 docs para respetar límites de Firebase)
   try {
     const BATCH_SIZE = 400;
     for (let i = 0; i < showsToRestore.length; i += BATCH_SIZE) {
@@ -288,3 +214,4 @@ export async function restoreShowsFromBackup(showsToRestore: Show[]): Promise<{ 
 
   return { count: showsToRestore.length };
 }
+
