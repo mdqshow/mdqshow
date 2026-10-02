@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Show, FilterState } from './types';
+import { Show, FilterState, Sponsor } from './types';
 import { INITIAL_SHOWS, AVAILABLE_CITIES } from './data/mockShows';
 import { 
   subscribeToShows, 
@@ -8,12 +8,21 @@ import {
   getLocalFallbackShows,
   restoreShowsFromBackup
 } from './services/showsService';
+import { 
+  subscribeToSponsors,
+  saveSponsorToCloud,
+  deleteSponsorFromCloud,
+  getLocalFallbackSponsors
+} from './services/sponsorsService';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from './firebase';
 import { Navbar } from './components/Navbar';
 import { ShowFilters } from './components/ShowFilters';
 import { ShowCard } from './components/ShowCard';
 import { ShowModal } from './components/ShowModal';
 import { TimelineAgendaView } from './components/TimelineAgendaView';
 import { AdminLoginModal } from './components/AdminLoginModal';
+import { AdminSponsorsModal } from './components/AdminSponsorsModal';
 import { AdPopup } from './components/AdPopup';
 import { ContactModal } from './components/ContactModal';
 import { NewsletterModal } from './components/NewsletterModal';
@@ -33,7 +42,6 @@ import {
   subscribeToSubscribers, 
   Subscriber 
 } from './services/subscribersService';
-import { ComingSoon } from './components/ComingSoon';
 import { 
   Flame, 
   Calendar, 
@@ -53,139 +61,70 @@ import {
   ChevronUp,
   ShieldCheck,
   Scale,
-  Info
+  Info,
+  Megaphone
 } from 'lucide-react';
 
 const LOCAL_STORAGE_SHOWS_LIST = 'mdqshow_all_shows_v4';
 const LOCAL_STORAGE_FAVORITES = 'mdqshow_favorites_v2';
-const LOCAL_STORAGE_ADMIN = 'mdqshow_is_admin_v1';
 
 export default function App() {
   const currentCity = 'Mar del Plata';
 
-  // Admin authentication state
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    return localStorage.getItem(LOCAL_STORAGE_ADMIN) === 'true';
-  });
+  // Estado de administrador: lo determina Firebase Auth (no la URL ni el localStorage)
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
 
-  // Soporte para ingresar o abrir login por URL directa (ej: /admin, #admin, ?admin)
   useEffect(() => {
-    const checkAdminUrl = () => {
+    // Limpieza de la bandera vieja que guardaba la versión anterior
+    try {
+      localStorage.removeItem('mdqshow_is_admin_v1');
+    } catch {
+      // ignore
+    }
+    // Entrar a /admin (o #admin) solo abre la pantalla de login; el acceso lo da Firebase Auth
+    const isAdminRoute = () => {
       const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
-      const search = window.location.search.toLowerCase();
-      const hash = window.location.hash.toLowerCase();
-
-      const isAdminRoute = 
-        path === '/admin' || 
-        path.endsWith('/admin') || 
-        hash === '#admin' || 
-        search.includes('admin');
-
-      if (isAdminRoute) {
-        // Desbloquear vista previa si estaba en modo Coming Soon
-        sessionStorage.setItem('mdqshow_preview_access', 'true');
-        setIsPreviewUnlocked(true);
-
-        if (!isAdmin) {
-          setIsAdminLoginOpen(true);
-        }
+      return path.endsWith('/admin') || window.location.hash.toLowerCase() === '#admin';
+    };
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      setIsAdmin(!!user);
+      if (!user && isAdminRoute()) {
+        setIsAdminLoginOpen(true);
+      }
+    });
+    const handleRouteChange = () => {
+      if (!auth.currentUser && isAdminRoute()) {
+        setIsAdminLoginOpen(true);
       }
     };
-
-    checkAdminUrl();
-    window.addEventListener('popstate', checkAdminUrl);
-    window.addEventListener('hashchange', checkAdminUrl);
+    window.addEventListener('popstate', handleRouteChange);
+    window.addEventListener('hashchange', handleRouteChange);
     return () => {
-      window.removeEventListener('popstate', checkAdminUrl);
-      window.removeEventListener('hashchange', checkAdminUrl);
+      unsubscribeAuth();
+      window.removeEventListener('popstate', handleRouteChange);
+      window.removeEventListener('hashchange', handleRouteChange);
     };
-  }, [isAdmin]);
+  }, []);
 
   const handleLoginSuccess = () => {
     setIsAdmin(true);
-    localStorage.setItem(LOCAL_STORAGE_ADMIN, 'true');
   };
 
-  const handleAdminLogout = () => {
+  const handleAdminLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error('Error al cerrar sesión:', err);
+    }
     setIsAdmin(false);
-    localStorage.removeItem(LOCAL_STORAGE_ADMIN);
     window.location.hash = '';
 
-    // Si estaba en /admin, pasamos suavemente a /test para que el usuario pueda ver la cartelera pública
     const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
     if (path.endsWith('/admin')) {
-      window.history.replaceState(null, '', '/test');
-      setIsPreviewUnlocked(true);
-      sessionStorage.setItem('mdqshow_preview_access', 'true');
+      window.history.replaceState(null, '', '/');
     }
   };
-
-  // Modo Próximamente / Vista previa privada
-  // El público general ve la pantalla "Próximamente".
-  // Para entrar a la web completa se requiere:
-  // 1. Ingresar con la clave en pantalla (MDQ2026mdq)
-  // 2. O entrar mediante enlace directo de test sin clave para clientes y conocidos:
-  //    - mdqshow.com.ar/test (o /demo, /preview)
-  //    - mdqshow.com.ar/?test (o ?preview=true)
-  //    - mdqshow.com.ar/#test
-  const [isPreviewUnlocked, setIsPreviewUnlocked] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-
-    // Chequeo de link de test directo en path, search o hash
-    const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
-    const search = window.location.search.toLowerCase();
-    const hash = window.location.hash.toLowerCase();
-
-    const isTestUrl = 
-      path.endsWith('/test') || 
-      path.endsWith('/demo') || 
-      path.endsWith('/preview') || 
-      path.endsWith('/cliente') || 
-      search.includes('test') || 
-      search.includes('demo') || 
-      search.includes('preview') || 
-      hash === '#test' || 
-      hash === '#demo' || 
-      hash === '#preview';
-
-    if (isTestUrl) {
-      sessionStorage.setItem('mdqshow_preview_access', 'true');
-      return true;
-    }
-
-    // Si ya se desbloqueó en esta sesión previamente
-    return sessionStorage.getItem('mdqshow_preview_access') === 'true';
-  });
-
-  // Escuchar si el usuario navega a /test o agrega #test en cualquier momento
-  useEffect(() => {
-    const checkTestUrl = () => {
-      const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
-      const search = window.location.search.toLowerCase();
-      const hash = window.location.hash.toLowerCase();
-
-      if (
-        path.endsWith('/test') || 
-        path.endsWith('/demo') || 
-        path.endsWith('/preview') || 
-        search.includes('test') || 
-        hash === '#test' || 
-        hash === '#demo'
-      ) {
-        sessionStorage.setItem('mdqshow_preview_access', 'true');
-        setIsPreviewUnlocked(true);
-      }
-    };
-
-    checkTestUrl();
-    window.addEventListener('popstate', checkTestUrl);
-    window.addEventListener('hashchange', checkTestUrl);
-    return () => {
-      window.removeEventListener('popstate', checkTestUrl);
-      window.removeEventListener('hashchange', checkTestUrl);
-    };
-  }, []);
 
   // Shows list initialized from local fallback, then synced with Firestore in real time
   const [shows, setShows] = useState<Show[]>(() => getLocalFallbackShows());
@@ -221,11 +160,36 @@ export default function App() {
   // Suscriptores para KPIs del Admin
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   useEffect(() => {
+    if (!isAdmin) {
+      setSubscribers([]);
+      return;
+    }
     const unsubSubs = subscribeToSubscribers((subs) => {
       setSubscribers(subs);
     });
     return () => unsubSubs();
+  }, [isAdmin]);
+
+  // Sponsors y Publicidades sincronizados con Firestore en tiempo real
+  const [sponsors, setSponsors] = useState<Sponsor[]>(() => getLocalFallbackSponsors());
+  const [isAdminSponsorsOpen, setIsAdminSponsorsOpen] = useState(false);
+
+  useEffect(() => {
+    const unsubSponsors = subscribeToSponsors((cloudSponsors) => {
+      if (cloudSponsors && cloudSponsors.length > 0) {
+        setSponsors(cloudSponsors);
+      }
+    });
+    return () => unsubSponsors();
   }, []);
+
+  const handleSaveSponsor = async (sponsor: Sponsor) => {
+    await saveSponsorToCloud(sponsor);
+  };
+
+  const handleDeleteSponsor = async (sponsorId: string) => {
+    await deleteSponsorFromCloud(sponsorId);
+  };
 
   // Favorites state
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -554,18 +518,6 @@ export default function App() {
     return shows.filter((s) => s.featured);
   }, [shows]);
 
-  // Si no está desbloqueado el preview privado, mostramos la pantalla elegante de Próximamente
-  if (!isPreviewUnlocked) {
-    return (
-      <ComingSoon 
-        onUnlockAdmin={() => {
-          setIsPreviewUnlocked(true);
-          setIsAdmin(true);
-        }} 
-      />
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#0e1117] text-slate-100 flex flex-col selection:bg-rose-500 selection:text-white">
       {/* Top Navbar */}
@@ -588,6 +540,7 @@ export default function App() {
         onImportBackup={handleImportBackup}
         onDownloadTxt={handleDownloadTxt}
         onOpenMetrics={() => setIsAdminMetricsOpen(true)}
+        onOpenSponsors={() => setIsAdminSponsorsOpen(true)}
       />
 
       {/* Main Container */}
@@ -796,11 +749,13 @@ export default function App() {
           />
         </section>
 
-        {/* Espacio publicitario superior: Dos banners de salas y estadios lado a lado con rotación suave */}
+        {/* Espacio publicitario superior: Los dos primeros según los sponsors que marcó el admin */}
         <div className="animate-in fade-in duration-300">
           <AdSenseBanner 
             format="timeline-double" 
             initialOffset={0} 
+            sponsors={sponsors}
+            isTopBanner={true}
           />
         </div>
 
@@ -882,6 +837,8 @@ export default function App() {
                         <AdSenseBanner
                           format="timeline-double"
                           initialOffset={chunkIdx * 2}
+                          sponsors={sponsors}
+                          isTopBanner={false}
                         />
                       </div>
                     )}
@@ -899,6 +856,7 @@ export default function App() {
               onEditShow={handleOpenEditShow}
               onDeleteShow={handleDeleteShow}
               metricsMap={metricsMap}
+              sponsors={sponsors}
             />
           )}
         </section>
@@ -939,18 +897,31 @@ export default function App() {
               <span>Newsletters</span>
             </button>
 
-            {isAdmin && (
-              <button
-                type="button"
-                id="footer-test-ad-btn"
-                onClick={() => window.dispatchEvent(new Event('mdq_trigger_ad_popup'))}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 transition-all cursor-pointer shadow-xs"
-                title="Probar el popup de publicidad obligatorio de 5s"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-rose-400" />
-                <span>Probar Publicidad (5s)</span>
-              </button>
-            )}
+            {isAdmin ? (
+              <>
+                <button
+                  type="button"
+                  id="footer-sponsors-btn"
+                  onClick={() => setIsAdminSponsorsOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 transition-all cursor-pointer shadow-xs active:scale-95"
+                  title="Gestionar Publicidades y Sponsors (Pop-up, Primeros Dos, Feed)"
+                >
+                  <Megaphone className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Publicidades / Sponsors</span>
+                </button>
+
+                <button
+                  type="button"
+                  id="footer-test-ad-btn"
+                  onClick={() => window.dispatchEvent(new CustomEvent('mdq_trigger_ad_popup'))}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all cursor-pointer shadow-xs"
+                  title="Probar el popup de sponsor de 5s obligatorio"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Probar Popup Sponsor (5s)</span>
+                </button>
+              </>
+            ) : null}
           </div>
 
           {/* Aviso Legal & Descargo de Responsabilidad (Disclaimer Oficial) */}
@@ -997,8 +968,17 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Welcome / Entry 5-second Ad Popup */}
-      <AdPopup shows={shows} isAdmin={isAdmin} />
+      {/* Welcome / Entry 5-second Ad Popup for Sponsors */}
+      <AdPopup sponsors={sponsors} isAdmin={isAdmin} />
+
+      {/* Admin Sponsors & Publicidades Modal */}
+      <AdminSponsorsModal
+        isOpen={isAdminSponsorsOpen}
+        onClose={() => setIsAdminSponsorsOpen(false)}
+        sponsors={sponsors}
+        onSaveSponsor={handleSaveSponsor}
+        onDeleteSponsor={handleDeleteSponsor}
+      />
 
       {/* Contact Form Modal */}
       <ContactModal
@@ -1027,6 +1007,7 @@ export default function App() {
         metricsMap={metricsMap}
         bannerMetricsMap={bannerMetricsMap}
         subscribers={subscribers}
+        sponsors={sponsors}
       />
 
       {/* Direct deletion confirmation toast */}

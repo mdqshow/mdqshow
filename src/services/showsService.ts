@@ -69,20 +69,13 @@ export function subscribeToShows(
 ): () => void {
   const showsCol = collection(db, SHOWS_COLLECTION);
 
-  let isSeeding = false;
-
   const unsubscribe = onSnapshot(
     showsCol,
     async (snapshot) => {
-      if (snapshot.empty && !isSeeding) {
-        isSeeding = true;
-        // Si la base en la nube estuviera completamente vacía, sembramos los shows reales iniciales
-        const localShows = getLocalFallbackShows();
-        if (localShows.length > 0) {
-          await seedInitialShows(localShows);
-        }
-        onUpdate(localShows);
-        isSeeding = false;
+      if (snapshot.empty) {
+        // Base vacía: se muestra la lista local, pero NO se escribe nada en la nube
+        // (antes se re-sembraba automáticamente y eso podía pisar o "resucitar" shows borrados)
+        onUpdate(getLocalFallbackShows());
         return;
       }
 

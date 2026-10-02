@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Lock, KeyRound, X, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Lock, KeyRound, X, AlertCircle, ShieldCheck, Mail } from 'lucide-react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -7,26 +9,47 @@ interface AdminLoginModalProps {
   onLoginSuccess: () => void;
 }
 
+function traducirError(code?: string): string {
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+    case 'auth/invalid-email':
+      return 'Email o contraseña incorrectos.';
+    case 'auth/too-many-requests':
+      return 'Demasiados intentos. Esperá unos minutos y volvé a probar.';
+    case 'auth/network-request-failed':
+      return 'No hay conexión. Revisá tu internet e intentá de nuevo.';
+    default:
+      return 'No se pudo iniciar sesión. Intentá de nuevo.';
+  }
+}
+
 export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
   isOpen,
   onClose,
   onLoginSuccess
 }) => {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Clave de administrador unificada
-    if (password.trim() === 'MDQ2026mdq' || password.trim() === 'mdq2026') {
-      setError('');
+    setLoading(true);
+    setError('');
+    try {
+      await signInWithEmailAndPassword(auth, email.trim(), password);
       setPassword('');
       onLoginSuccess();
       onClose();
-    } else {
-      setError('Contraseña incorrecta. Solo el administrador de MDQSHOW puede acceder.');
+    } catch (err: any) {
+      setError(traducirError(err?.code));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -60,26 +83,45 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              Contraseña de Administrador
+              Email
+            </label>
+            <div className="relative">
+              <input
+                type="email"
+                autoFocus
+                required
+                autoComplete="username"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError('');
+                }}
+                placeholder="tu@email.com"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 pr-10"
+              />
+              <Mail className="w-4 h-4 text-slate-500 absolute right-3 top-3 pointer-events-none" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              Contraseña
             </label>
             <div className="relative">
               <input
                 type="password"
-                autoFocus
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   setError('');
                 }}
-                placeholder="Ingresá la clave de acceso..."
+                placeholder="Tu contraseña de administrador"
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 pr-10"
               />
               <KeyRound className="w-4 h-4 text-slate-500 absolute right-3 top-3 pointer-events-none" />
             </div>
-            <p className="text-[11px] text-slate-500 mt-1.5">
-              Clave predeterminada: <span className="font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">mdq2026</span>
-            </p>
           </div>
 
           <div className="flex justify-end space-x-2 pt-2">
@@ -92,10 +134,11 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 rounded-xl shadow-lg shadow-rose-900/30 transition-all flex items-center space-x-1.5"
+              disabled={loading}
+              className="px-5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-60 rounded-xl shadow-lg shadow-rose-900/30 transition-all flex items-center space-x-1.5"
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>Ingresar como Admin</span>
+              <span>{loading ? 'Ingresando...' : 'Ingresar como Admin'}</span>
             </button>
           </div>
         </form>

@@ -22,8 +22,6 @@ interface NewsletterModalProps {
   isAdmin?: boolean;
 }
 
-const STORAGE_KEY_SUBSCRIBERS = 'mdqshow_subscribers';
-
 export const NewsletterModal: React.FC<NewsletterModalProps> = ({
   isOpen,
   onClose,
@@ -38,38 +36,12 @@ export const NewsletterModal: React.FC<NewsletterModalProps> = ({
   const [showAdminList, setShowAdminList] = useState(false);
   const [copiedSubscribers, setCopiedSubscribers] = useState(false);
 
-  // Load existing subscribers and listen to cloud updates
+  // La lista de suscriptores solo se descarga para el administrador
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_SUBSCRIBERS);
-      if (stored) {
-        setSubscribers(JSON.parse(stored));
-      } else {
-        const initialSubscribers: Subscriber[] = [
-          {
-            id: 'sub-1',
-            email: 'fanrock.mdq@gmail.com',
-            instantAlerts: true,
-            weeklyDigest: true,
-            favoriteGenre: 'Rock Nacional',
-            subscribedAt: '2026-09-18'
-          },
-          {
-            id: 'sub-2',
-            email: 'recitaleslafeliz@outlook.com',
-            instantAlerts: true,
-            weeklyDigest: true,
-            favoriteGenre: 'Todos los géneros',
-            subscribedAt: '2026-09-20'
-          }
-        ];
-        localStorage.setItem(STORAGE_KEY_SUBSCRIBERS, JSON.stringify(initialSubscribers));
-        setSubscribers(initialSubscribers);
-      }
-    } catch {
-      // ignore
+    if (!isAdmin) {
+      setSubscribers([]);
+      return;
     }
-
     const unsubscribe = subscribeToSubscribers((cloudSubs) => {
       if (cloudSubs && cloudSubs.length > 0) {
         setSubscribers(cloudSubs);
@@ -77,7 +49,7 @@ export const NewsletterModal: React.FC<NewsletterModalProps> = ({
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isAdmin]);
 
   // Close on Escape key
   useEffect(() => {
@@ -122,20 +94,17 @@ export const NewsletterModal: React.FC<NewsletterModalProps> = ({
       updated = [newSubscriber, ...subscribers];
     }
 
-    setSubscribers(updated);
-    try {
-      localStorage.setItem(STORAGE_KEY_SUBSCRIBERS, JSON.stringify(updated));
-    } catch {
-      // storage error
-    }
-
-    // Save to Firestore in background
-    saveSubscriberToCloud(newSubscriber).catch((err) => {
-      console.warn('Error al guardar suscriptor en Firestore:', err);
-    });
-
-    setIsSuccess(true);
-    setEmail('');
+    // Guardar en Firestore y recién entonces confirmar al usuario
+    saveSubscriberToCloud(newSubscriber)
+      .then(() => {
+        if (isAdmin) setSubscribers(updated);
+        setIsSuccess(true);
+        setEmail('');
+      })
+      .catch((err) => {
+        console.warn('Error al guardar suscriptor en Firestore:', err);
+        setError('No pudimos registrar tu email. Intentá de nuevo en unos minutos.');
+      });
   };
 
   const handleCopyAllSubscribers = () => {
