@@ -22,7 +22,9 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
 }) => {
   // Obtener sponsors activos según la ubicación solicitada
   const activeSponsorsList = React.useMemo(() => {
-    const list = (sponsors && sponsors.length > 0) ? sponsors : INITIAL_SPONSORS;
+    // Sin sponsors repetidos (por id) en la lista
+    const dedupe = (arr: Sponsor[]) => arr.filter((s, i) => arr.findIndex((o) => o.id === s.id) === i);
+    const list = dedupe((sponsors && sponsors.length > 0) ? sponsors : INITIAL_SPONSORS);
     
     if (isTopBanner) {
       // "en los dos primeros ( ahi solo tienen que aparecer los que yo marco )"
@@ -39,72 +41,69 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
     return markedForFeed.length > 0 ? markedForFeed : list.filter(s => s.isActive !== false);
   }, [sponsors, isTopBanner]);
 
+  // Los sponsors se reparten en dos grupos que NO comparten ningún aviso:
+  // la tarjeta izquierda rota entre los de posición par y la derecha entre los de posición impar.
+  // Así, los dos banners que van juntos nunca muestran el mismo sponsor.
+  const leftPool = React.useMemo(() => activeSponsorsList.filter((_, i) => i % 2 === 0), [activeSponsorsList]);
+  const rightPool = React.useMemo(() => activeSponsorsList.filter((_, i) => i % 2 === 1), [activeSponsorsList]);
   const poolLength = activeSponsorsList.length;
 
-  // Rotación desfasada independiente para cada columna (izq y der)
-  // Tarjeta Izquierda (columna 1): arranca en initialOffset
-  const [leftIndex, setLeftIndex] = useState(() => (poolLength > 0 ? initialOffset % poolLength : 0));
+  const startOffset = Math.floor(initialOffset / 2);
+  const [leftIndex, setLeftIndex] = useState(0);
   const [isLeftFading, setIsLeftFading] = useState(false);
-
-  // Tarjeta Derecha (columna 2): arranca desfasada respecto a la izquierda
-  const [rightIndex, setRightIndex] = useState(() => (poolLength > 1 ? (initialOffset + 1) % poolLength : 0));
+  const [rightIndex, setRightIndex] = useState(0);
   const [isRightFading, setIsRightFading] = useState(false);
 
-  // Reset indices when pool changes
+  // Reiniciar posiciones cuando cambia la lista de sponsors
   useEffect(() => {
-    if (poolLength > 0) {
-      setLeftIndex(initialOffset % poolLength);
-      setRightIndex(poolLength > 1 ? (initialOffset + 1) % poolLength : 0);
-    }
-  }, [poolLength, initialOffset]);
+    setLeftIndex(leftPool.length > 0 ? startOffset % leftPool.length : 0);
+    setRightIndex(rightPool.length > 0 ? startOffset % rightPool.length : 0);
+  }, [leftPool.length, rightPool.length, startOffset]);
 
-  // Si hay más de 1 sponsor disponible, alternamos con rotación suave
-  // Ciclo para la tarjeta IZQUIERDA: cambia cada 10 segundos
+  // Rotación ALTERNADA con un único reloj: cada 5 segundos cambia una sola tarjeta,
+  // primero la izquierda y 5 segundos después la derecha. Nunca cambian a la vez.
+  // Cada banner de la página arranca con un pequeño desfase propio para que tampoco cambien todos juntos.
   useEffect(() => {
-    if (poolLength <= 2 && isTopBanner) return; // Si en los dos primeros hay exactamente los marcados fijos, no rotan agresivamente
-    if (poolLength <= 1) return;
+    const canRotateLeft = leftPool.length > 1;
+    const canRotateRight = rightPool.length > 1;
+    if (!canRotateLeft && !canRotateRight) return;
 
-    const leftInterval = setInterval(() => {
-      setIsLeftFading(true);
-      setTimeout(() => {
-        setLeftIndex((prev) => (prev + 2) % poolLength);
-        setIsLeftFading(false);
-      }, 500);
-    }, 10000);
+    const phaseMs = (startOffset % 4) * 1250;
+    let turn = 0;
+    let interval: ReturnType<typeof setInterval> | undefined;
+    let fadeTimeout: ReturnType<typeof setTimeout> | undefined;
 
-    return () => clearInterval(leftInterval);
-  }, [poolLength, isTopBanner]);
-
-  // Ciclo para la tarjeta DERECHA: desfasado 5 segundos
-  useEffect(() => {
-    if (poolLength <= 2 && isTopBanner) return;
-    if (poolLength <= 1) return;
-
-    let rightInterval: NodeJS.Timeout;
-    const timeout = setTimeout(() => {
-      setIsRightFading(true);
-      setTimeout(() => {
-        setRightIndex((prev) => (prev + 2) % poolLength);
-        setIsRightFading(false);
-      }, 500);
-
-      rightInterval = setInterval(() => {
+    const rotateNext = () => {
+      const isLeftTurn = turn % 2 === 0;
+      turn += 1;
+      if (isLeftTurn && canRotateLeft) {
+        setIsLeftFading(true);
+        fadeTimeout = setTimeout(() => {
+          setLeftIndex((prev) => (prev + 1) % leftPool.length);
+          setIsLeftFading(false);
+        }, 500);
+      } else if (!isLeftTurn && canRotateRight) {
         setIsRightFading(true);
-        setTimeout(() => {
-          setRightIndex((prev) => (prev + 2) % poolLength);
+        fadeTimeout = setTimeout(() => {
+          setRightIndex((prev) => (prev + 1) % rightPool.length);
           setIsRightFading(false);
         }, 500);
-      }, 10000);
-    }, 5000);
+      }
+    };
+
+    const startTimeout = setTimeout(() => {
+      interval = setInterval(rotateNext, 5000);
+    }, phaseMs);
 
     return () => {
-      clearTimeout(timeout);
-      if (rightInterval) clearInterval(rightInterval);
+      clearTimeout(startTimeout);
+      if (interval) clearInterval(interval);
+      if (fadeTimeout) clearTimeout(fadeTimeout);
     };
-  }, [poolLength, isTopBanner]);
+  }, [leftPool.length, rightPool.length, startOffset]);
 
-  const firstSponsor = activeSponsorsList[leftIndex % poolLength] || activeSponsorsList[0];
-  const secondSponsor = activeSponsorsList[rightIndex % poolLength] || activeSponsorsList[Math.min(1, poolLength - 1)] || firstSponsor;
+  const firstSponsor = leftPool[leftIndex % Math.max(leftPool.length, 1)];
+  const secondSponsor = rightPool.length > 0 ? rightPool[rightIndex % rightPool.length] : undefined;
 
   // Registrar impresiones en métricas
   useEffect(() => {
@@ -114,32 +113,34 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   }, [firstSponsor]);
 
   useEffect(() => {
-    if (secondSponsor && secondSponsor.id !== firstSponsor?.id) {
+    if (secondSponsor) {
       trackBannerImpression(secondSponsor.id, secondSponsor.name, secondSponsor.address || '');
     }
-  }, [secondSponsor, firstSponsor]);
+  }, [secondSponsor]);
 
-  if (poolLength === 0) return null;
+  if (poolLength === 0 || !firstSponsor) return null;
 
   return (
-    <aside 
-      aria-label="Espacio de Sponsors y Publicidad"
+    <aside
+      aria-label="Espacio publicitario"
       className={`w-full my-6 ${className}`}
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <SponsorCard 
-          sponsor={firstSponsor} 
-          heightClass="h-28 sm:h-32" 
-          isFading={isLeftFading} 
-          showBadge={true}
+      {/* Con un solo sponsor se muestra una única tarjeta (nunca el mismo aviso dos veces) */}
+      <div className={`grid grid-cols-1 gap-4 ${secondSponsor ? 'sm:grid-cols-2' : ''}`}>
+        <SponsorCard
+          sponsor={firstSponsor}
+          heightClass="h-28 sm:h-32"
+          isFading={isLeftFading}
+          showBadge={false}
         />
-        {/* En caso de que solo haya un único sponsor en la lista, mostramos el segundo o repetimos con estilo */}
-        <SponsorCard 
-          sponsor={secondSponsor} 
-          heightClass="h-28 sm:h-32" 
-          isFading={isRightFading} 
-          showBadge={true}
-        />
+        {secondSponsor && (
+          <SponsorCard
+            sponsor={secondSponsor}
+            heightClass="h-28 sm:h-32"
+            isFading={isRightFading}
+            showBadge={false}
+          />
+        )}
       </div>
     </aside>
   );

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X } from 'lucide-react';
 import { Sponsor } from '../types';
 import { SponsorCard } from './SponsorCard';
 import { trackBannerImpression } from '../services/metricsService';
@@ -10,7 +9,7 @@ interface AdPopupProps {
   isAdmin?: boolean;
 }
 
-const COUNTDOWN_SECONDS = 5;
+const POPUP_DURATION_SECONDS = 5; // el aviso se cierra solo cuando el borde completa la vuelta
 const OPEN_DELAY_MS = 1200; // deja que la cartelera cargue y que lleguen los sponsors de la nube
 const CLOSE_ANIMATION_MS = 380;
 const LAST_POPUP_KEY = 'mdqshow_last_popup_sponsor';
@@ -72,11 +71,8 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [] }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [adSponsor, setAdSponsor] = useState<Sponsor | null>(null);
-  const [timeLeft, setTimeLeft] = useState(COUNTDOWN_SECONDS);
-  const [progress, setProgress] = useState(100);
+  const [progress, setProgress] = useState(0); // 0 = recién abierto, 1 = el borde completó la vuelta
   const hasTriggeredRef = useRef(false);
-
-  const canClose = timeLeft <= 0;
 
   const rememberSponsor = (sponsor: Sponsor) => {
     try {
@@ -106,8 +102,7 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [] }) => {
       hasTriggeredRef.current = true;
       rememberSponsor(chosen);
       setAdSponsor(chosen);
-      setTimeLeft(COUNTDOWN_SECONDS);
-      setProgress(100);
+      setProgress(0);
       setIsClosing(false);
       setIsOpen(true);
       if (chosen.id && chosen.name) {
@@ -132,8 +127,7 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [] }) => {
       if (!chosen) return;
 
       setAdSponsor(chosen);
-      setTimeLeft(COUNTDOWN_SECONDS);
-      setProgress(100);
+      setProgress(0);
       setIsClosing(false);
       setIsOpen(true);
     };
@@ -142,22 +136,27 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [] }) => {
     return () => window.removeEventListener('mdq_trigger_ad_popup' as any, handleTrigger);
   }, [sponsors]);
 
-  // Cuenta regresiva: el aviso se puede cerrar recién a los 5 segundos
+  // Temporizador: el borde da una vuelta completa en 5 segundos y al terminar el aviso se cierra solo
   useEffect(() => {
     if (!isOpen || !adSponsor) return;
 
-    const startTime = Date.now();
-    const durationMs = COUNTDOWN_SECONDS * 1000;
+    const startTime = performance.now();
+    const durationMs = POPUP_DURATION_SECONDS * 1000;
+    let frameId = 0;
 
-    const interval = window.setInterval(() => {
-      const remainingMs = Math.max(0, durationMs - (Date.now() - startTime));
-      setTimeLeft(Math.ceil(remainingMs / 1000));
-      setProgress((remainingMs / durationMs) * 100);
-      if (remainingMs <= 0) window.clearInterval(interval);
-    }, 40);
+    const tick = (now: number) => {
+      const elapsed = Math.min(1, (now - startTime) / durationMs);
+      setProgress(elapsed);
+      if (elapsed >= 1) {
+        closePopup();
+        return;
+      }
+      frameId = window.requestAnimationFrame(tick);
+    };
+    frameId = window.requestAnimationFrame(tick);
 
-    return () => window.clearInterval(interval);
-  }, [isOpen, adSponsor]);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isOpen, adSponsor, closePopup]);
 
   // Bloquea el scroll de fondo mientras el aviso está abierto
   useEffect(() => {
@@ -169,33 +168,19 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [] }) => {
     };
   }, [isOpen]);
 
-  // Esc cierra el aviso (solo cuando ya terminó la cuenta regresiva)
-  useEffect(() => {
-    if (!isOpen || !canClose) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closePopup();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, canClose, closePopup]);
-
   if (!isOpen || !adSponsor) return null;
 
-  // Anillo de cuenta regresiva
-  const RING_RADIUS = 16;
-  const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
+  // Borde que da la vuelta: el color recorre toda la rueda de colores (arranca en ámbar)
+  const borderColor = `hsl(${(40 + progress * 360) % 360} 95% 60%)`;
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Publicidad"
+      aria-label="Main sponsor"
       className={`fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/75 backdrop-blur-md overflow-y-auto select-none ${
         isClosing ? 'mdq-popup-overlay-out' : 'mdq-popup-overlay-in'
       }`}
-      onClick={() => {
-        if (canClose) closePopup();
-      }}
     >
       <style>{POPUP_STYLES}</style>
 
@@ -216,41 +201,29 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [] }) => {
             onClick={closePopup}
           />
 
-          {/* Cuenta regresiva que se convierte en botón de cerrar */}
-          <div className="absolute -top-3 -right-3 z-20">
-            {canClose ? (
-              <button
-                type="button"
-                onClick={closePopup}
-                aria-label="Cerrar publicidad"
-                className="mdq-popup-fade-up w-10 h-10 rounded-full bg-white text-slate-900 shadow-lg shadow-black/50 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-              >
-                <X className="w-5 h-5" strokeWidth={2.5} />
-              </button>
-            ) : (
-              <div className="relative w-10 h-10 rounded-full bg-slate-950/90 backdrop-blur shadow-lg shadow-black/50 flex items-center justify-center">
-                <svg className="absolute inset-0 -rotate-90" viewBox="0 0 40 40" aria-hidden="true">
-                  <circle cx="20" cy="20" r={RING_RADIUS} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="2.5" />
-                  <circle
-                    cx="20"
-                    cy="20"
-                    r={RING_RADIUS}
-                    fill="none"
-                    stroke="rgb(251 191 36)"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeDasharray={RING_LENGTH}
-                    strokeDashoffset={RING_LENGTH * (1 - progress / 100)}
-                  />
-                </svg>
-                <span className="relative text-xs font-black text-amber-300">{timeLeft}</span>
-              </div>
-            )}
+          {/* Borde de la tarjeta: da una vuelta completa cambiando de color; al volver al inicio el aviso se cierra solo */}
+          <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl overflow-hidden" aria-hidden="true">
+            <svg className="w-full h-full overflow-hidden">
+              <rect
+                x="0"
+                y="0"
+                width="100%"
+                height="100%"
+                rx="16"
+                ry="16"
+                fill="none"
+                stroke={borderColor}
+                strokeWidth="8"
+                pathLength={1}
+                strokeDasharray="1"
+                strokeDashoffset={1 - progress}
+              />
+            </svg>
           </div>
         </div>
 
         <p className="relative mt-4 text-center text-[10px] font-semibold tracking-[0.3em] uppercase text-white/45">
-          Publicidad
+          Main Sponsor
         </p>
       </div>
     </div>

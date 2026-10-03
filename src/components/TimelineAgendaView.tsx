@@ -19,7 +19,6 @@ interface TimelineAgendaViewProps {
   isAdmin?: boolean;
   onEditShow?: (show: Show) => void;
   onDeleteShow?: (id: string) => void;
-  metricsMap?: Record<string, { ticketClicks: number; shares: number; favoritesCount: number }>;
   sponsors?: Sponsor[];
 }
 
@@ -37,7 +36,6 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
   isAdmin,
   onEditShow,
   onDeleteShow,
-  metricsMap,
   sponsors,
 }) => {
   // Desglosamos todas las fechas para que cada recital tenga su lugar cronológico
@@ -263,11 +261,6 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                           <span className="hidden sm:inline truncate">Entradas en {formatProperCase(show.ticketPortalName)}</span>
                           <ExternalLink className="w-3 h-3 ml-1 shrink-0 opacity-80" />
                         </a>
-                        {isAdmin && metricsMap?.[show.id] && (
-                          <span className="text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 whitespace-nowrap">
-                            {metricsMap[show.id].ticketClicks} clicks
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>

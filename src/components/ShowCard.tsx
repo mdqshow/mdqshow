@@ -10,7 +10,6 @@ import {
   Sparkles,
   Edit3,
   Trash2,
-  MousePointerClick,
   Share2,
   CalendarPlus,
   MessageCircle,
@@ -34,11 +33,6 @@ interface ShowCardProps {
   isAdmin?: boolean;
   onEditShow?: (show: Show) => void;
   onDeleteShow?: (id: string) => void;
-  metrics?: {
-    ticketClicks: number;
-    shares: number;
-    favoritesCount: number;
-  };
 }
 
 export const ShowCard: React.FC<ShowCardProps> = ({
@@ -49,7 +43,6 @@ export const ShowCard: React.FC<ShowCardProps> = ({
   isAdmin,
   onEditShow,
   onDeleteShow,
-  metrics,
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -296,20 +289,6 @@ export const ShowCard: React.FC<ShowCardProps> = ({
             )}
           </button>
         </div>
-
-        {/* Métricas para el Administrador (para evaluar performance y ofrecer pauta comercial) */}
-        {isAdmin && metrics && (
-          <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-slate-950/80 border border-emerald-500/30 text-[11px] text-slate-300 font-medium">
-            <span className="text-emerald-400 font-semibold flex items-center gap-1">
-              <MousePointerClick className="w-3 h-3 text-emerald-400" />
-              {metrics.ticketClicks} {metrics.ticketClicks === 1 ? 'click' : 'clicks'} tickets
-            </span>
-            <span className="text-slate-400 flex items-center gap-1">
-              <Heart className="w-3 h-3 text-rose-400" />
-              {metrics.favoritesCount} favs
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );

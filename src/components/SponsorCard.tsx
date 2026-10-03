@@ -345,7 +345,7 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
         rel="noopener noreferrer"
         onClick={handleClick}
         className="block cursor-pointer"
-        title={`${sponsor.name} — ${sponsor.address || 'Sponsor Oficial'} (Clic para visitar)`}
+        title={sponsor.address ? `${sponsor.name} — ${sponsor.address}` : sponsor.name}
       >
         {cardContent}
       </a>

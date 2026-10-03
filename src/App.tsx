@@ -122,7 +122,8 @@ export default function App() {
 
     const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
     if (path.endsWith('/admin')) {
-      window.history.replaceState(null, '', '/');
+      // Vuelve a la misma ruta sin "/admin" (por ejemplo /test/admin -> /test)
+      window.history.replaceState(null, '', path.replace(/\/admin$/, '') || '/');
     }
   };
 
@@ -826,7 +827,6 @@ export default function App() {
                           isAdmin={isAdmin}
                           onEditShow={handleOpenEditShow}
                           onDeleteShow={handleDeleteShow}
-                          metrics={metricsMap[show.id]}
                         />
                       ))}
                     </div>
@@ -855,7 +855,6 @@ export default function App() {
               isAdmin={isAdmin}
               onEditShow={handleOpenEditShow}
               onDeleteShow={handleDeleteShow}
-              metricsMap={metricsMap}
               sponsors={sponsors}
             />
           )}
