@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // IMPORTANTE: reemplazá TU_EMAIL@gmail.com por el email del
+    // usuario administrador que creaste en Firebase Authentication.
+    // Mientras no lo cambies, NADIE puede modificar shows ni sponsors.
+    // ============================================================
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'TU_EMAIL@gmail.com';
+    }
+
+    // Shows: todo el mundo los ve, solo el admin escribe
+    match /shows/{showId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Sponsors: todo el mundo los ve, solo el admin escribe
+    match /sponsors/{sponsorId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Suscriptores: cualquiera puede anotarse (con datos válidos),
+    // pero SOLO el admin puede ver, modificar o borrar la lista.
+    match /subscribers/{subscriberId} {
+      allow create: if request.resource.data.keys().hasOnly(
+            ['id', 'email', 'instantAlerts', 'weeklyDigest', 'favoriteGenre', 'subscribedAt'])
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+        && request.resource.data.instantAlerts is bool
+        && request.resource.data.weeklyDigest is bool
+        && request.resource.data.favoriteGenre is string
+        && request.resource.data.favoriteGenre.size() <= 60
+        && request.resource.data.subscribedAt is string
+        && request.resource.data.subscribedAt.size() <= 40;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Métricas de shows: lectura pública; los visitantes solo pueden
+    // sumar o restar 1 por operación a los contadores (no pueden fijar valores arbitrarios).
+    match /metrics/{metricId} {
+      allow read: if true;
+      allow create: if isAdmin() || (
+        request.resource.data.keys().hasOnly(
+          ['showId', 'bandName', 'ticketClicks', 'shares', 'favoritesCount', 'lastUpdated'])
+        && request.resource.data.get('ticketClicks', 0) <= 1
+        && request.resource.data.get('shares', 0) <= 1
+        && math.abs(request.resource.data.get('favoritesCount', 0)) <= 1
+      );
+      allow update: if isAdmin() || (
+        request.resource.data.keys().hasOnly(
+          ['showId', 'bandName', 'ticketClicks', 'shares', 'favoritesCount', 'lastUpdated'])
+        && math.abs(request.resource.data.get('ticketClicks', 0) - resource.data.get('ticketClicks', 0)) <= 1
+        && math.abs(request.resource.data.get('shares', 0) - resource.data.get('shares', 0)) <= 1
+        && math.abs(request.resource.data.get('favoritesCount', 0) - resource.data.get('favoritesCount', 0)) <= 1
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Métricas de banners: igual criterio (impresiones y clics de a 1)
+    match /banner_metrics/{venueId} {
+      allow read: if true;
+      allow create: if isAdmin() || (
+        request.resource.data.keys().hasOnly(
+          ['venueId', 'venueName', 'venueAddress', 'impressions', 'clicks', 'lastImpressionAt', 'lastClickAt'])
+        && request.resource.data.get('impressions', 0) <= 1
+        && request.resource.data.get('clicks', 0) <= 1
+      );
+      allow update: if isAdmin() || (
+        request.resource.data.keys().hasOnly(
+          ['venueId', 'venueName', 'venueAddress', 'impressions', 'clicks', 'lastImpressionAt', 'lastClickAt'])
+        && math.abs(request.resource.data.get('impressions', 0) - resource.data.get('impressions', 0)) <= 1
+        && math.abs(request.resource.data.get('clicks', 0) - resource.data.get('clicks', 0)) <= 1
+      );
+      allow delete: if isAdmin();
+    }
+  }
+}
