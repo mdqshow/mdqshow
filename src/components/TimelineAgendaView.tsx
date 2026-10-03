@@ -9,6 +9,7 @@ import { formatProperCase } from '../utils/textFormatting';
 import { AdSenseBanner } from './AdSenseBanner';
 import { SpotifyIcon } from './SpotifyIcon';
 import { WhatsAppIcon } from './WhatsAppIcon';
+import { Sponsor } from '../types';
 
 interface TimelineAgendaViewProps {
   shows: Show[];
@@ -19,6 +20,7 @@ interface TimelineAgendaViewProps {
   onEditShow?: (show: Show) => void;
   onDeleteShow?: (id: string) => void;
   metricsMap?: Record<string, { ticketClicks: number; shares: number; favoritesCount: number }>;
+  sponsors?: Sponsor[];
 }
 
 interface TimelineItem {
@@ -36,6 +38,7 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
   onEditShow,
   onDeleteShow,
   metricsMap,
+  sponsors,
 }) => {
   // Desglosamos todas las fechas para que cada recital tenga su lugar cronológico
   const rawItems: Array<{ date: string; show: Show }> = [];
@@ -274,6 +277,8 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                     <AdSenseBanner
                       format="timeline-double"
                       initialOffset={globalIndex}
+                      sponsors={sponsors}
+                      isTopBanner={false}
                     />
                   )}
                 </React.Fragment>

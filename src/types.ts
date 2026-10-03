@@ -39,3 +39,42 @@ export interface CityOption {
   country: string;
   count?: number;
 }
+
+export type SponsorEffectType = 
+  | 'random'
+  | 'bruto'
+  | 'abbey-road'
+  | 'bendu'
+  | 'arena-mdp'
+  | 'plaza-musica'
+  | 'mute'
+  | 'radio-city'
+  | 'cyber-neon'
+  | 'golden-shimmer'
+  | 'retro-bounce'
+  | 'float-glow';
+
+export interface Sponsor {
+  id: string;
+  type: 'image' | 'text';
+  name: string;              // Renglón 1: Nombre del negocio / sponsor en mayúsculas
+  address: string;           // Renglón 2: Dirección, zona o bajada breve
+  image?: string;            // Imagen subida o URL
+  link?: string;             // Enlace web o red social (ej. Instagram)
+  
+  // Ubicaciones de visualización en la aplicación:
+  showInPopup?: boolean;     // Salir en el pop up de inicio (5 segundos no saltable)
+  showInTopBanner?: boolean; // Salir en los dos primeros de la página (bajo los filtros)
+  showInFeed?: boolean;      // Salir en el resto de la página (alternando entre shows)
+  
+  // Configuración de estilo y animación para textos:
+  effectType?: SponsorEffectType;
+  bgColor?: string;          // Clases Tailwind de gradiente o fondo sólido
+  textColor?: string;        // Color tipográfico del renglón 1
+  subtextColor?: string;     // Color tipográfico del renglón 2
+  
+  isActive?: boolean;        // Pauta activa (true por defecto)
+  createdAt?: string;        // Fecha de alta
+  notes?: string;            // Observaciones internas del admin
+}
+

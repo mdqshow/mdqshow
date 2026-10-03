@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { MapPin, Plus, Heart, Calendar, LayoutGrid, ShieldCheck, Lock, LogOut, Mail, Bell, Download, FileText, BarChart3, Database, Upload } from 'lucide-react';
+import { MapPin, Plus, Heart, Calendar, LayoutGrid, ShieldCheck, Lock, LogOut, Mail, Bell, Download, FileText, BarChart3, Database, Upload, Megaphone } from 'lucide-react';
 import { MdqBrandIcon } from './MdqBrandIcon';
 import { AVAILABLE_CITIES } from '../data/mockShows';
 
@@ -22,6 +22,7 @@ interface NavbarProps {
   onImportBackup?: (file: File) => void;
   onDownloadTxt?: () => void;
   onOpenMetrics?: () => void;
+  onOpenSponsors?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -43,6 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onImportBackup,
   onDownloadTxt,
   onOpenMetrics,
+  onOpenSponsors,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   return (
@@ -180,6 +182,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Admin Controls */}
             {isAdmin ? (
               <div className="flex items-center space-x-1 sm:space-x-1.5">
+                {onOpenSponsors && (
+                  <button
+                    id="admin-sponsors-btn"
+                    onClick={onOpenSponsors}
+                    className="flex items-center px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-amber-300 hover:text-amber-200 bg-amber-500/20 hover:bg-amber-500/30 rounded-xl transition-all border border-amber-500/50 text-xs font-black cursor-pointer shadow-xs active:scale-95"
+                    title="Cargar y Gestionar Publicidades y Sponsors (Pop-up, Primeros Dos, Feed)"
+                  >
+                    <Megaphone className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 text-amber-400 shrink-0" />
+                    <span className="font-extrabold">Sponsors</span>
+                  </button>
+                )}
+
                 {onOpenMetrics && (
                   <button
                     id="admin-metrics-btn"

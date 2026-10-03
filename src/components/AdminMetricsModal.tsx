@@ -19,7 +19,7 @@ import {
   Eye,
   Megaphone
 } from 'lucide-react';
-import { Show } from '../types';
+import { Show, Sponsor } from '../types';
 import { ShowMetrics, BannerMetrics } from '../services/metricsService';
 import { Subscriber } from '../services/subscribersService';
 import { VENUE_SPONSORS } from './AdSenseBanner';
@@ -31,6 +31,7 @@ interface AdminMetricsModalProps {
   metricsMap: Record<string, ShowMetrics>;
   bannerMetricsMap: Record<string, BannerMetrics>;
   subscribers: Subscriber[];
+  sponsors?: Sponsor[];
 }
 
 export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
@@ -40,6 +41,7 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
   metricsMap,
   bannerMetricsMap,
   subscribers,
+  sponsors,
 }) => {
   const [activeTab, setActiveTab] = useState<'shows' | 'banners'>('shows');
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,12 +75,13 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
   const activeShowsCount = shows.length;
   const totalSubscribersCount = subscribers.length;
 
-  // Combinar banners con sus métricas de impresiones y clicks
-  const venueBannersWithMetrics = VENUE_SPONSORS.map((venue) => {
+  // Combinar banners y sponsors con sus métricas de impresiones y clicks
+  const sponsorPool = (sponsors && sponsors.length > 0) ? sponsors : VENUE_SPONSORS;
+  const venueBannersWithMetrics = sponsorPool.map((venue) => {
     const m = bannerMetricsMap[venue.id] || {
       venueId: venue.id,
       venueName: venue.name,
-      venueAddress: venue.address,
+      venueAddress: venue.address || '',
       impressions: 0,
       clicks: 0,
     };
