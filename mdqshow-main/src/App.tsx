@@ -129,13 +129,15 @@ export default function App() {
 
   // Shows list initialized from local fallback, then synced with Firestore in real time
   const [shows, setShows] = useState<Show[]>(() => getLocalFallbackShows());
+  const [showsStatus, setShowsStatus] = useState<{ source: 'cloud' | 'empty' | 'local'; error?: string }>({ source: 'cloud' });
 
   // Subscribe to real-time updates from Firebase Firestore
   useEffect(() => {
-    const unsubscribe = subscribeToShows((cloudShows) => {
+    const unsubscribe = subscribeToShows((cloudShows, source, errorMessage) => {
       if (cloudShows && cloudShows.length > 0) {
         setShows(cloudShows);
       }
+      setShowsStatus({ source, error: errorMessage });
     });
     return () => unsubscribe();
   }, []);
@@ -547,6 +549,25 @@ export default function App() {
         onOpenMetrics={() => setIsAdminMetricsOpen(true)}
         onOpenSponsors={() => setIsAdminSponsorsOpen(true)}
       />
+
+      {/* Aviso solo para el administrador: la lista de recitales no viene de la base de datos real */}
+      {isAdmin && showsStatus.source !== 'cloud' && (
+        <div className="bg-rose-950/90 border-b border-rose-500/60 text-rose-100 px-4 py-3 text-xs sm:text-sm" role="alert">
+          <div className="max-w-7xl mx-auto">
+            <p className="font-bold">
+              {showsStatus.source === 'empty'
+                ? '⚠️ La base de datos de recitales está vacía: estás viendo solo la lista de respaldo.'
+                : '⚠️ No se pudo leer la base de datos: la lista de recitales que ves es una copia guardada, no la real.'}
+            </p>
+            <p className="mt-1 text-rose-200/90">
+              {/quota/i.test(showsStatus.error || '')
+                ? 'Firebase alcanzó el límite diario gratuito de uso y se restablece solo cada día (alrededor de las 4 de la mañana, hora de Argentina). Mientras tanto no cargues, edites, borres ni restaures recitales.'
+                : 'Evitá cargar, editar, borrar o restaurar recitales hasta que desaparezca este aviso.'}
+              {showsStatus.error && !/quota/i.test(showsStatus.error) ? ` Detalle técnico: ${showsStatus.error}` : ''}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
