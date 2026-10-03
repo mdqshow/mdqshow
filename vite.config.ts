@@ -10,6 +10,11 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       VitePWA({
+        // Service worker "autodestructivo": elimina cualquier service worker viejo que haya
+        // quedado instalado en los navegadores (causaba el error ERR_FAILED al abrir /admin)
+        // y no se vuelve a registrar. El manifest sigue funcionando igual.
+        selfDestroying: true,
+        injectRegister: false,
         registerType: 'autoUpdate',
         includeAssets: ['favicon.png', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-maskable-512x512.png'],
         manifest: {
