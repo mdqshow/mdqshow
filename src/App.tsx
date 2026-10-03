@@ -914,10 +914,10 @@ export default function App() {
                   id="footer-test-ad-btn"
                   onClick={() => window.dispatchEvent(new CustomEvent('mdq_trigger_ad_popup'))}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all cursor-pointer shadow-xs"
-                  title="Probar el popup de sponsor de 5s obligatorio"
+                  title="Probar el popup: cada vez que lo tocás muestra el siguiente sponsor, así los ves a todos"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Probar Popup Sponsor (5s)</span>
+                  <span>Probar Popup Sponsor (siguiente)</span>
                 </button>
               </>
             ) : null}

@@ -3,6 +3,7 @@ import { Sponsor } from '../types';
 import { SponsorCard } from './SponsorCard';
 import { trackBannerImpression } from '../services/metricsService';
 import { INITIAL_SPONSORS } from '../data/mockSponsors';
+import { auth } from '../firebase';
 
 interface AdPopupProps {
   sponsors?: Sponsor[];
@@ -67,12 +68,14 @@ function pickSponsor(pool: Sponsor[]): Sponsor | null {
   return candidates[Math.floor(Math.random() * candidates.length)] || candidates[0];
 }
 
-export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [] }) => {
+export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [adSponsor, setAdSponsor] = useState<Sponsor | null>(null);
   const [progress, setProgress] = useState(0); // 0 = recién abierto, 1 = el borde completó la vuelta
   const hasTriggeredRef = useRef(false);
+  const openedManuallyRef = useRef(false); // true si lo abrió el botón de prueba del admin
+  const testIndexRef = useRef(0); // para que el botón de prueba recorra los sponsors uno por uno
 
   const rememberSponsor = (sponsor: Sponsor) => {
     try {
@@ -90,16 +93,26 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [] }) => {
     }, CLOSE_ANIMATION_MS);
   }, []);
 
-  // Selección automática al cargar la web
+  // Selección automática al cargar la web (el administrador no ve este aviso)
   useEffect(() => {
     if (hasTriggeredRef.current) return;
     const pool = sponsors && sponsors.length > 0 ? sponsors : INITIAL_SPONSORS;
     const chosen = pickSponsor(pool);
     if (!chosen) return;
 
-    const openTimer = window.setTimeout(() => {
-      if (hasTriggeredRef.current) return;
+    let cancelled = false;
+    const openTimer = window.setTimeout(async () => {
+      // Esperar a que Firebase termine de reconocer la sesión; si hay un administrador logueado, no se muestra
+      try {
+        await auth.authStateReady();
+      } catch {
+        // ignore
+      }
+      if (cancelled || hasTriggeredRef.current) return;
+      if (auth.currentUser) return;
+
       hasTriggeredRef.current = true;
+      openedManuallyRef.current = false;
       rememberSponsor(chosen);
       setAdSponsor(chosen);
       setProgress(0);
@@ -110,8 +123,18 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [] }) => {
       }
     }, OPEN_DELAY_MS);
 
-    return () => window.clearTimeout(openTimer);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(openTimer);
+    };
   }, [sponsors]);
+
+  // Si el administrador inicia sesión mientras el aviso automático está abierto, se cierra
+  useEffect(() => {
+    if (isAdmin && isOpen && !openedManuallyRef.current) {
+      closePopup();
+    }
+  }, [isAdmin, isOpen, closePopup]);
 
   // Disparo manual para pruebas desde el panel de administración
   useEffect(() => {
@@ -123,9 +146,15 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [] }) => {
       if (event.detail && event.detail.sponsorId) {
         chosen = pool.find((s) => s.id === event.detail.sponsorId);
       }
-      if (!chosen) chosen = pickSponsor(pool);
-      if (!chosen) return;
+      if (!chosen) {
+        // Botón de prueba general: muestra los sponsors activos de a uno, en orden, para poder ver todos
+        const active = pool.filter((s) => s.isActive !== false);
+        if (active.length === 0) return;
+        chosen = active[testIndexRef.current % active.length];
+        testIndexRef.current += 1;
+      }
 
+      openedManuallyRef.current = true;
       setAdSponsor(chosen);
       setProgress(0);
       setIsClosing(false);

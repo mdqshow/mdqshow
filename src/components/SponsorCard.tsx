@@ -27,6 +27,29 @@ interface SponsorCardProps {
   onClick?: () => void;
 }
 
+/**
+ * Efecto "Bruto": cada letra gira por separado, pero las palabras se respetan tal como se escribieron.
+ * Cada palabra es un bloque que no se corta a la mitad y entre palabras queda el espacio normal.
+ */
+function renderBrutoLetters(text: string): React.ReactNode {
+  let letterIndex = 0;
+  return text.split(/\s+/).filter(Boolean).map((word, wordIndex) => (
+    <React.Fragment key={wordIndex}>
+      {wordIndex > 0 && ' '}
+      <span className="inline-block whitespace-nowrap">
+        {word.split('').map((char, i) => {
+          const delay = letterIndex++ * 0.12;
+          return (
+            <span key={i} className="animate-bruto-letter" style={{ animationDelay: `${delay}s` }}>
+              {char}
+            </span>
+          );
+        })}
+      </span>
+    </React.Fragment>
+  ));
+}
+
 export const SponsorCard: React.FC<SponsorCardProps> = ({
   sponsor,
   heightClass = 'h-28 sm:h-32',
@@ -160,15 +183,7 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
               {activeEffect === 'bruto' && (
                 <>
                   <h3 className={`text-xl sm:text-2xl lg:text-3xl font-black tracking-widest ${textColor} uppercase font-sans drop-shadow-lg leading-tight select-none`}>
-                    {(sponsor.name || '').split('').map((char, index) => (
-                      <span
-                        key={index}
-                        className="animate-bruto-letter"
-                        style={{ animationDelay: `${index * 0.12}s` }}
-                      >
-                        {char}
-                      </span>
-                    ))}
+                    {renderBrutoLetters(sponsor.name || '')}
                   </h3>
                   {sponsor.address && (
                     <div className="animate-bruto-location mt-1 sm:mt-1.5">

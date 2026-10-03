@@ -4,6 +4,7 @@ import {
   setDoc, 
   deleteDoc, 
   onSnapshot, 
+  getDocs,
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -213,4 +214,50 @@ export async function deleteSponsorFromCloud(sponsorId: string): Promise<void> {
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${SPONSORS_COLLECTION}/${sponsorId}`);
   }
+}
+
+
+/** Normaliza un nombre para compararlo (sin tildes, mayúsculas, sin la palabra "TEATRO" al inicio) */
+function normalizeSponsorName(name: string): string {
+  return (name || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/^TEATRO\s+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Carga en la nube los sponsors indicados que todavía no existan (compara por ID y por nombre).
+ * Nunca pisa ni duplica los que ya están. Devuelve cuántos creó.
+ */
+export async function importMissingSponsors(seeds: Sponsor[]): Promise<number> {
+  const snapshot = await getDocs(collection(db, SPONSORS_COLLECTION));
+  const existingIds = new Set<string>();
+  const existingNames = new Set<string>();
+  snapshot.forEach((docSnap) => {
+    existingIds.add(docSnap.id);
+    existingNames.add(normalizeSponsorName((docSnap.data() as Sponsor).name));
+  });
+
+  const toCreate = seeds.filter(
+    (seed) => !existingIds.has(seed.id) && !existingNames.has(normalizeSponsorName(seed.name))
+  );
+  if (toCreate.length === 0) return 0;
+
+  try {
+    const batch = writeBatch(db);
+    for (const seed of toCreate) {
+      const payload = cleanForFirestore({
+        ...seed,
+        createdAt: seed.createdAt || new Date().toISOString(),
+      });
+      batch.set(doc(db, SPONSORS_COLLECTION, seed.id), payload);
+    }
+    await batch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, SPONSORS_COLLECTION);
+  }
+  return toCreate.length;
 }
