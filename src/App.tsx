@@ -174,12 +174,14 @@ export default function App() {
   // Sponsors y Publicidades sincronizados con Firestore en tiempo real
   const [sponsors, setSponsors] = useState<Sponsor[]>(() => getLocalFallbackSponsors());
   const [isAdminSponsorsOpen, setIsAdminSponsorsOpen] = useState(false);
+  const [sponsorsStatus, setSponsorsStatus] = useState<{ source: 'cloud' | 'empty' | 'local'; error?: string }>({ source: 'local' });
 
   useEffect(() => {
-    const unsubSponsors = subscribeToSponsors((cloudSponsors) => {
+    const unsubSponsors = subscribeToSponsors((cloudSponsors, source, errorMessage) => {
       if (cloudSponsors && cloudSponsors.length > 0) {
         setSponsors(cloudSponsors);
       }
+      setSponsorsStatus({ source, error: errorMessage });
     });
     return () => unsubSponsors();
   }, []);
@@ -975,6 +977,7 @@ export default function App() {
         isOpen={isAdminSponsorsOpen}
         onClose={() => setIsAdminSponsorsOpen(false)}
         sponsors={sponsors}
+        sponsorsStatus={sponsorsStatus}
         onSaveSponsor={handleSaveSponsor}
         onDeleteSponsor={handleDeleteSponsor}
       />

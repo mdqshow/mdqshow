@@ -81,54 +81,75 @@ export async function seedInitialSponsors(sponsorsToSeed: Sponsor[]): Promise<vo
   }
 }
 
+export type SponsorsSource = 'cloud' | 'empty' | 'local';
+
 /**
- * Escucha cambios en tiempo real en la colección de sponsors directamente desde Firestore
+ * Escucha cambios en tiempo real en la colección de sponsors directamente desde Firestore.
+ * Informa de dónde viene la lista: 'cloud' (la base de datos real), 'empty' (la base está vacía y se muestra
+ * la lista de respaldo del código) o 'local' (falló la conexión y se muestra la copia guardada en este navegador).
+ * Si la conexión se corta por un error, vuelve a intentar sola a los 5 segundos.
  */
 export function subscribeToSponsors(
-  onUpdate: (sponsors: Sponsor[]) => void,
+  onUpdate: (sponsors: Sponsor[], source: SponsorsSource, errorMessage?: string) => void,
   onError?: (error: Error) => void
 ): () => void {
-  const sponsorsCol = collection(db, SPONSORS_COLLECTION);
+  let stopped = false;
+  let unsubscribe: (() => void) | null = null;
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
-  const unsubscribe = onSnapshot(
-    sponsorsCol,
-    async (snapshot) => {
-      if (snapshot.empty) {
-        // Base vacía: se muestra la lista local, sin escribir nada en la nube
-        onUpdate(getLocalFallbackSponsors());
-        return;
-      }
+  const start = () => {
+    if (stopped) return;
+    const sponsorsCol = collection(db, SPONSORS_COLLECTION);
 
-      const list: Sponsor[] = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data() as Sponsor;
-        list.push({
-          ...data,
-          id: docSnap.id,
+    unsubscribe = onSnapshot(
+      sponsorsCol,
+      (snapshot) => {
+        if (snapshot.empty) {
+          // Base vacía: se muestra la lista de respaldo, sin escribir nada en la nube
+          onUpdate(getLocalFallbackSponsors(), 'empty');
+          return;
+        }
+
+        const list: Sponsor[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() as Sponsor;
+          list.push({
+            ...data,
+            id: docSnap.id,
+          });
         });
-      });
 
-      // Ordenar por fecha o nombre
-      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-      // Actualizar localStorage como caché de respaldo sincronizada
-      try {
-        localStorage.setItem(LOCAL_STORAGE_SPONSORS_KEY, JSON.stringify(list));
-      } catch {
-        // ignore
+        // La copia local solo se actualiza con datos confirmados por la nube
+        if (!snapshot.metadata.hasPendingWrites) {
+          try {
+            localStorage.setItem(LOCAL_STORAGE_SPONSORS_KEY, JSON.stringify(list));
+          } catch {
+            // ignore
+          }
+        }
+
+        onUpdate(list, 'cloud');
+      },
+      (err) => {
+        console.warn('Firestore sponsors listener error:', err.message || err);
+        // Se muestra la copia local, pero avisando que NO es la lista real
+        onUpdate(getLocalFallbackSponsors(), 'local', err.message || String(err));
+        if (onError) onError(err);
+        // Un listener con error queda cortado: se reintenta solo
+        retryTimer = setTimeout(start, 5000);
       }
+    );
+  };
 
-      onUpdate(list);
-    },
-    (err) => {
-      console.warn('Firestore sponsors listener fallback:', err.message || err);
-      // Servir la lista de sponsors desde la caché local sin interrumpir la experiencia
-      onUpdate(getLocalFallbackSponsors());
-      if (onError) onError(err);
-    }
-  );
+  start();
 
-  return unsubscribe;
+  return () => {
+    stopped = true;
+    if (retryTimer) clearTimeout(retryTimer);
+    if (unsubscribe) unsubscribe();
+  };
 }
 
 /**
@@ -163,12 +184,20 @@ export async function saveSponsorToCloud(sponsor: Sponsor): Promise<void> {
     showInFeed: sponsor.showInFeed ?? true,
   });
 
-  // Actualizar inmediatamente la caché local
+  // 1) Guardar en Firestore Cloud (si falla, se corta acá y no queda nada "a medias")
+  try {
+    const docRef = doc(db, SPONSORS_COLLECTION, payload.id);
+    await setDoc(docRef, payload, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `${SPONSORS_COLLECTION}/${payload.id}`);
+  }
+
+  // 2) Solo con la nube confirmada, actualizar la copia local de respaldo
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_SPONSORS_KEY);
     let currentList: Sponsor[] = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(currentList)) currentList = [];
-    
+
     const existingIndex = currentList.findIndex(s => s.id === payload.id);
     if (existingIndex >= 0) {
       currentList[existingIndex] = payload as Sponsor;
@@ -179,21 +208,21 @@ export async function saveSponsorToCloud(sponsor: Sponsor): Promise<void> {
   } catch (err) {
     console.warn('Error al guardar sponsor en localStorage:', err);
   }
-
-  // Guardar en Firestore Cloud
-  try {
-    const docRef = doc(db, SPONSORS_COLLECTION, payload.id);
-    await setDoc(docRef, payload, { merge: true });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `${SPONSORS_COLLECTION}/${payload.id}`);
-  }
 }
 
 /**
  * Elimina un sponsor de la base de datos en la nube y de la caché local
  */
 export async function deleteSponsorFromCloud(sponsorId: string): Promise<void> {
-  // Limpiar en localStorage
+  // Eliminar en Firestore (si falla, se corta acá)
+  try {
+    const docRef = doc(db, SPONSORS_COLLECTION, sponsorId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `${SPONSORS_COLLECTION}/${sponsorId}`);
+  }
+
+  // Con la nube confirmada, limpiar la copia local
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_SPONSORS_KEY);
     if (raw) {
@@ -206,16 +235,7 @@ export async function deleteSponsorFromCloud(sponsorId: string): Promise<void> {
   } catch {
     // ignore
   }
-
-  // Eliminar en Firestore
-  try {
-    const docRef = doc(db, SPONSORS_COLLECTION, sponsorId);
-    await deleteDoc(docRef);
-  } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `${SPONSORS_COLLECTION}/${sponsorId}`);
-  }
 }
-
 
 /** Normaliza un nombre para compararlo (sin tildes, mayúsculas, sin la palabra "TEATRO" al inicio) */
 function normalizeSponsorName(name: string): string {

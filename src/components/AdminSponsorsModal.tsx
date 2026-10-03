@@ -33,6 +33,7 @@ interface AdminSponsorsModalProps {
   isOpen: boolean;
   onClose: () => void;
   sponsors: Sponsor[];
+  sponsorsStatus?: { source: 'cloud' | 'empty' | 'local'; error?: string };
   onSaveSponsor: (sponsor: Sponsor) => Promise<void>;
   onDeleteSponsor: (sponsorId: string) => Promise<void>;
 }
@@ -52,6 +53,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
   isOpen,
   onClose,
   sponsors,
+  sponsorsStatus,
   onSaveSponsor,
   onDeleteSponsor,
 }) => {
@@ -292,6 +294,32 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
 
         {/* Content Body */}
         <div ref={bodyRef} className="p-5 overflow-y-auto space-y-6 flex-1">
+          {/* Estado de la conexión con la base de datos */}
+          {sponsorsStatus && sponsorsStatus.source !== 'cloud' && (
+            <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/50 text-rose-200 text-xs space-y-1">
+              <div className="font-bold flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>
+                  {sponsorsStatus.source === 'empty'
+                    ? 'La base de datos de sponsors está vacía: la lista que ves es solo de respaldo.'
+                    : 'No se pudo leer la base de datos: la lista que ves es una copia guardada en este navegador, no la real.'}
+                </span>
+              </div>
+              <p className="text-rose-300/90">
+                {sponsorsStatus.source === 'empty'
+                  ? 'Tocá "Cargar lugares de los shows" para cargarlos en la nube.'
+                  : 'Lo que cargues podría no verse hasta que se restablezca la conexión.'}
+                {sponsorsStatus.error ? ` Detalle técnico: ${sponsorsStatus.error}` : ''}
+              </p>
+            </div>
+          )}
+          {sponsorsStatus?.source === 'cloud' && !isFormActive && (
+            <p className="text-[11px] text-emerald-400/90 flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5" />
+              <span>Conectado a la base de datos en la nube · {sponsors.length} sponsors guardados</span>
+            </p>
+          )}
+
           {/* Top toolbar */}
           {!isFormActive && (
             <div className="flex flex-col gap-3 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
