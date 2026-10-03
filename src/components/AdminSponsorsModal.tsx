@@ -8,6 +8,7 @@ import {
   Upload, 
   Image as ImageIcon, 
   Type, 
+  Film,
   ExternalLink, 
   Check, 
   Eye, 
@@ -133,6 +134,11 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
       return;
     }
 
+    if (formData.type === 'video' && !formData.video?.trim()) {
+      alert('Para una publicidad con video ingresá el link directo del video (.mp4 o .webm).');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const sponsorToSave: Sponsor = {
@@ -142,6 +148,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
         address: (formData.address || '').trim().toUpperCase(),
         link: formData.link?.trim() || '',
         image: formData.image || '',
+        video: formData.video?.trim() || '',
         showInPopup: Boolean(formData.showInPopup),
         showInTopBanner: Boolean(formData.showInTopBanner),
         showInFeed: formData.showInFeed !== false,
@@ -277,7 +284,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                 <label className="text-xs font-bold text-slate-300 block">
                   1. ¿Qué tipo de publicidad querés publicar?
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, type: 'text' }))}
@@ -303,8 +310,51 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                     <ImageIcon className="w-4 h-4" />
                     <span>Con Imagen / Banner Gráfico</span>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, type: 'video' }))}
+                    className={`p-3.5 rounded-xl border flex items-center justify-center gap-2.5 font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                      formData.type === 'video'
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-md shadow-amber-950/30'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Film className="w-4 h-4" />
+                    <span>Con Video</span>
+                  </button>
                 </div>
               </div>
+
+              {/* Si es con video: URL directa del archivo */}
+              {formData.type === 'video' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+                  <label className="text-xs font-bold text-slate-300 block">
+                    Link directo del video (.mp4 o .webm):
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://mdqshow.com.ar/ads/mi-video.mp4"
+                    value={formData.video || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, video: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    Se reproduce solo, sin sonido y en bucle. Recomendado: video corto (hasta 15 segundos) y liviano (menos de 20 MB).
+                  </p>
+
+                  <label className="text-xs font-bold text-slate-300 block pt-1">
+                    Imagen de portada (opcional, se ve mientras carga el video):
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://ejemplo.com/portada.jpg"
+                    value={formData.image || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              )}
 
               {/* Si es con imagen: subida o URL */}
               {formData.type === 'image' && (
@@ -562,6 +612,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                       name: formData.name || 'NOMBRE DEL NEGOCIO',
                       address: formData.address || 'DIRECCIÓN O BAJADA',
                       image: formData.image,
+                      video: formData.video,
                       link: formData.link,
                       effectType: formData.effectType || 'random',
                       bgColor: formData.bgColor,
@@ -659,7 +710,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                             </span>
                           )}
                           <span className="px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-400">
-                            {sponsor.type === 'image' ? '🖼️ Imagen' : '✍️ Solo Texto'}
+                            {sponsor.type === 'image' ? '🖼️ Imagen' : sponsor.type === 'video' ? '🎬 Video' : '✍️ Solo Texto'}
                           </span>
                         </div>
                       </div>

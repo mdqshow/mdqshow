@@ -56,10 +56,11 @@ export type SponsorEffectType =
 
 export interface Sponsor {
   id: string;
-  type: 'image' | 'text';
+  type: 'image' | 'text' | 'video';
   name: string;              // Renglón 1: Nombre del negocio / sponsor en mayúsculas
   address: string;           // Renglón 2: Dirección, zona o bajada breve
-  image?: string;            // Imagen subida o URL
+  image?: string;            // Imagen subida o URL (en tipo video se usa como portada opcional)
+  video?: string;            // URL directa de un video (.mp4 / .webm) para el tipo video
   link?: string;             // Enlace web o red social (ej. Instagram)
   
   // Ubicaciones de visualización en la aplicación:

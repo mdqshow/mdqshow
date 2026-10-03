@@ -66,6 +66,7 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
   };
 
   const isImageSponsor = sponsor.type === 'image' && Boolean(sponsor.image);
+  const isVideoSponsor = sponsor.type === 'video' && Boolean(sponsor.video);
 
   const cardContent = (
     <div
@@ -77,8 +78,43 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
         boxShadow: '0 0 16px -2px rgba(245, 158, 11, 0.35)',
       }}
     >
-      {/* Si es sponsor con imagen */}
-      {isImageSponsor ? (
+      {/* Si es sponsor con video (se reproduce solo, sin sonido y en bucle) */}
+      {isVideoSponsor ? (
+        <div className="relative w-full h-full bg-black">
+          <video
+            src={sponsor.video}
+            poster={sponsor.image || undefined}
+            className="w-full h-full object-cover object-center"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
+
+          {(sponsor.name || sponsor.address) && (
+            <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between z-10">
+              <div className="truncate pr-2">
+                <span className="block text-sm sm:text-base font-black text-white drop-shadow-md truncate uppercase tracking-wider">
+                  {sponsor.name}
+                </span>
+                {sponsor.address && (
+                  <span className="block text-[10px] sm:text-xs font-bold text-amber-300 drop-shadow-sm truncate tracking-wide uppercase">
+                    {sponsor.address}
+                  </span>
+                )}
+              </div>
+              {sponsor.link && (
+                <span className="shrink-0 p-1.5 rounded-lg bg-black/60 backdrop-blur-md text-amber-300 border border-amber-500/40 text-[10px] font-bold flex items-center gap-1 group-hover:bg-amber-500 group-hover:text-black transition-colors">
+                  <span>Ver</span>
+                  <ExternalLink className="w-3 h-3" />
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      ) : isImageSponsor ? (
         <div className="relative w-full h-full">
           <img
             src={sponsor.image}
