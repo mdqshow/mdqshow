@@ -17,6 +17,7 @@ import {
 } from './services/sponsorsService';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
+import { checkAdminAccess } from './services/adminAccess';
 import { Navbar } from './components/Navbar';
 import { ShowFilters } from './components/ShowFilters';
 import { ShowCard } from './components/ShowCard';
@@ -88,11 +89,21 @@ export default function App() {
       const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
       return path.endsWith('/admin') || window.location.hash.toLowerCase() === '#admin';
     };
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      setIsAdmin(!!user);
-      if (!user && isAdminRoute()) {
-        setIsAdminLoginOpen(true);
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setIsAdmin(false);
+        if (isAdminRoute()) setIsAdminLoginOpen(true);
+        return;
       }
+      // Solo se habilita el modo admin si Firebase confirma que la cuenta tiene permisos reales
+      const access = await checkAdminAccess();
+      if (access === 'denied') {
+        setIsAdmin(false);
+        alert('Esta cuenta no tiene permisos de administrador.');
+        signOut(auth).catch(() => {});
+        return;
+      }
+      setIsAdmin(true);
     });
     const handleRouteChange = () => {
       if (!auth.currentUser && isAdminRoute()) {
@@ -1025,15 +1036,6 @@ export default function App() {
           <div className="pt-2 space-y-1.5 text-center">
             <p className="font-bold text-sm text-slate-300">
               MDQ<span className="text-rose-500">SHOW</span> — Cartelera de recitales y shows en Mar del Plata
-            </p>
-            <p className="text-slate-500 text-xs">
-              <button
-                type="button"
-                onClick={() => setIsContactModalOpen(true)}
-                className="text-slate-400 hover:text-rose-400 underline transition-colors cursor-pointer"
-              >
-                Formulario de contacto
-              </button>
             </p>
             <p className="text-slate-600 text-[11px]">
               © {new Date().getFullYear()} MDQSHOW. Todos los derechos reservados.

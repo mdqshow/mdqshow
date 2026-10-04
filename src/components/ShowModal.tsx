@@ -1,3 +1,4 @@
+import { normalizeUserUrl } from '../utils/safeUrl';
 import React, { useState, useEffect } from 'react';
 import { 
   X, 
@@ -284,6 +285,17 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       return;
     }
 
+    const ticketCheck = normalizeUserUrl(ticketUrl || 'https://articket.com.ar');
+    if (!ticketCheck.valid) {
+      setError('El link de entradas tiene que ser una dirección web válida (por ejemplo https://www.ticketek.com.ar/...).');
+      return;
+    }
+    const spotifyCheck = normalizeUserUrl(spotifyUrl);
+    if (!spotifyCheck.valid) {
+      setError('El link de Spotify tiene que ser una dirección web válida (por ejemplo https://open.spotify.com/...).');
+      return;
+    }
+
     const defaultImg = 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=800&auto=format&fit=crop';
 
     const savedShow: Show = {
@@ -296,7 +308,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       venueAddress: formatProperCase(venueAddress.trim()) || 'Sede principal',
       dates: selectedDates,
       time: time.trim() || '21:00 hs',
-      ticketUrl: ticketUrl.trim() || 'https://articket.com.ar',
+      ticketUrl: ticketCheck.url || 'https://articket.com.ar',
       ticketPortalName: formatProperCase(ticketPortalName.trim()) || 'Boletería Oficial',
       ticketPriceRange: normalizePriceInput(ticketPriceRange),
       ticketStatus: 'disponibles',
@@ -305,7 +317,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       description: initialShow?.description || `${band} en vivo en ${venue}.`,
       featured,
       isNewBadge,
-      spotifyUrl: spotifyUrl.trim() || '',
+      spotifyUrl: spotifyCheck.url,
       createdAt: initialShow?.createdAt || new Date().toISOString(),
       isUserAdded: true,
       openingActs: initialShow?.openingActs || [],

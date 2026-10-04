@@ -19,6 +19,7 @@ import {
 import { Show } from '../types';
 import { formatSingleDate, getDaysUntil } from '../utils/dateHelpers';
 import { trackTicketClick, trackShareEvent } from '../services/metricsService';
+import { safeHttpUrl } from '../utils/safeUrl';
 import { getWhatsAppShareUrl, addToDeviceCalendar } from '../utils/shareAndCalendar';
 import { formatDisplayPrice } from '../utils/priceHelpers';
 import { formatProperCase } from '../utils/textFormatting';
@@ -232,7 +233,7 @@ export const ShowCard: React.FC<ShowCardProps> = ({
         <div>
           <a
             id={`buy-tickets-link-${show.id}`}
-            href={show.ticketUrl}
+            href={safeHttpUrl(show.ticketUrl)}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => {
@@ -247,7 +248,7 @@ export const ShowCard: React.FC<ShowCardProps> = ({
         </div>
 
         {/* Secondary Actions: WhatsApp, Spotify (si tiene) & Calendar - Iconos limpios sin texto truncado */}
-        <div className={`grid ${show.spotifyUrl ? 'grid-cols-3' : 'grid-cols-2'} gap-2 relative`}>
+        <div className={`grid ${safeHttpUrl(show.spotifyUrl) ? 'grid-cols-3' : 'grid-cols-2'} gap-2 relative`}>
           {/* WhatsApp Share con icono oficial (teléfono adentro) */}
           <button
             type="button"
@@ -259,9 +260,9 @@ export const ShowCard: React.FC<ShowCardProps> = ({
           </button>
 
           {/* Spotify Direct Link (si el recital tiene link cargado) */}
-          {show.spotifyUrl && (
+          {safeHttpUrl(show.spotifyUrl) && (
             <a
-              href={show.spotifyUrl}
+              href={safeHttpUrl(show.spotifyUrl)}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center py-2 px-2 rounded-xl bg-green-950/40 hover:bg-green-900/50 text-green-400 hover:text-green-300 border border-green-500/30 transition-all active:scale-95 cursor-pointer shadow-xs"

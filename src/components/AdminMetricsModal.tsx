@@ -25,6 +25,7 @@ import { Subscriber } from '../services/subscribersService';
 import { VENUE_SPONSORS } from './AdSenseBanner';
 import { SubscribersPanel } from './SubscribersPanel';
 import { resetMetricCounters } from '../services/metricsService';
+import { safeHttpUrl } from '../utils/safeUrl';
 
 interface AdminMetricsModalProps {
   isOpen: boolean;
@@ -462,7 +463,7 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
                       </td>
                       <td className="py-3 px-4 text-center">
                         <a 
-                          href={item.venue.link} 
+                          href={safeHttpUrl(item.venue.link)} 
                           target="_blank" 
                           rel="noopener noreferrer" 
                           className="inline-flex items-center text-xs text-sky-400 hover:text-sky-300 hover:underline"

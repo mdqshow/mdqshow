@@ -3,6 +3,7 @@ import { Calendar, MapPin, Heart, ExternalLink, MessageCircle, CalendarPlus, Tic
 import { Show } from '../types';
 import { getDaysUntil } from '../utils/dateHelpers';
 import { trackTicketClick, trackShareEvent } from '../services/metricsService';
+import { safeHttpUrl } from '../utils/safeUrl';
 import { getWhatsAppShareUrl, addToDeviceCalendar } from '../utils/shareAndCalendar';
 import { formatDisplayPrice } from '../utils/priceHelpers';
 import { formatProperCase } from '../utils/textFormatting';
@@ -222,9 +223,9 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                         </button>
 
                         {/* Spotify link (si está configurado) */}
-                        {show.spotifyUrl && (
+                        {safeHttpUrl(show.spotifyUrl) && (
                           <a
-                            href={show.spotifyUrl}
+                            href={safeHttpUrl(show.spotifyUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 sm:p-2.5 rounded-xl bg-green-950/40 hover:bg-green-900/50 border border-green-500/30 text-[#1DB954] hover:text-green-300 transition-colors cursor-pointer shrink-0 flex items-center justify-center"
@@ -247,7 +248,7 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
 
                       <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
                         <a
-                          href={show.ticketUrl}
+                          href={safeHttpUrl(show.ticketUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={() => {

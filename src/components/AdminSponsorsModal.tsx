@@ -28,6 +28,7 @@ import { compressImage } from '../utils/imageCompressor';
 import { INITIAL_SPONSORS } from '../data/mockSponsors';
 import { importMissingSponsors } from '../services/sponsorsService';
 import { downloadSponsorsTxt } from '../utils/sponsorsExport';
+import { normalizeUserUrl } from '../utils/safeUrl';
 
 interface AdminSponsorsModalProps {
   isOpen: boolean;
@@ -150,6 +151,12 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
       return;
     }
 
+    const linkCheck = normalizeUserUrl(formData.link);
+    if (!linkCheck.valid) {
+      alert('El enlace de destino tiene que ser una dirección web válida, por ejemplo https://www.instagram.com/negocio');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const sponsorToSave: Sponsor = {
@@ -157,7 +164,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
         type: formData.type || 'text',
         name: formData.name.trim().toUpperCase(),
         address: (formData.address || '').trim().toUpperCase(),
-        link: formData.link?.trim() || '',
+        link: linkCheck.url,
         image: formData.image || '',
         video: formData.video?.trim() || '',
         showInPopup: Boolean(formData.showInPopup),
@@ -308,8 +315,10 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
               <p className="text-rose-300/90">
                 {sponsorsStatus.source === 'empty'
                   ? 'Tocá "Cargar lugares de los shows" para cargarlos en la nube.'
-                  : 'Lo que cargues podría no verse hasta que se restablezca la conexión.'}
-                {sponsorsStatus.error ? ` Detalle técnico: ${sponsorsStatus.error}` : ''}
+                  : /quota/i.test(sponsorsStatus.error || '')
+                    ? 'Firebase alcanzó el límite diario gratuito de uso. Se restablece solo cada día (alrededor de las 4 de la mañana, hora de Argentina). Hasta entonces no se pueden guardar cambios.'
+                    : 'Lo que cargues podría no verse hasta que se restablezca la conexión.'}
+                {sponsorsStatus.error && !/quota/i.test(sponsorsStatus.error) ? ` Detalle técnico: ${sponsorsStatus.error}` : ''}
               </p>
             </div>
           )}
