@@ -248,7 +248,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
               <div>
                 <h3 className="text-sm font-bold text-white">Sponsors Registrados ({sponsors.length})</h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Marcá individualmente dónde querés que se visualice cada sponsor:
+                  Tocá una publicidad para editarla o cargá una nueva:
                 </p>
               </div>
 
@@ -711,7 +711,29 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
               </div>
 
               {/* Botones de acción */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                {!isCreatingNew && editingSponsor && (
+                  <div className="flex items-center gap-2 mr-auto">
+                    <button
+                      type="button"
+                      onClick={() => handleTestPopup(editingSponsor.id)}
+                      className="flex items-center gap-1 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[11px] font-bold cursor-pointer"
+                      title="Probar cómo se ve en el popup de inicio de 5 segundos"
+                    >
+                      <Play className="w-3 h-3" />
+                      <span>Probar popup</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(editingSponsor.id, editingSponsor.name)}
+                      className="flex items-center gap-1 px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[11px] font-bold cursor-pointer"
+                      title="Eliminar esta publicidad"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={handleCancelForm}
@@ -747,91 +769,40 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {sponsors.map((sponsor) => (
-                    <div 
-                      key={sponsor.id}
-                      className="bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 flex flex-col justify-between space-y-3 transition-colors"
-                    >
-                      {/* Mini preview card */}
-                      <SponsorCard
-                        sponsor={sponsor}
-                        heightClass="h-24 sm:h-28"
-                        showBadge={false}
-                        variant="preview"
-                      />
-
-                      {/* Info & Badges */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-white truncate pr-2">
-                            {sponsor.name}
-                          </span>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            sponsor.isActive !== false 
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
-                              : 'bg-slate-800 text-slate-400'
-                          }`}>
-                            {sponsor.isActive !== false ? 'Activo' : 'Pausado'}
-                          </span>
-                        </div>
-
-                        {/* Badges de ubicación */}
-                        <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
-                          {sponsor.showInPopup && (
-                            <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                              🌟 Pop-up Inicio
-                            </span>
-                          )}
-                          {sponsor.showInTopBanner && (
-                            <span className="px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 border border-sky-500/40">
-                              🔝 Primeros Dos
-                            </span>
-                          )}
-                          {sponsor.showInFeed !== false && (
-                            <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">
-                              📄 En el Feed
-                            </span>
-                          )}
-                          <span className="px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-400">
-                            {sponsor.type === 'image' ? '🖼️ Imagen' : sponsor.type === 'video' ? '🎬 Video' : '✍️ Solo Texto'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Botones de acción */}
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
+                <div className="space-y-3">
+                  <p className="text-[11px] text-slate-400">
+                    Tocá una publicidad para editarla:
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {sponsors.map((sponsor) => {
+                      const isActive = sponsor.isActive !== false;
+                      return (
                         <button
+                          key={sponsor.id}
                           type="button"
-                          onClick={() => handleTestPopup(sponsor.id)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[11px] font-bold cursor-pointer"
-                          title="Probar cómo se ve este sponsor en el popup de inicio de 5 segundos"
+                          onClick={() => handleStartEdit(sponsor)}
+                          title={`Editar: ${sponsor.name}${isActive ? '' : ' (pausado)'}`}
+                          className={`flex items-center gap-1.5 max-w-full px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer active:scale-95 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/60 hover:border-amber-500/60 ${
+                            isActive ? 'text-slate-200' : 'text-slate-500'
+                          }`}
                         >
-                          <Play className="w-3 h-3" />
-                          <span>Probar Popup</span>
+                          <span
+                            className={`w-2 h-2 rounded-full shrink-0 ${isActive ? 'bg-emerald-400' : 'bg-slate-600'}`}
+                            aria-hidden="true"
+                          />
+                          <span className="truncate max-w-[180px]">{sponsor.name || 'Sin nombre'}</span>
+                          <span className="shrink-0 text-[11px] leading-none" aria-hidden="true">
+                            {sponsor.showInPopup ? '🌟' : ''}
+                            {sponsor.showInTopBanner ? '🔝' : ''}
+                            {sponsor.type === 'image' ? '🖼️' : sponsor.type === 'video' ? '🎬' : ''}
+                          </span>
                         </button>
-
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handleStartEdit(sponsor)}
-                            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                            title="Editar publicidad"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(sponsor.id, sponsor.name)}
-                            className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                            title="Eliminar publicidad"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    Punto verde = activo · gris = pausado · 🌟 popup · 🔝 banners de arriba · 🖼️ imagen · 🎬 video
+                  </p>
                 </div>
               )}
             </div>
