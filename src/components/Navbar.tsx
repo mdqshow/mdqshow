@@ -227,9 +227,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={onExportBackup}
                     className="flex items-center p-1.5 sm:px-2.5 sm:py-2 text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 rounded-xl transition-all border border-amber-500/30 text-xs font-bold cursor-pointer"
                     title="Descargar copia de seguridad (Backup JSON) de todos los recitales"
+                    aria-label="Descargar copia de seguridad (Backup)"
                   >
-                    <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1 shrink-0" />
-                    <span className="hidden md:inline">Backup</span>
+                    <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                   </button>
                 )}
 
@@ -254,9 +254,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onClick={() => fileInputRef.current?.click()}
                       className="flex items-center p-1.5 sm:px-2.5 sm:py-2 text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl transition-all border border-indigo-500/30 text-xs font-bold cursor-pointer"
                       title="Restaurar recitales desde un archivo Backup .json"
+                      aria-label="Restaurar recitales desde un Backup"
                     >
-                      <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1 shrink-0" />
-                      <span className="hidden md:inline">Restaurar</span>
+                      <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                     </button>
                   </>
                 )}
@@ -273,8 +273,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   onClick={onAdminLogout}
-                  className="p-1.5 sm:p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-xl transition-colors border border-slate-700/60"
+                  className="shrink-0 p-1.5 sm:p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-xl transition-colors border border-slate-700/60"
                   title="Cerrar sesión de administrador"
+                  aria-label="Cerrar sesión"
                 >
                   <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>

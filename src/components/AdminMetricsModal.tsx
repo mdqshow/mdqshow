@@ -23,6 +23,7 @@ import { Show, Sponsor } from '../types';
 import { ShowMetrics, BannerMetrics } from '../services/metricsService';
 import { Subscriber } from '../services/subscribersService';
 import { VENUE_SPONSORS } from './AdSenseBanner';
+import { SubscribersPanel } from './SubscribersPanel';
 
 interface AdminMetricsModalProps {
   isOpen: boolean;
@@ -43,7 +44,7 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
   subscribers,
   sponsors,
 }) => {
-  const [activeTab, setActiveTab] = useState<'shows' | 'banners'>('shows');
+  const [activeTab, setActiveTab] = useState<'shows' | 'banners' | 'subscribers'>('shows');
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedReport, setCopiedReport] = useState(false);
 
@@ -289,6 +290,17 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
               <Megaphone className="w-4 h-4" />
               Publicaciones de Banners ({VENUE_SPONSORS.length} Lugares)
             </button>
+            <button
+              onClick={() => setActiveTab('subscribers')}
+              className={`pb-2.5 px-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'subscribers'
+                  ? 'border-amber-500 text-amber-300'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              Suscriptores ({subscribers.length})
+            </button>
           </div>
 
           <div className="flex items-center space-x-2 pb-2">
@@ -311,6 +323,10 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
           </div>
         </div>
 
+        {activeTab === 'subscribers' ? (
+          <SubscribersPanel subscribers={subscribers} />
+        ) : (
+        <>
         {/* Table & Search */}
         <div className="p-4 sm:p-5 flex-1 overflow-hidden flex flex-col space-y-3">
           <div className="flex items-center justify-between gap-3">
@@ -452,6 +468,8 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
             </div>
           )}
         </div>
+        </>
+        )}
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between text-xs text-slate-400">

@@ -60,55 +60,79 @@ export async function seedInitialShows(showsToSeed: Show[]): Promise<void> {
   }
 }
 
+export type ShowsSource = 'cloud' | 'empty' | 'local';
+
 /**
- * Escucha cambios en tiempo real en la colección de shows directamente desde Firestore
+ * Escucha cambios en tiempo real en la colección de shows directamente desde Firestore.
+ * Informa de dónde viene la lista: 'cloud' (la base de datos real), 'empty' (la base está vacía y se muestra
+ * la lista de respaldo) o 'local' (falló la conexión y se muestra la copia guardada en este navegador).
+ * Si la conexión se corta por un error, vuelve a intentar sola.
  */
 export function subscribeToShows(
-  onUpdate: (shows: Show[]) => void,
+  onUpdate: (shows: Show[], source: ShowsSource, errorMessage?: string) => void,
   onError?: (error: Error) => void
 ): () => void {
-  const showsCol = collection(db, SHOWS_COLLECTION);
+  let stopped = false;
+  let unsubscribe: (() => void) | null = null;
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
-  const unsubscribe = onSnapshot(
-    showsCol,
-    async (snapshot) => {
-      if (snapshot.empty) {
-        // Base vacía: se muestra la lista local, pero NO se escribe nada en la nube
-        // (antes se re-sembraba automáticamente y eso podía pisar o "resucitar" shows borrados)
-        onUpdate(getLocalFallbackShows());
-        return;
-      }
+  const start = () => {
+    if (stopped) return;
+    const showsCol = collection(db, SHOWS_COLLECTION);
 
-      const showsList: Show[] = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data() as Show;
-        showsList.push({
-          ...data,
-          id: docSnap.id,
-          venue: formatProperCase(data.venue),
-          venueAddress: formatProperCase(data.venueAddress),
-          ticketPortalName: formatProperCase(data.ticketPortalName) || 'Boletería Oficial',
+    unsubscribe = onSnapshot(
+      showsCol,
+      (snapshot) => {
+        if (snapshot.empty) {
+          // Base vacía: se muestra la lista local, pero NO se escribe nada en la nube
+          // (antes se re-sembraba automáticamente y eso podía pisar o "resucitar" shows borrados)
+          onUpdate(getLocalFallbackShows(), 'empty');
+          return;
+        }
+
+        const showsList: Show[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() as Show;
+          showsList.push({
+            ...data,
+            id: docSnap.id,
+            venue: formatProperCase(data.venue),
+            venueAddress: formatProperCase(data.venueAddress),
+            ticketPortalName: formatProperCase(data.ticketPortalName) || 'Boletería Oficial',
+          });
         });
-      });
 
-      // Actualizar localStorage como caché de respaldo sincronizada
-      try {
-        localStorage.setItem(LOCAL_STORAGE_SHOWS_LIST, JSON.stringify(showsList));
-      } catch {
-        // ignore
+        // La copia local solo se actualiza con datos confirmados por la nube
+        if (!snapshot.metadata.hasPendingWrites) {
+          try {
+            localStorage.setItem(LOCAL_STORAGE_SHOWS_LIST, JSON.stringify(showsList));
+          } catch {
+            // ignore
+          }
+        }
+
+        onUpdate(showsList, 'cloud');
+      },
+      (err) => {
+        console.warn('Firestore shows listener error:', err.message || err);
+        // Se muestra la copia local, avisando que NO es la lista real
+        onUpdate(getLocalFallbackShows(), 'local', err.message || String(err));
+        if (onError) onError(err);
+        // Un listener con error queda cortado: se reintenta solo.
+        // Si el error es por límite de uso (cuota), se espera mucho más para no empeorarlo.
+        const isQuota = (err as { code?: string }).code === 'resource-exhausted' || /quota/i.test(err.message || '');
+        retryTimer = setTimeout(start, isQuota ? 5 * 60 * 1000 : 10000);
       }
+    );
+  };
 
-      onUpdate(showsList);
-    },
-    (err) => {
-      console.warn('Firestore shows listener fallback:', err.message || err);
-      // Servir la lista de shows desde la caché local sin interrumpir la experiencia del usuario
-      onUpdate(getLocalFallbackShows());
-      if (onError) onError(err);
-    }
-  );
+  start();
 
-  return unsubscribe;
+  return () => {
+    stopped = true;
+    if (retryTimer) clearTimeout(retryTimer);
+    if (unsubscribe) unsubscribe();
+  };
 }
 
 /**

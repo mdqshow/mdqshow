@@ -585,7 +585,7 @@ export default function App() {
       />
 
       {/* Aviso solo para el administrador: la lista de recitales no viene de la base de datos real */}
-      {isAdmin && showsStatus.source !== 'cloud' && (
+      {isAdmin && (showsStatus.source === 'local' || showsStatus.source === 'empty') && (
         <div className="bg-rose-950/90 border-b border-rose-500/60 text-rose-100 px-4 py-3 text-xs sm:text-sm" role="alert">
           <div className="max-w-7xl mx-auto">
             <p className="font-bold">
