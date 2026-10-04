@@ -3,9 +3,12 @@ import {
   doc, 
   setDoc, 
   onSnapshot, 
-  increment 
+  increment,
+  getDocs,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { shouldCountVisit, onceThisSession } from '../utils/visitorFilter';
 
 export interface ShowMetrics {
   showId: string;
@@ -82,19 +85,9 @@ export function subscribeToMetrics(
  * Registra un clic en "Comprar Entradas" para un recital
  */
 export async function trackTicketClick(showId: string, bandName?: string): Promise<void> {
-  // Actualizar inmediatamente caché local para feedback instantáneo
-  try {
-    const cached = localStorage.getItem(STORAGE_KEY_METRICS);
-    const map: Record<string, ShowMetrics> = cached ? JSON.parse(cached) : {};
-    if (!map[showId]) {
-      map[showId] = { showId, bandName, ticketClicks: 0, shares: 0, favoritesCount: 0 };
-    }
-    map[showId].ticketClicks = (map[showId].ticketClicks || 0) + 1;
-    if (bandName) map[showId].bandName = bandName;
-    localStorage.setItem(STORAGE_KEY_METRICS, JSON.stringify(map));
-  } catch {
-    // ignore
-  }
+  // Solo visitas reales y una vez por show en cada visita (sin administrador ni robots)
+  if (!(await shouldCountVisit())) return;
+  if (!onceThisSession(`mdq_tc_${showId}`)) return;
 
   // Registrar en Firebase Firestore
   try {
@@ -118,6 +111,8 @@ export async function trackTicketClick(showId: string, bandName?: string): Promi
  * Registra cuando un usuario comparte un show (WhatsApp, copiar link, etc.)
  */
 export async function trackShareEvent(showId: string, bandName?: string): Promise<void> {
+  if (!(await shouldCountVisit())) return;
+  if (!onceThisSession(`mdq_sh_${showId}`)) return;
   try {
     const docRef = doc(db, METRICS_COLLECTION, showId);
     await setDoc(
@@ -139,6 +134,7 @@ export async function trackShareEvent(showId: string, bandName?: string): Promis
  * Registra cuando un usuario agrega a favoritos
  */
 export async function trackFavoriteEvent(showId: string, bandName?: string, delta: 1 | -1 = 1): Promise<void> {
+  if (!(await shouldCountVisit())) return;
   try {
     const docRef = doc(db, METRICS_COLLECTION, showId);
     await setDoc(
@@ -225,20 +221,9 @@ export function subscribeToBannerMetrics(
  * Registra una impresión/publicación cuando un banner se muestra en pantalla
  */
 export async function trackBannerImpression(venueId: string, venueName: string, venueAddress?: string): Promise<void> {
-  // Actualizar caché local de inmediato
-  try {
-    const cached = localStorage.getItem(STORAGE_KEY_BANNER_METRICS);
-    const map: Record<string, BannerMetrics> = cached ? JSON.parse(cached) : {};
-    if (!map[venueId]) {
-      map[venueId] = { venueId, venueName, venueAddress, impressions: 0, clicks: 0 };
-    }
-    map[venueId].impressions = (map[venueId].impressions || 0) + 1;
-    map[venueId].venueName = venueName;
-    map[venueId].lastImpressionAt = new Date().toISOString();
-    localStorage.setItem(STORAGE_KEY_BANNER_METRICS, JSON.stringify(map));
-  } catch {
-    // ignore
-  }
+  // Solo visitas reales, y una sola vez por sponsor en cada visita
+  if (!(await shouldCountVisit())) return;
+  if (!onceThisSession(`mdq_imp_${venueId}`)) return;
 
   // Persistir en Firebase Firestore
   try {
@@ -255,7 +240,7 @@ export async function trackBannerImpression(venueId: string, venueName: string, 
       { merge: true }
     );
   } catch (error) {
-    console.error('Error registrando banner impression en Firestore:', error);
+    console.warn('No se pudo registrar la impresión del banner:', error);
   }
 }
 
@@ -263,6 +248,8 @@ export async function trackBannerImpression(venueId: string, venueName: string, 
  * Registra un clic en el banner del lugar
  */
 export async function trackBannerClick(venueId: string, venueName: string): Promise<void> {
+  if (!(await shouldCountVisit())) return;
+  if (!onceThisSession(`mdq_bc_${venueId}`)) return;
   try {
     const docRef = doc(db, BANNER_METRICS_COLLECTION, venueId);
     await setDoc(
@@ -277,5 +264,38 @@ export async function trackBannerClick(venueId: string, venueName: string): Prom
     );
   } catch (error) {
     console.error('Error registrando banner click en Firestore:', error);
+  }
+}
+
+/**
+ * Pone en cero los contadores de banners (visualizaciones y clics) y de shows (clics en entradas y compartidos).
+ * NO toca favoritos, suscriptores, shows ni sponsors. Solo el administrador puede hacerlo.
+ */
+export async function resetMetricCounters(): Promise<void> {
+  const now = new Date().toISOString();
+
+  // Banners: se eliminan los registros (se vuelven a crear solos con las próximas visitas)
+  const bannerSnap = await getDocs(collection(db, BANNER_METRICS_COLLECTION));
+  const bannerRefs = bannerSnap.docs.map((d) => d.ref);
+  for (let i = 0; i < bannerRefs.length; i += 400) {
+    const batch = writeBatch(db);
+    bannerRefs.slice(i, i + 400).forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  }
+
+  // Shows: clics y compartidos en cero, favoritos intactos
+  const showSnap = await getDocs(collection(db, METRICS_COLLECTION));
+  const showRefs = showSnap.docs.map((d) => d.ref);
+  for (let i = 0; i < showRefs.length; i += 400) {
+    const batch = writeBatch(db);
+    showRefs.slice(i, i + 400).forEach((ref) => batch.set(ref, { ticketClicks: 0, shares: 0, lastUpdated: now }, { merge: true }));
+    await batch.commit();
+  }
+
+  try {
+    localStorage.removeItem(STORAGE_KEY_BANNER_METRICS);
+    localStorage.removeItem(STORAGE_KEY_METRICS);
+  } catch {
+    // ignore
   }
 }

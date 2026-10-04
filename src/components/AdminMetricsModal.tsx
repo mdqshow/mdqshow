@@ -24,6 +24,7 @@ import { ShowMetrics, BannerMetrics } from '../services/metricsService';
 import { Subscriber } from '../services/subscribersService';
 import { VENUE_SPONSORS } from './AdSenseBanner';
 import { SubscribersPanel } from './SubscribersPanel';
+import { resetMetricCounters } from '../services/metricsService';
 
 interface AdminMetricsModalProps {
   isOpen: boolean;
@@ -47,6 +48,7 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
   const [activeTab, setActiveTab] = useState<'shows' | 'banners' | 'subscribers'>('shows');
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedReport, setCopiedReport] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   if (!isOpen) return null;
 
@@ -62,7 +64,7 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
       show,
       ticketClicks: metric.ticketClicks,
       shares: metric.shares,
-      favoritesCount: metric.favoritesCount,
+      favoritesCount: Math.max(0, metric.favoritesCount),
     };
   });
 
@@ -108,6 +110,28 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
     item.venue.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleResetCounters = async () => {
+    const ok = window.confirm(
+      'Se van a poner en CERO:\n' +
+      '• las visualizaciones y clics de los banners\n' +
+      '• los clics en entradas y los compartidos de cada show\n\n' +
+      'NO se tocan: favoritos, suscriptores, shows ni sponsors.\n\n' +
+      'Si querés conservar los números actuales, cancelá y descargá antes el reporte (botón "Descargar TXT").\n\n' +
+      '¿Reiniciar los contadores?'
+    );
+    if (!ok) return;
+    setIsResetting(true);
+    try {
+      await resetMetricCounters();
+      alert('Listo: los contadores volvieron a cero.');
+    } catch (err) {
+      console.error('Error al reiniciar contadores:', err);
+      alert('No se pudieron reiniciar los contadores. Revisá que tengas la sesión de administrador iniciada e intentá de nuevo.');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   // Generar reporte de métricas en texto para copiar o enviar a productores y auspiciantes
   const generateProducerReport = () => {
     const lines: string[] = [];
@@ -117,13 +141,13 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
     lines.push(`Total Clicks a Boleterías Oficiales: ${totalClicks}`);
     lines.push(`Total Compartidos por WhatsApp: ${totalShares}`);
     lines.push(`Suscriptores al Newsletter: ${totalSubscribersCount}`);
-    lines.push(`Total Impresiones/Publicaciones de Banners: ${totalBannerImpressions}`);
+    lines.push(`Total de visitas que vieron banners (una por sponsor y por visita): ${totalBannerImpressions}`);
     lines.push('====================================================\n');
 
     lines.push('1. MÉTRICAS DE BANNERS (TEATROS Y ESTADIOS):');
     venueBannersWithMetrics.forEach((item, idx) => {
       lines.push(`${idx + 1}. ${item.venue.name} - ${item.venue.address}`);
-      lines.push(`   - Impresiones (veces publicado en pantalla): ${item.impressions}`);
+      lines.push(`   - Visitas que lo vieron: ${item.impressions}`);
       lines.push(`   - Clics al Instagram/Sitio Oficial: ${item.clicks}`);
       lines.push('----------------------------------------------------');
     });
@@ -207,11 +231,11 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
           {/* Publicaciones de Banners */}
           <div className="bg-slate-900/90 border border-amber-500/40 rounded-xl p-2.5 shadow-sm col-span-2 sm:col-span-1">
             <div className="flex items-center justify-between text-amber-400 text-xs font-semibold mb-0.5">
-              <span>Banners Publi</span>
+              <span>Banners vistos</span>
               <Eye className="w-3.5 h-3.5" />
             </div>
             <p className="text-lg sm:text-xl font-black text-amber-300">{totalBannerImpressions}</p>
-            <p className="text-[9px] text-slate-400 mt-0.5">Veces publicados</p>
+            <p className="text-[9px] text-slate-400 mt-0.5">Visitas que los vieron</p>
           </div>
 
           {/* Clicks en Entradas */}
@@ -417,7 +441,7 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
                     <th className="py-3 px-4">Espacio / Teatro</th>
                     <th className="py-3 px-4">Dirección</th>
                     <th className="py-3 px-4 text-center">Instagram / Web</th>
-                    <th className="py-3 px-4 text-right text-amber-300">Veces Publicado</th>
+                    <th className="py-3 px-4 text-right text-amber-300">Visitas que lo vieron</th>
                     <th className="py-3 px-4 text-right text-emerald-400">Clicks al Link</th>
                   </tr>
                 </thead>
@@ -473,7 +497,17 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between text-xs text-slate-400">
-          <span>Los contadores de impresiones y clicks se actualizan en vivo en Firebase con cada rotación de banner.</span>
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>Se cuenta una vez por visita real (sin administrador ni robots); los banners solo cuando se ven en pantalla.</span>
+            <button
+              type="button"
+              onClick={handleResetCounters}
+              disabled={isResetting}
+              className="text-rose-400 hover:text-rose-300 underline underline-offset-2 disabled:opacity-50 cursor-pointer"
+            >
+              {isResetting ? 'Reiniciando...' : 'Reiniciar contadores'}
+            </button>
+          </span>
           <button
             onClick={onClose}
             className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-semibold transition-colors cursor-pointer"

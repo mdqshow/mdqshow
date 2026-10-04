@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sponsor } from '../types';
 import { SponsorCard } from './SponsorCard';
-import { trackBannerImpression } from '../services/metricsService';
+import { ImpressionTracker } from './ImpressionTracker';
 import { INITIAL_SPONSORS } from '../data/mockSponsors';
 
 export const VENUE_SPONSORS = INITIAL_SPONSORS;
@@ -105,19 +105,6 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   const firstSponsor = leftPool[leftIndex % Math.max(leftPool.length, 1)];
   const secondSponsor = rightPool.length > 0 ? rightPool[rightIndex % rightPool.length] : undefined;
 
-  // Registrar impresiones en métricas
-  useEffect(() => {
-    if (firstSponsor) {
-      trackBannerImpression(firstSponsor.id, firstSponsor.name, firstSponsor.address || '');
-    }
-  }, [firstSponsor]);
-
-  useEffect(() => {
-    if (secondSponsor) {
-      trackBannerImpression(secondSponsor.id, secondSponsor.name, secondSponsor.address || '');
-    }
-  }, [secondSponsor]);
-
   if (poolLength === 0 || !firstSponsor) return null;
 
   return (
@@ -127,19 +114,23 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
     >
       {/* Con un solo sponsor se muestra una única tarjeta (nunca el mismo aviso dos veces) */}
       <div className={`grid grid-cols-1 gap-4 ${secondSponsor ? 'sm:grid-cols-2' : ''}`}>
-        <SponsorCard
-          sponsor={firstSponsor}
-          heightClass="h-28 sm:h-32"
-          isFading={isLeftFading}
-          showBadge={false}
-        />
-        {secondSponsor && (
+        <ImpressionTracker sponsor={firstSponsor}>
           <SponsorCard
-            sponsor={secondSponsor}
+            sponsor={firstSponsor}
             heightClass="h-28 sm:h-32"
-            isFading={isRightFading}
+            isFading={isLeftFading}
             showBadge={false}
           />
+        </ImpressionTracker>
+        {secondSponsor && (
+          <ImpressionTracker sponsor={secondSponsor}>
+            <SponsorCard
+              sponsor={secondSponsor}
+              heightClass="h-28 sm:h-32"
+              isFading={isRightFading}
+              showBadge={false}
+            />
+          </ImpressionTracker>
         )}
       </div>
     </aside>
