@@ -6,12 +6,20 @@ interface ContactModalProps {
   onClose: () => void;
 }
 
+// Pegá acá la URL de tu script de Google (la que termina en /exec).
+// Si queda vacío, el formulario usa el método anterior (abrir el correo del visitante).
+const CONTACT_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwErEif_byrRH6chIQXlLScAhqDpuEmJqk42Q2fAb9l4_vqZrgCN0o7UlIaDdjM_ZKnLw/exec';
+
 export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('Consulta general');
   const [message, setMessage] = useState('');
   const [isSent, setIsSent] = useState(false);
+  const [sentByMailClient, setSentByMailClient] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState('');
+  const [website, setWebsite] = useState(''); // campo trampa anti-spam (los visitantes no lo ven)
 
   // Close on Escape key
   useEffect(() => {
@@ -28,22 +36,53 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSending) return;
     if (!name.trim() || !email.trim() || !message.trim()) return;
+    setError('');
 
-    const recipient = 'info.mdqshow@gmail.com';
-    const subjectLine = `[MDQSHOW Contacto] ${subject} - ${name.trim()}`;
-    const bodyContent = `Hola equipo de MDQSHOW,\n\nNombre: ${name.trim()}\nEmail: ${email.trim()}\nMotivo: ${subject}\n\nMensaje:\n${message.trim()}\n\n---\nEnviado desde el formulario web de MDQSHOW`;
+    // Sin script configurado: método anterior (abre el correo del visitante)
+    if (!CONTACT_ENDPOINT) {
+      const recipient = 'info.mdqshow@gmail.com';
+      const subjectLine = `[MDQSHOW Contacto] ${subject} - ${name.trim()}`;
+      const bodyContent = `Hola equipo de MDQSHOW,\n\nNombre: ${name.trim()}\nEmail: ${email.trim()}\nMotivo: ${subject}\n\nMensaje:\n${message.trim()}\n\n---\nEnviado desde el formulario web de MDQSHOW`;
+      window.location.href = `mailto:${recipient}?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(bodyContent)}`;
+      setSentByMailClient(true);
+      setIsSent(true);
+      return;
+    }
 
-    const mailtoUrl = `mailto:${recipient}?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(bodyContent)}`;
-    window.location.href = mailtoUrl;
+    setIsSending(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('nombre', name.trim());
+      params.set('email', email.trim());
+      params.set('asunto', subject);
+      params.set('mensaje', message.trim());
+      params.set('website', website);
 
-    setIsSent(true);
+      const response = await fetch(CONTACT_ENDPOINT, { method: 'POST', body: params });
+      const data = await response.json();
+
+      if (data && data.ok) {
+        setSentByMailClient(false);
+        setIsSent(true);
+      } else if (data && data.error === 'limite') {
+        setError('Se alcanzó el límite de mensajes por ahora. Probá de nuevo en un rato.');
+      } else {
+        setError('No pudimos enviar tu mensaje. Revisá los datos e intentá de nuevo.');
+      }
+    } catch {
+      setError('No pudimos enviar tu mensaje. Revisá tu conexión e intentá de nuevo.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleReset = () => {
     setIsSent(false);
+    setError('');
     setMessage('');
   };
 
@@ -87,9 +126,13 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <div>
-                <h4 className="text-base font-bold text-white">¡Mensaje preparado para enviar!</h4>
+                <h4 className="text-base font-bold text-white">
+                  {sentByMailClient ? '¡Mensaje preparado para enviar!' : '¡Mensaje enviado!'}
+                </h4>
                 <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">
-                  Se abrió tu cliente de correo para enviar tu mensaje al equipo de MDQSHOW.
+                  {sentByMailClient
+                    ? 'Se abrió tu cliente de correo para enviar tu mensaje al equipo de MDQSHOW.'
+                    : 'Recibimos tu mensaje. Te respondemos al correo que nos dejaste lo antes posible.'}
                 </p>
               </div>
               <div className="pt-2 flex flex-wrap justify-center gap-2">
@@ -177,13 +220,32 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
                 />
               </div>
 
+              {/* Campo trampa anti-spam: invisible para personas */}
+              <input
+                type="text"
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                className="absolute -left-[9999px] h-0 w-0 opacity-0"
+              />
+
+              {error && (
+                <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                  {error}
+                </p>
+              )}
+
               <div className="flex items-center justify-end pt-2">
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-rose-950/40 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                  disabled={isSending}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-rose-950/40 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <Send className="w-4 h-4" />
-                  <span>Enviar</span>
+                  <span>{isSending ? 'Enviando...' : 'Enviar'}</span>
                 </button>
               </div>
             </form>
