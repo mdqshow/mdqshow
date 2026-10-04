@@ -354,3 +354,32 @@
 
 
 
+
+
+/* ---------- Texto de los banners de sponsors ----------
+   El nombre usa el mayor tamaño posible según el ancho de la tarjeta (cqw) y un tope por variante:
+   banner = 25 / 30 / 37.5 px (un 25% más que antes), popup = bastante más grande. */
+.mdq-sponsor-card {
+  container-type: inline-size;
+  --mdq-cap-1: 25px;
+  --mdq-cap-2: 21px;
+}
+@media (min-width: 640px) {
+  .mdq-sponsor-card { --mdq-cap-1: 30px; --mdq-cap-2: 25px; }
+}
+@media (min-width: 1024px) {
+  .mdq-sponsor-card { --mdq-cap-1: 37.5px; --mdq-cap-2: 27px; }
+}
+.mdq-sponsor-card[data-variant="popup"] { --mdq-cap-1: 48px; --mdq-cap-2: 40px; }
+@media (min-width: 640px) {
+  .mdq-sponsor-card[data-variant="popup"] { --mdq-cap-1: 58px; --mdq-cap-2: 46px; }
+}
+.mdq-sponsor-name {
+  line-height: 1.12;
+  font-size: min(var(--mdq-name-cap, 30px), calc(var(--mdq-name-fit, 0.08) * 100cqw));
+}
+/* Segundo renglón: en el popup también más grande */
+.mdq-sponsor-card[data-variant="popup"] .mdq-sponsor-sub {
+  font-size: clamp(13px, 4.6cqw, 21px);
+  line-height: 1.3;
+}

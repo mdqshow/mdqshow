@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { getDaysUntil, isShowPast } from './utils/dateHelpers';
 import { Show, FilterState, Sponsor } from './types';
 import { INITIAL_SHOWS, AVAILABLE_CITIES } from './data/mockShows';
 import { 
@@ -128,14 +129,24 @@ export default function App() {
   };
 
   // Shows list initialized from local fallback, then synced with Firestore in real time
-  const [shows, setShows] = useState<Show[]>(() => getLocalFallbackShows());
+  const [allShows, setShows] = useState<Show[]>(() => getLocalFallbackShows());
+  // Solo el administrador puede pedir ver también los shows que ya pasaron
+  const [showPastShows, setShowPastShows] = useState(false);
+  // Se actualiza solo al cambiar el día, aunque la página quede abierta
+  const [dayKey, setDayKey] = useState(() => new Date().toDateString());
+  useEffect(() => {
+    const id = window.setInterval(() => setDayKey(new Date().toDateString()), 60 * 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const [showsStatus, setShowsStatus] = useState<{ source: 'cloud' | 'empty' | 'local'; error?: string }>({ source: 'cloud' });
 
   // Subscribe to real-time updates from Firebase Firestore
   useEffect(() => {
-    const unsubscribe = subscribeToShows((cloudShows) => {
+    const unsubscribe = subscribeToShows((cloudShows, source, errorMessage) => {
       if (cloudShows && cloudShows.length > 0) {
         setShows(cloudShows);
       }
+      setShowsStatus({ source, error: errorMessage });
     });
     return () => unsubscribe();
   }, []);
@@ -145,7 +156,9 @@ export default function App() {
   const [bannerMetricsMap, setBannerMetricsMap] = useState<Record<string, BannerMetrics>>({});
   const [isAdminMetricsOpen, setIsAdminMetricsOpen] = useState(false);
 
+  // Solo el administrador necesita las métricas: los visitantes no las escuchan (ahorra lecturas de Firebase)
   useEffect(() => {
+    if (!isAdmin) return;
     const unsubMetrics = subscribeToMetrics((map) => {
       setMetricsMap(map);
     });
@@ -156,7 +169,7 @@ export default function App() {
       unsubMetrics();
       unsubBannerMetrics();
     };
-  }, []);
+  }, [isAdmin]);
 
   // Suscriptores para KPIs del Admin
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
@@ -325,7 +338,7 @@ export default function App() {
 
   // Delete show handler
   const handleDeleteShow = async (showId: string) => {
-    const showToDelete = shows.find((s) => s.id === showId);
+    const showToDelete = allShows.find((s) => s.id === showId);
     const bandName = showToDelete ? showToDelete.band : 'El recital';
 
     // Immediate optimistic local update
@@ -362,7 +375,7 @@ export default function App() {
 
   // Export backup handler
   const handleExportBackup = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(shows, null, 2));
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allShows, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
     downloadAnchor.setAttribute("download", `mdqshow_backup_${new Date().toISOString().split('T')[0]}.json`);
@@ -398,7 +411,7 @@ export default function App() {
   // Descarga del listado rápido de shows en formato TXT (para verificación rápida)
   const handleDownloadTxt = () => {
     // Ordenar shows cronológicamente por primera fecha
-    const sorted = [...shows].sort((a, b) => {
+    const sorted = [...allShows].sort((a, b) => {
       const dateA = a.dates && a.dates[0] ? a.dates[0] : '9999-99-99';
       const dateB = b.dates && b.dates[0] ? b.dates[0] : '9999-99-99';
       return dateA.localeCompare(dateB);
@@ -456,6 +469,31 @@ export default function App() {
     });
     setShowFavoritesOnly(false);
   };
+
+  // Cartelera visible: los shows que ya pasaron se ocultan solos (se conservan en la base de datos).
+  // Si un show tiene varias fechas, solo se muestran las que todavía no pasaron.
+  const shows = useMemo(() => {
+    if (isAdmin && showPastShows) return allShows;
+    const upcoming: Show[] = [];
+    for (const show of allShows) {
+      const dates = Array.isArray(show.dates) ? show.dates : [];
+      if (dates.length === 0) {
+        upcoming.push(show); // fecha a confirmar
+        continue;
+      }
+      const futureDates = dates.filter((d) => !getDaysUntil(d).isPast);
+      if (futureDates.length === 0) continue; // todas las fechas ya pasaron
+      upcoming.push(futureDates.length === dates.length ? show : { ...show, dates: futureDates });
+    }
+    return upcoming;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allShows, isAdmin, showPastShows, dayKey]);
+
+  const hiddenPastCount = useMemo(
+    () => allShows.filter((s) => isShowPast(s.dates)).length,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allShows, dayKey]
+  );
 
   // Extract all unique venues in Mar del Plata sorted alphabetically (A-Z)
   const availableVenues = useMemo(() => {
@@ -545,6 +583,25 @@ export default function App() {
         onOpenMetrics={() => setIsAdminMetricsOpen(true)}
         onOpenSponsors={() => setIsAdminSponsorsOpen(true)}
       />
+
+      {/* Aviso solo para el administrador: la lista de recitales no viene de la base de datos real */}
+      {isAdmin && showsStatus.source !== 'cloud' && (
+        <div className="bg-rose-950/90 border-b border-rose-500/60 text-rose-100 px-4 py-3 text-xs sm:text-sm" role="alert">
+          <div className="max-w-7xl mx-auto">
+            <p className="font-bold">
+              {showsStatus.source === 'empty'
+                ? '⚠️ La base de datos de recitales está vacía: estás viendo solo la lista de respaldo.'
+                : '⚠️ No se pudo leer la base de datos: la lista de recitales que ves es una copia guardada, no la real.'}
+            </p>
+            <p className="mt-1 text-rose-200/90">
+              {/quota/i.test(showsStatus.error || '')
+                ? 'Firebase alcanzó el límite diario gratuito de uso y se restablece solo cada día (alrededor de las 4 de la mañana, hora de Argentina). Mientras tanto no cargues, edites, borres ni restaures recitales.'
+                : 'Evitá cargar, editar, borrar o restaurar recitales hasta que desaparezca este aviso.'}
+              {showsStatus.error && !/quota/i.test(showsStatus.error) ? ` Detalle técnico: ${showsStatus.error}` : ''}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
@@ -764,6 +821,22 @@ export default function App() {
 
         {/* Active View Content: Grid vs. Timeline */}
         <section id="shows-section" className="scroll-mt-24" aria-label="Lista de recitales">
+          {isAdmin && (hiddenPastCount > 0 || showPastShows) && (
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 p-3.5 bg-slate-900 border border-slate-700 rounded-2xl">
+              <p className="text-xs sm:text-sm text-slate-300">
+                {showPastShows
+                  ? 'Estás viendo también los shows que ya pasaron (el público no los ve).'
+                  : `Hay ${hiddenPastCount} ${hiddenPastCount === 1 ? 'show finalizado oculto' : 'shows finalizados ocultos'} para el público (solo lo ves vos).`}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowPastShows((v) => !v)}
+                className="text-xs font-bold text-white bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+              >
+                {showPastShows ? 'Ocultar finalizados' : 'Mostrar finalizados'}
+              </button>
+            </div>
+          )}
           {showFavoritesOnly && (
             <div className="mb-6 flex items-center justify-between p-3.5 bg-rose-950/30 border border-rose-800/40 rounded-2xl">
               <div className="flex items-center space-x-2 text-rose-300 text-sm font-semibold">
@@ -1005,7 +1078,7 @@ export default function App() {
       <AdminMetricsModal
         isOpen={isAdminMetricsOpen}
         onClose={() => setIsAdminMetricsOpen(false)}
-        shows={shows}
+        shows={allShows}
         metricsMap={metricsMap}
         bannerMetricsMap={bannerMetricsMap}
         subscribers={subscribers}

@@ -50,6 +50,21 @@ function renderBrutoLetters(text: string): React.ReactNode {
   ));
 }
 
+/**
+ * Tamaño del nombre en el banner: el más grande posible según el espacio disponible.
+ * Nombres cortos usan el tamaño máximo y los largos se achican solos para entrar en 1 o 2 renglones sin cortarse.
+ */
+function getNameSizing(name: string): { fit: number; lines: 1 | 2 } {
+  const clean = (name || '').trim();
+  const words = clean.split(/\s+/).filter(Boolean);
+  const longestWord = Math.max(1, ...words.map((w) => w.length));
+  const total = Math.max(1, clean.length);
+  const oneLine = total <= 16;
+  const letters = oneLine ? total : Math.max(longestWord, Math.ceil(total / 2) + 1);
+  // ancho aproximado de una letra mayúscula con su separación: 0.9 veces el tamaño de la fuente
+  return { fit: 1.04 / letters, lines: oneLine ? 1 : 2 };
+}
+
 export const SponsorCard: React.FC<SponsorCardProps> = ({
   sponsor,
   heightClass = 'h-28 sm:h-32',
@@ -59,6 +74,12 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
   variant = 'banner',
   onClick,
 }) => {
+  const nameSizing = getNameSizing(sponsor.name || '');
+  const nameStyle = {
+    '--mdq-name-fit': nameSizing.fit,
+    '--mdq-name-cap': `var(--mdq-cap-${nameSizing.lines})`,
+  } as React.CSSProperties;
+
   // Resolver el efecto: si es 'random' o no está definido, asignar uno estable basado en el ID/nombre
   const activeEffect: SponsorEffectType = useMemo(() => {
     if (sponsor.effectType && sponsor.effectType !== 'random') {
@@ -119,11 +140,11 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
           {(sponsor.name || sponsor.address) && (
             <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between z-10">
               <div className="truncate pr-2">
-                <span className="block text-sm sm:text-base font-black text-white drop-shadow-md truncate uppercase tracking-wider">
+                <span className="block text-[17.5px] sm:text-xl font-black text-white drop-shadow-md truncate uppercase tracking-wider">
                   {sponsor.name}
                 </span>
                 {sponsor.address && (
-                  <span className="block text-[10px] sm:text-xs font-bold text-amber-300 drop-shadow-sm truncate tracking-wide uppercase">
+                  <span className="block text-[10px] sm:text-xs font-normal text-amber-300 drop-shadow-sm truncate tracking-wide uppercase">
                     {sponsor.address}
                   </span>
                 )}
@@ -151,11 +172,11 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
           {/* Información superpuesta del sponsor */}
           <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between z-10">
             <div className="truncate pr-2">
-              <span className="block text-sm sm:text-base font-black text-white drop-shadow-md truncate uppercase tracking-wider">
+              <span className="block text-[17.5px] sm:text-xl font-black text-white drop-shadow-md truncate uppercase tracking-wider">
                 {sponsor.name}
               </span>
               {sponsor.address && (
-                <span className="block text-[10px] sm:text-xs font-bold text-amber-300 drop-shadow-sm truncate tracking-wide uppercase">
+                <span className="block text-[10px] sm:text-xs font-normal text-amber-300 drop-shadow-sm truncate tracking-wide uppercase">
                   {sponsor.address}
                 </span>
               )}
@@ -176,18 +197,18 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent pointer-events-none" />
 
           {/* Contenido tipográfico centrado en dos renglones */}
-          <div className="absolute inset-0 p-3 sm:p-4 flex flex-col items-center justify-center text-center z-10 overflow-hidden">
+          <div data-variant={variant} className="mdq-sponsor-card absolute inset-0 p-3 sm:p-4 flex flex-col items-center justify-center text-center z-10 overflow-hidden">
             <div className="flex flex-col items-center justify-center transition-transform duration-300 group-hover:scale-105 w-full">
               
               {/* EFECTO: BRUTO (giro 3D letra por letra + latido) */}
               {activeEffect === 'bruto' && (
                 <>
-                  <h3 className={`text-xl sm:text-2xl lg:text-3xl font-black tracking-widest ${textColor} uppercase font-sans drop-shadow-lg leading-tight select-none`}>
+                  <h3 className={`font-black tracking-widest ${textColor} uppercase font-sans drop-shadow-lg leading-tight select-none mdq-sponsor-name`} style={nameStyle}>
                     {renderBrutoLetters(sponsor.name || '')}
                   </h3>
                   {sponsor.address && (
                     <div className="animate-bruto-location mt-1 sm:mt-1.5">
-                      <p className={`text-xs sm:text-sm font-extrabold tracking-[0.25em] ${subtextColor} uppercase drop-shadow-md`}>
+                      <p className={`text-xs sm:text-sm font-normal tracking-[0.25em] ${subtextColor} uppercase drop-shadow-md mdq-sponsor-sub`}>
                         {sponsor.address}
                       </p>
                     </div>
@@ -198,11 +219,11 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
               {/* EFECTO: ABBEY ROAD (destello neón rock retro) */}
               {activeEffect === 'abbey-road' && (
                 <div className="animate-abbey-road flex flex-col items-center leading-tight">
-                  <h3 className={`text-xl sm:text-2xl lg:text-3xl font-black tracking-widest ${textColor} uppercase drop-shadow-md`}>
+                  <h3 className={`font-black tracking-widest ${textColor} uppercase drop-shadow-md mdq-sponsor-name`} style={nameStyle}>
                     {sponsor.name}
                   </h3>
                   {sponsor.address && (
-                    <p className={`text-xs sm:text-sm font-extrabold tracking-[0.2em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5`}>
+                    <p className={`text-xs sm:text-sm font-normal tracking-[0.2em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5 mdq-sponsor-sub`}>
                       {sponsor.address}
                     </p>
                   )}
@@ -212,11 +233,11 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
               {/* EFECTO: BENDU ARENA (balanceo 3D y resplandor áureo) */}
               {activeEffect === 'bendu' && (
                 <div className="animate-bendu flex flex-col items-center leading-tight">
-                  <h3 className={`text-xl sm:text-2xl lg:text-3xl font-black tracking-widest ${textColor} uppercase drop-shadow-lg`}>
+                  <h3 className={`font-black tracking-widest ${textColor} uppercase drop-shadow-lg mdq-sponsor-name`} style={nameStyle}>
                     {sponsor.name}
                   </h3>
                   {sponsor.address && (
-                    <p className={`text-[11px] sm:text-xs font-extrabold tracking-[0.18em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5 text-center`}>
+                    <p className={`text-[11px] sm:text-xs font-normal tracking-[0.18em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5 text-center mdq-sponsor-sub`}>
                       {sponsor.address}
                     </p>
                   )}
@@ -226,11 +247,11 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
               {/* EFECTO: ARENA MDP (expansión rítmica de tracking) */}
               {activeEffect === 'arena-mdp' && (
                 <div className="animate-arena-mdp flex flex-col items-center leading-tight">
-                  <h3 className={`text-lg sm:text-2xl lg:text-3xl font-black tracking-wider ${textColor} uppercase drop-shadow-md`}>
+                  <h3 className={`font-black tracking-wider ${textColor} uppercase drop-shadow-md mdq-sponsor-name`} style={nameStyle}>
                     {sponsor.name}
                   </h3>
                   {sponsor.address && (
-                    <p className={`text-xs sm:text-sm font-extrabold tracking-[0.22em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5`}>
+                    <p className={`text-xs sm:text-sm font-normal tracking-[0.22em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5 mdq-sponsor-sub`}>
                       {sponsor.address}
                     </p>
                   )}
@@ -240,11 +261,11 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
               {/* EFECTO: PLAZA DE LA MÚSICA (pulso musical ecualizador) */}
               {activeEffect === 'plaza-musica' && (
                 <div className="animate-plaza-musica flex flex-col items-center leading-tight">
-                  <h3 className={`text-lg sm:text-2xl lg:text-3xl font-black tracking-wider ${textColor} uppercase drop-shadow-lg`}>
+                  <h3 className={`font-black tracking-wider ${textColor} uppercase drop-shadow-lg mdq-sponsor-name`} style={nameStyle}>
                     {sponsor.name}
                   </h3>
                   {sponsor.address && (
-                    <p className={`text-xs sm:text-sm font-extrabold tracking-[0.22em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5`}>
+                    <p className={`text-xs sm:text-sm font-normal tracking-[0.22em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5 mdq-sponsor-sub`}>
                       {sponsor.address}
                     </p>
                   )}
@@ -254,11 +275,11 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
               {/* EFECTO: MUTE (ola marina esmeralda) */}
               {activeEffect === 'mute' && (
                 <div className="animate-mute-wave flex flex-col items-center leading-tight">
-                  <h3 className={`text-xl sm:text-2xl lg:text-3xl font-black tracking-[0.25em] ${textColor} uppercase drop-shadow-lg`}>
+                  <h3 className={`font-black tracking-[0.25em] ${textColor} uppercase drop-shadow-lg mdq-sponsor-name`} style={nameStyle}>
                     {sponsor.name}
                   </h3>
                   {sponsor.address && (
-                    <p className={`text-xs sm:text-sm font-extrabold tracking-[0.22em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5`}>
+                    <p className={`text-xs sm:text-sm font-normal tracking-[0.22em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5 mdq-sponsor-sub`}>
                       {sponsor.address}
                     </p>
                   )}
@@ -268,11 +289,11 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
               {/* EFECTO: RADIO CITY (marquesina broadway) */}
               {activeEffect === 'radio-city' && (
                 <div className="animate-radio-city flex flex-col items-center leading-tight">
-                  <h3 className={`text-lg sm:text-2xl lg:text-3xl font-black tracking-wider ${textColor} uppercase drop-shadow-lg`}>
+                  <h3 className={`font-black tracking-wider ${textColor} uppercase drop-shadow-lg mdq-sponsor-name`} style={nameStyle}>
                     {sponsor.name}
                   </h3>
                   {sponsor.address && (
-                    <p className={`text-xs sm:text-sm font-extrabold tracking-[0.22em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5`}>
+                    <p className={`text-xs sm:text-sm font-normal tracking-[0.22em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5 mdq-sponsor-sub`}>
                       {sponsor.address}
                     </p>
                   )}
@@ -282,11 +303,11 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
               {/* EFECTO: CYBER NEON (pulso eléctrico futurista) */}
               {activeEffect === 'cyber-neon' && (
                 <div className="animate-cyber-neon flex flex-col items-center leading-tight">
-                  <h3 className={`text-xl sm:text-2xl lg:text-3xl font-black tracking-widest text-cyan-300 uppercase drop-shadow-lg`}>
+                  <h3 className={`font-black tracking-widest text-cyan-300 uppercase drop-shadow-lg mdq-sponsor-name`} style={nameStyle}>
                     {sponsor.name}
                   </h3>
                   {sponsor.address && (
-                    <p className={`text-xs sm:text-sm font-extrabold tracking-[0.2em] text-pink-300 uppercase drop-shadow-md mt-1 sm:mt-1.5`}>
+                    <p className={`text-xs sm:text-sm font-normal tracking-[0.2em] text-pink-300 uppercase drop-shadow-md mt-1 sm:mt-1.5 mdq-sponsor-sub`}>
                       {sponsor.address}
                     </p>
                   )}
@@ -296,11 +317,11 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
               {/* EFECTO: GOLDEN SHIMMER (resplandor dorado prestigioso) */}
               {activeEffect === 'golden-shimmer' && (
                 <div className="animate-golden-shimmer flex flex-col items-center leading-tight">
-                  <h3 className={`text-xl sm:text-2xl lg:text-3xl font-black tracking-widest text-amber-300 uppercase drop-shadow-lg`}>
+                  <h3 className={`font-black tracking-widest text-amber-300 uppercase drop-shadow-lg mdq-sponsor-name`} style={nameStyle}>
                     {sponsor.name}
                   </h3>
                   {sponsor.address && (
-                    <p className={`text-xs sm:text-sm font-extrabold tracking-[0.2em] text-amber-100 uppercase drop-shadow-md mt-1 sm:mt-1.5`}>
+                    <p className={`text-xs sm:text-sm font-normal tracking-[0.2em] text-amber-100 uppercase drop-shadow-md mt-1 sm:mt-1.5 mdq-sponsor-sub`}>
                       {sponsor.address}
                     </p>
                   )}
@@ -310,11 +331,11 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
               {/* EFECTO: RETRO BOUNCE (rebote cinético) */}
               {activeEffect === 'retro-bounce' && (
                 <div className="animate-retro-bounce flex flex-col items-center leading-tight">
-                  <h3 className={`text-xl sm:text-2xl lg:text-3xl font-black tracking-widest ${textColor} uppercase drop-shadow-md`}>
+                  <h3 className={`font-black tracking-widest ${textColor} uppercase drop-shadow-md mdq-sponsor-name`} style={nameStyle}>
                     {sponsor.name}
                   </h3>
                   {sponsor.address && (
-                    <p className={`text-xs sm:text-sm font-extrabold tracking-[0.18em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5`}>
+                    <p className={`text-xs sm:text-sm font-normal tracking-[0.18em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5 mdq-sponsor-sub`}>
                       {sponsor.address}
                     </p>
                   )}
@@ -324,11 +345,11 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
               {/* EFECTO: FLOAT GLOW (flotación mística) */}
               {activeEffect === 'float-glow' && (
                 <div className="animate-float-glow flex flex-col items-center leading-tight">
-                  <h3 className={`text-xl sm:text-2xl lg:text-3xl font-black tracking-widest ${textColor} uppercase drop-shadow-lg`}>
+                  <h3 className={`font-black tracking-widest ${textColor} uppercase drop-shadow-lg mdq-sponsor-name`} style={nameStyle}>
                     {sponsor.name}
                   </h3>
                   {sponsor.address && (
-                    <p className={`text-xs sm:text-sm font-extrabold tracking-[0.2em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5`}>
+                    <p className={`text-xs sm:text-sm font-normal tracking-[0.2em] ${subtextColor} uppercase drop-shadow-md mt-1 sm:mt-1.5 mdq-sponsor-sub`}>
                       {sponsor.address}
                     </p>
                   )}

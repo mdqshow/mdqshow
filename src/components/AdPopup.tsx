@@ -230,9 +230,9 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false
             onClick={closePopup}
           />
 
-          {/* Borde de la tarjeta: da una vuelta completa cambiando de color; al volver al inicio el aviso se cierra solo */}
+          {/* Borde de la tarjeta, en sentido antihorario: da una vuelta completa cambiando de color; al volver al inicio el aviso se cierra solo */}
           <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl overflow-hidden" aria-hidden="true">
-            <svg className="w-full h-full overflow-hidden">
+            <svg className="w-full h-full overflow-hidden" style={{ transform: 'scaleX(-1)' }}>
               <rect
                 x="0"
                 y="0"
