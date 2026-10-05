@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Mail, Send, CheckCircle2, X } from 'lucide-react';
 
 interface ContactModalProps {
@@ -11,6 +11,9 @@ interface ContactModalProps {
 const CONTACT_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwErEif_byrRH6chIQXlLScAhqDpuEmJqk42Q2fAb9l4_vqZrgCN0o7UlIaDdjM_ZKnLw/exec';
 
 export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
+  // El clic afuera solo cierra si el botón del mouse se apretó y se soltó sobre el fondo oscuro
+  // (así no se cierra al arrastrar el mouse para seleccionar texto)
+  const overlayMouseDownRef = useRef(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('Consulta general');
@@ -89,7 +92,13 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
-      onClick={onClose}
+      onMouseDown={(e) => {
+        overlayMouseDownRef.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        if (overlayMouseDownRef.current && e.target === e.currentTarget) onClose();
+        overlayMouseDownRef.current = false;
+      }}
     >
       <div 
         className="relative w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-3xl overflow-hidden shadow-2xl my-6 animate-in zoom-in-95"

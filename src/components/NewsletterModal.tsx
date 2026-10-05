@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Bell, 
   Mail, 
@@ -27,6 +27,9 @@ export const NewsletterModal: React.FC<NewsletterModalProps> = ({
   onClose,
   isAdmin = false,
 }) => {
+  // El clic afuera solo cierra si el botón del mouse se apretó y se soltó sobre el fondo oscuro
+  // (así no se cierra al arrastrar el mouse para seleccionar texto)
+  const overlayMouseDownRef = useRef(false);
   const [email, setEmail] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -135,7 +138,13 @@ export const NewsletterModal: React.FC<NewsletterModalProps> = ({
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
-      onClick={onClose}
+      onMouseDown={(e) => {
+        overlayMouseDownRef.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        if (overlayMouseDownRef.current && e.target === e.currentTarget) onClose();
+        overlayMouseDownRef.current = false;
+      }}
     >
       <div 
         className="relative w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-3xl overflow-hidden shadow-2xl my-6 animate-in zoom-in-95"

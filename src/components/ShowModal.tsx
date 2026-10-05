@@ -1,5 +1,5 @@
 import { normalizeUserUrl } from '../utils/safeUrl';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   Plus, 
@@ -58,6 +58,15 @@ export const ShowModal: React.FC<ShowModalProps> = ({
   defaultCity,
 }) => {
   const isEditing = Boolean(initialShow);
+
+  // Cerrar con Esc pide confirmación, para no perder por error lo que se está cargando
+  const requestClose = () => {
+    if (window.confirm('¿Cerrar sin guardar? Se va a perder lo que cargaste.')) {
+      onClose();
+    }
+  };
+  const requestCloseRef = useRef(requestClose);
+  requestCloseRef.current = requestClose;
 
   const [band, setBand] = useState('');
   const [tourName, setTourName] = useState('');
@@ -159,7 +168,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        requestCloseRef.current();
       }
     };
     if (isOpen) {
@@ -337,7 +346,6 @@ export const ShowModal: React.FC<ShowModalProps> = ({
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto animate-in fade-in"
-      onClick={onClose}
     >
       <div 
         className="relative w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-3xl overflow-hidden shadow-2xl my-6"
@@ -745,6 +753,8 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                 onPaste={(e) => {
                   const pastedText = e.clipboardData.getData('text');
                   if (pastedText) {
+                    // Se evita el pegado normal del navegador: si no, el texto se insertaba dos veces
+                    e.preventDefault();
                     handleTicketUrlChange(pastedText.trim());
                   }
                 }}
