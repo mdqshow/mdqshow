@@ -87,6 +87,12 @@ interface DisplayRowState {
   bandFolded: boolean;
 }
 
+// Texto que se muestra cuando todavía no hay ningún show marcado con MDQ LINE UP
+const PLACEHOLDER_ROW_ITEM: { date?: string; band: string } = {
+  date: '',
+  band: 'PROXIMAMENTE'.padEnd(15, ' '),
+};
+
 // Fila vacía de separación (las mismas casillas pero sin letras)
 const EMPTY_ROW_ITEM: { date?: string; band: string } = {
   date: '',
@@ -98,8 +104,8 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
   const sortedShows = React.useMemo(() => {
     if (!shows || shows.length === 0) return [];
     
-    const explicitlyMarked = shows.filter(s => s.isNewBadge === true);
-    const pool = explicitlyMarked.length >= 5 ? explicitlyMarked : shows;
+    // El cartel muestra SOLO los shows marcados con el tilde MDQ LINE UP (sean 1, 3 o 20)
+    const pool = shows.filter(s => s.isNewBadge === true);
 
     const getShowEarliestDate = (s: Show): string => {
       if (Array.isArray(s.dates) && s.dates.length > 0) {
@@ -119,7 +125,7 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
   // Esto genera el efecto solicitado: luego de mostrar el último show (el más lejano en fecha),
   // rota una fila completamente vacía como separador antes de volver a empezar desde el show más próximo.
   const boardItems = React.useMemo(() => {
-    if (sortedShows.length === 0) return [];
+    if (sortedShows.length === 0) return [PLACEHOLDER_ROW_ITEM];
     return [
       ...sortedShows.map(s => {
         const earliest = Array.isArray(s.dates) && s.dates.length > 0 ? [...s.dates].sort()[0] : '';
@@ -150,27 +156,29 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
     });
   });
 
-  // Inicialización cuando boardItems esté disponible por primera vez
+  // Sincroniza las filas con la lista. Si hay pocos shows (no hay rotación), se actualizan
+  // cada vez que cambia la lista; si hay muchos, se conservan las filas que ya están girando.
   useEffect(() => {
-    if (boardItems.length > 0) {
-      setRows((prev) => {
-        // Solo inicializamos si estaban vacías
-        const hasContent = prev.some(r => r.band.trim().length > 0);
-        if (hasContent) return prev;
-        return Array.from({ length: ROWS_TO_SHOW }, (_, i) => {
-          const item = boardItems[i % boardItems.length];
-          const parts = parseAirportDateParts(item.date);
-          return {
-            day: parts.day.padEnd(2, ' ').slice(0, 2),
-            month: parts.month.padEnd(3, ' ').slice(0, 3),
-            band: (item.band || '').padEnd(15, ' ').slice(0, 15),
-            dayFolded: false,
-            monthFolded: false,
-            bandFolded: false,
-          };
-        });
+    if (boardItems.length === 0) return;
+    setRows((prev) => {
+      const hasContent = prev.some(r => r.band.trim().length > 0);
+      if (hasContent && boardItems.length > ROWS_TO_SHOW) return prev;
+      return Array.from({ length: ROWS_TO_SHOW }, (_, i) => {
+        const item =
+          boardItems.length > ROWS_TO_SHOW
+            ? boardItems[i % boardItems.length]
+            : (boardItems[i] || EMPTY_ROW_ITEM);
+        const parts = parseAirportDateParts(item.date);
+        return {
+          day: parts.day.padEnd(2, ' ').slice(0, 2),
+          month: parts.month.padEnd(3, ' ').slice(0, 3),
+          band: (item.band || '').padEnd(15, ' ').slice(0, 15),
+          dayFolded: false,
+          monthFolded: false,
+          bandFolded: false,
+        };
       });
-    }
+    });
   }, [boardItems]);
 
   useEffect(() => {
@@ -333,12 +341,12 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
 
   return (
     <div className="relative w-full h-full min-h-[280px] sm:min-h-[310px] rounded-2xl bg-[#090a0c] border-2 border-[#202226] p-2 sm:p-3 shadow-2xl shadow-black overflow-hidden select-none flex flex-col justify-between">
-      {/* Marco superior: "MDQ LINE UP" con el color ámbar vintage original */}
+      {/* Marco superior: "MDQ LINE UP - DESTACADOS" con el color ámbar vintage original */}
       <div className="flex items-center pb-1.5 mb-1 border-b border-[#1c1e22] px-1 text-zinc-400 font-airport-matrix">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[#e2b740] animate-pulse" />
           <span className="text-[#e2b740] font-black tracking-[0.25em] text-xs sm:text-sm">
-            MDQ LINE UP
+            MDQ LINE UP - DESTACADOS
           </span>
         </div>
       </div>

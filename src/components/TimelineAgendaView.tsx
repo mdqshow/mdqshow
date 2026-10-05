@@ -110,7 +110,11 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                 <React.Fragment key={`${show.id}-${date}-${globalIndex}`}>
                   <div
                     id={`timeline-show-${show.id}`}
-                    className="scroll-mt-28 bg-slate-900/90 border border-slate-800/90 hover:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-200 hover:shadow-lg hover:shadow-rose-950/10"
+                    className={`scroll-mt-28 bg-slate-900/90 border rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-200 hover:shadow-lg hover:shadow-rose-950/10 ${
+                      isAdmin && show.isNewBadge
+                        ? 'border-amber-500/70 ring-1 ring-amber-500/40'
+                        : 'border-slate-800/90 hover:border-slate-700'
+                    }`}
                   >
                     {/* Left: Date Badge & Band Info */}
                     <div className="flex items-center space-x-4 w-full sm:w-auto min-w-0 flex-1">
@@ -150,6 +154,14 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                           <h4 className="text-base sm:text-lg font-bold text-white truncate hover:text-rose-400 transition-colors cursor-pointer" onClick={() => onSelectShow(show)}>
                             {show.band}
                           </h4>
+                          {isAdmin && show.isNewBadge && (
+                            <span
+                              className="shrink-0 text-[10px] uppercase font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/30"
+                              title="Este show sale en el cartel MDQ LINE UP - DESTACADOS (solo lo ves vos como administrador)"
+                            >
+                              Line up
+                            </span>
+                          )}
                           {!countdown.isPast && (
                             <span className="hidden md:inline-block text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
                               {countdown.text}

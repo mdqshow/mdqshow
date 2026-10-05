@@ -70,7 +70,11 @@ export const ShowCard: React.FC<ShowCardProps> = ({
   return (
     <div
       id={`show-card-${show.id}`}
-      className="scroll-mt-28 group relative bg-slate-900 border border-slate-800 hover:border-slate-700/90 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-rose-950/20 transition-all duration-300 flex flex-col justify-between"
+      className={`scroll-mt-28 group relative bg-slate-900 border rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-rose-950/20 transition-all duration-300 flex flex-col justify-between ${
+        isAdmin && show.isNewBadge
+          ? 'border-amber-500/70 ring-1 ring-amber-500/40'
+          : 'border-slate-800 hover:border-slate-700/90'
+      }`}
     >
       <div>
         {/* Band Photo Container */}
@@ -171,9 +175,12 @@ export const ShowCard: React.FC<ShowCardProps> = ({
               <h3 className="text-xl font-bold text-white group-hover:text-rose-400 transition-colors tracking-tight">
                 {show.band}
               </h3>
-              {show.featured && (
-                <span className="flex items-center text-[10px] uppercase font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
-                  <Flame className="w-3 h-3 mr-0.5 text-amber-400" /> Destacado
+              {isAdmin && show.isNewBadge && (
+                <span
+                  className="flex items-center shrink-0 text-[10px] uppercase font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/30"
+                  title="Este show sale en el cartel MDQ LINE UP - DESTACADOS (solo lo ves vos como administrador)"
+                >
+                  <Flame className="w-3 h-3 mr-0.5 text-amber-400" /> Line up
                 </span>
               )}
             </div>
