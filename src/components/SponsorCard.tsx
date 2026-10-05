@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { ExternalLink, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { Sponsor, SponsorEffectType } from '../types';
 import { trackBannerClick } from '../services/metricsService';
+import { safeHttpUrl } from '../utils/safeUrl';
 
 const AVAILABLE_EFFECTS: SponsorEffectType[] = [
   'bruto',
@@ -351,10 +352,11 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
   );
 
   // Si tiene link de destino, lo envuelve en enlace <a> accesible
-  if (sponsor.link && variant !== 'preview') {
+  const safeLink = safeHttpUrl(sponsor.link);
+  if (safeLink && variant !== 'preview') {
     return (
       <a
-        href={sponsor.link}
+        href={safeLink}
         target="_blank"
         rel="noopener noreferrer"
         onClick={handleClick}

@@ -1,17 +1,53 @@
 import { Show } from '../types';
+import { formatSingleDate } from './dateHelpers';
 
 /**
  * Genera la URL para compartir un show por WhatsApp
  */
 export function getWhatsAppShareUrl(show: Show): string {
-  const datesText = show.dates.join(', ');
-  const text = `¡Mira! *${show.band}* se presenta en Mar del Plata.\n` +
-    `📍 *Lugar:* ${show.venue} (${show.city})\n` +
-    `📅 *Fecha:* ${datesText} a las ${show.time}\n` +
-    `🎟️ *Entradas oficiales:* ${show.ticketUrl}\n\n` +
-    `Encontrá toda la cartelera en https://mdqshow.com.ar`;
+  const datesText = show.dates.map((d) => formatSingleDate(d)).join(', ');
+  const lines = [
+    `¡Mira! *${show.band}* se presenta en Mar del Plata.`,
+    `📍 *Lugar:* ${show.venue} (${show.city})`,
+    `📅 *Fecha:* ${datesText}${show.time ? ` a las ${show.time}` : ''}`,
+  ];
+  if (show.ticketUrl) lines.push(`🎟️ *Entradas oficiales:* ${show.ticketUrl}`);
+  lines.push('', 'Encontrá toda la cartelera en https://mdqshow.com.ar');
 
-  return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  return `https://api.whatsapp.com/send?text=${encodeURIComponent(lines.join('\n'))}`;
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * Calcula inicio y fin del evento en formato de calendario (YYYYMMDDTHHMMSS, hora local).
+ * La duración por defecto es de 3 horas; si el show termina pasada la medianoche,
+ * el fin cae correctamente en el día siguiente.
+ */
+function buildEventTimes(show: Show, chosenDate: string): { start: string; end: string; dateCompact: string } {
+  const dateCompact = chosenDate.replace(/-/g, '');
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(chosenDate);
+
+  let hours = 21;
+  let minutes = 0;
+  const timeMatch = (show.time || '').match(/(\d{1,2})(?::(\d{2}))?/);
+  if (timeMatch) {
+    hours = Math.min(23, Number(timeMatch[1]));
+    minutes = timeMatch[2] ? Math.min(59, Number(timeMatch[2])) : 0;
+  }
+
+  if (!match) {
+    // Fecha con formato inesperado: se arma igual que antes, sin cálculo de día siguiente
+    const startOnly = `${dateCompact}T${pad2(hours)}${pad2(minutes)}00`;
+    return { start: startOnly, end: startOnly, dateCompact };
+  }
+
+  const startDate = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), hours, minutes));
+  const endDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
+  const fmt = (d: Date) =>
+    `${d.getUTCFullYear()}${pad2(d.getUTCMonth() + 1)}${pad2(d.getUTCDate())}T${pad2(d.getUTCHours())}${pad2(d.getUTCMinutes())}00`;
+
+  return { start: fmt(startDate), end: fmt(endDate), dateCompact };
 }
 
 /**
@@ -21,23 +57,7 @@ export function getGoogleCalendarUrl(show: Show, dateStr?: string): string {
   const chosenDate = dateStr || show.dates[0];
   if (!chosenDate) return '';
 
-  // Formato YYYYMMDD
-  const dateCompact = chosenDate.replace(/-/g, '');
-
-  // Horario por defecto si viene "21:00 hs" -> extraer 210000
-  let startTime = '210000';
-  let endTime = '233000';
-  const timeMatch = show.time.match(/([0-9]{1,2}):?([0-9]{2})?/);
-  if (timeMatch) {
-    const hours = timeMatch[1].padStart(2, '0');
-    const mins = timeMatch[2] || '00';
-    startTime = `${hours}${mins}00`;
-    const endHour = String((Number(hours) + 3) % 24).padStart(2, '0');
-    endTime = `${endHour}${mins}00`;
-  }
-
-  const startIso = `${dateCompact}T${startTime}`;
-  const endIso = `${dateCompact}T${endTime}`;
+  const { start, end } = buildEventTimes(show, chosenDate);
 
   const title = encodeURIComponent(`${show.band} en Mar del Plata`);
   const details = encodeURIComponent(
@@ -47,8 +67,9 @@ export function getGoogleCalendarUrl(show: Show, dateStr?: string): string {
     `Organizado y publicado en MDQSHOW (https://mdqshow.com.ar)`
   );
   const location = encodeURIComponent(`${show.venue}, ${show.venueAddress}, Mar del Plata, Argentina`);
+  const ctz = encodeURIComponent('America/Argentina/Buenos_Aires');
 
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startIso}/${endIso}&details=${details}&location=${location}&sf=true&output=xml`;
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&ctz=${ctz}&details=${details}&location=${location}&sf=true&output=xml`;
 }
 
 /**
@@ -62,29 +83,26 @@ export function addToDeviceCalendar(show: Show, dateStr?: string): void {
     downloadIcsFile(show, dateStr);
   } else {
     const gcalUrl = getGoogleCalendarUrl(show, dateStr);
-    window.open(gcalUrl, '_blank', 'noopener,noreferrer');
+    if (gcalUrl) window.open(gcalUrl, '_blank', 'noopener,noreferrer');
   }
 }
+
+// En los archivos .ics hay que "escapar" comas, punto y coma, barras y saltos de línea
+const escapeIcs = (value: string) =>
+  String(value || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, '\\n');
 
 /**
  * Genera y descarga un archivo .ics universal (para Apple Calendar, Outlook o celulares)
  */
 export function downloadIcsFile(show: Show, dateStr?: string): void {
-
   const chosenDate = dateStr || show.dates[0];
   if (!chosenDate) return;
 
-  const dateCompact = chosenDate.replace(/-/g, '');
-  let startTime = '210000';
-  let endTime = '233000';
-  const timeMatch = show.time.match(/([0-9]{1,2}):?([0-9]{2})?/);
-  if (timeMatch) {
-    const hours = timeMatch[1].padStart(2, '0');
-    const mins = timeMatch[2] || '00';
-    startTime = `${hours}${mins}00`;
-    const endHour = String((Number(hours) + 3) % 24).padStart(2, '0');
-    endTime = `${endHour}${mins}00`;
-  }
+  const { start, end, dateCompact } = buildEventTimes(show, chosenDate);
 
   const icsContent = [
     'BEGIN:VCALENDAR',
@@ -94,21 +112,29 @@ export function downloadIcsFile(show: Show, dateStr?: string): void {
     'BEGIN:VEVENT',
     `UID:mdqshow-${show.id}-${dateCompact}@mdqshow.com.ar`,
     `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
-    `DTSTART:${dateCompact}T${startTime}`,
-    `DTEND:${dateCompact}T${endTime}`,
-    `SUMMARY:${show.band} en Mar del Plata`,
-    `DESCRIPTION:Show de ${show.band} en ${show.venue}. Entradas: ${show.ticketUrl}`,
-    `LOCATION:${show.venue}, ${show.venueAddress}, Mar del Plata`,
+    `DTSTART:${start}`,
+    `DTEND:${end}`,
+    `SUMMARY:${escapeIcs(`${show.band} en Mar del Plata`)}`,
+    `DESCRIPTION:${escapeIcs(`Show de ${show.band} en ${show.venue}. Entradas: ${show.ticketUrl}`)}`,
+    `LOCATION:${escapeIcs(`${show.venue}, ${show.venueAddress}, Mar del Plata`)}`,
     'STATUS:CONFIRMED',
     'END:VEVENT',
     'END:VCALENDAR',
   ].join('\r\n');
 
+  const fileSlug =
+    show.band
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'show';
+
   const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${show.band.toLowerCase().replace(/[^a-z0-9]/g, '_')}_mdqshow.ics`;
+  a.download = `${fileSlug}_mdqshow.ics`;
   document.body.appendChild(a);
   a.click();
   a.remove();

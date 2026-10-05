@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getDaysUntil, isShowPast } from './utils/dateHelpers';
 import { Show, FilterState, Sponsor } from './types';
 import { INITIAL_SHOWS, AVAILABLE_CITIES } from './data/mockShows';
@@ -76,6 +76,7 @@ export default function App() {
   // Estado de administrador: lo determina Firebase Auth (no la URL ni el localStorage)
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const isLoggingOutRef = useRef(false);
 
   useEffect(() => {
     // Limpieza de la bandera vieja que guardaba la versión anterior
@@ -92,7 +93,7 @@ export default function App() {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         setIsAdmin(false);
-        if (isAdminRoute()) setIsAdminLoginOpen(true);
+        if (!isLoggingOutRef.current && isAdminRoute()) setIsAdminLoginOpen(true);
         return;
       }
       // Solo se habilita el modo admin si Firebase confirma que la cuenta tiene permisos reales
@@ -106,7 +107,7 @@ export default function App() {
       setIsAdmin(true);
     });
     const handleRouteChange = () => {
-      if (!auth.currentUser && isAdminRoute()) {
+      if (!auth.currentUser && !isLoggingOutRef.current && isAdminRoute()) {
         setIsAdminLoginOpen(true);
       }
     };
@@ -124,19 +125,19 @@ export default function App() {
   };
 
   const handleAdminLogout = async () => {
+    isLoggingOutRef.current = true;
+    setIsAdmin(false);
+    setIsAdminLoginOpen(false);
     try {
       await signOut(auth);
     } catch (err) {
       console.error('Error al cerrar sesión:', err);
     }
-    setIsAdmin(false);
-    window.location.hash = '';
-
-    const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
-    if (path.endsWith('/admin')) {
-      // Vuelve a la misma ruta sin "/admin" (por ejemplo /test/admin -> /test)
-      window.history.replaceState(null, '', path.replace(/\/admin$/, '') || '/');
-    }
+    // Carga la web principal desde cero, sin "/admin" ni "#admin" en la dirección
+    // (por ejemplo /test/admin -> /test, y /admin -> /)
+    const path = window.location.pathname.replace(/\/+$/, '');
+    const destination = path.replace(/\/admin$/i, '') || '/';
+    window.location.replace(destination);
   };
 
   // Shows list initialized from local fallback, then synced with Firestore in real time

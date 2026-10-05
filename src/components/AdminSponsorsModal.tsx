@@ -22,6 +22,7 @@ import {
 import { Sponsor, SponsorEffectType } from '../types';
 import { SponsorCard } from './SponsorCard';
 import { compressImage } from '../utils/imageCompressor';
+import { normalizeUserUrl } from '../utils/safeUrl';
 import { INITIAL_SPONSORS } from '../data/mockSponsors';
 
 interface AdminSponsorsModalProps {
@@ -136,6 +137,17 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
       return;
     }
 
+    const linkCheck = normalizeUserUrl(formData.link);
+    if (!linkCheck.valid) {
+      alert('El link de destino no es válido. Tiene que ser una dirección web (por ejemplo https://ejemplo.com).');
+      return;
+    }
+    const videoCheck = normalizeUserUrl(formData.video);
+    if (formData.type === 'video' && !videoCheck.valid) {
+      alert('El link del video no es válido. Tiene que ser una dirección web (por ejemplo https://mdqshow.com.ar/ads/video.mp4).');
+      return;
+    }
+
     if (formData.type === 'video' && !formData.video?.trim()) {
       alert('Para una publicidad con video ingresá el link directo del video (.mp4 o .webm).');
       return;
@@ -148,9 +160,9 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
         type: formData.type || 'text',
         name: formData.name.trim().toUpperCase(),
         address: (formData.address || '').trim().toUpperCase(),
-        link: formData.link?.trim() || '',
+        link: linkCheck.url,
         image: formData.image || '',
-        video: formData.video?.trim() || '',
+        video: videoCheck.url,
         showInPopup: Boolean(formData.showInPopup),
         showInTopBanner: Boolean(formData.showInTopBanner),
         showInFeed: formData.showInFeed !== false,

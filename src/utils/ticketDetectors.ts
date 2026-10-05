@@ -32,18 +32,45 @@ const KNOWN_PORTAL_DOMAINS: KnownPortal[] = [
 ];
 
 /**
+ * Devuelve el dominio (sin "www.") si el texto parece una dirección web; si no, null.
+ */
+function extractHostname(raw: string): string | null {
+  try {
+    const withProtocol = raw.startsWith('http://') || raw.startsWith('https://') ? raw : 'https://' + raw;
+    const hostname = new URL(withProtocol).hostname.replace(/^www\./, '');
+    return hostname.includes('.') ? hostname : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Detecta el nombre de la ticketera a partir de cualquier texto o URL ingresada.
  * Funciona si se pega con https://, http://, www o texto simple.
+ * Si es una dirección web, compara solo contra el dominio (no contra el resto del link),
+ * así una palabra dentro de la ruta no se confunde con otra ticketera.
  */
 export function detectTicketPortalFromUrl(url: string): string | null {
   if (!url || typeof url !== 'string') return null;
   const clean = url.trim().toLowerCase();
   if (clean.length < 3) return null;
 
-  // 1. Coincidencia por palabra clave directa en toda la cadena
-  for (const item of KNOWN_PORTAL_DOMAINS) {
-    if (clean.includes(item.domainKey)) {
-      return item.name;
+  // 1. Coincidencia con las ticketeras conocidas
+  const hostForMatch = extractHostname(clean);
+  if (hostForMatch) {
+    const labels = hostForMatch.split('.');
+    for (const item of KNOWN_PORTAL_DOMAINS) {
+      // Las claves cortas deben coincidir exactas con una parte del dominio; las largas pueden estar contenidas
+      const found = labels.some((label) =>
+        item.domainKey.length >= 8 ? label.includes(item.domainKey) : label === item.domainKey
+      );
+      if (found) return item.name;
+    }
+  } else {
+    // Texto simple (por ejemplo "ticketek")
+    for (const item of KNOWN_PORTAL_DOMAINS) {
+      const found = item.domainKey.length >= 6 ? clean.includes(item.domainKey) : clean === item.domainKey;
+      if (found) return item.name;
     }
   }
 
