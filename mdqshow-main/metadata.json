@@ -1,6 +1,0 @@
-{
-  "name": "MDQSHOW",
-  "description": "Cartelera de recitales, shows y recitales de rock y música en Mar del Plata con fechas, lugares y venta de entradas.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
