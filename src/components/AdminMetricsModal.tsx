@@ -26,6 +26,7 @@ import { VENUE_SPONSORS } from './AdSenseBanner';
 import { SubscribersPanel } from './SubscribersPanel';
 import { resetMetricCounters } from '../services/metricsService';
 import { safeHttpUrl } from '../utils/safeUrl';
+import { isShowPast } from '../utils/dateHelpers';
 
 interface AdminMetricsModalProps {
   isOpen: boolean;
@@ -53,8 +54,11 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Solo se cuentan los recitales vigentes: los que ya pasaron (todas sus fechas) quedan afuera
+  const currentShows = shows.filter((show) => !isShowPast(show.dates));
+
   // Combinar shows con sus métricas
-  const showsWithMetrics = shows.map((show) => {
+  const showsWithMetrics = currentShows.map((show) => {
     const metric = metricsMap[show.id] || {
       showId: show.id,
       ticketClicks: 0,
@@ -76,7 +80,7 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
   const totalClicks = showsWithMetrics.reduce((acc, curr) => acc + curr.ticketClicks, 0);
   const totalShares = showsWithMetrics.reduce((acc, curr) => acc + curr.shares, 0);
   const totalFavorites = showsWithMetrics.reduce((acc, curr) => acc + curr.favoritesCount, 0);
-  const activeShowsCount = shows.length;
+  const activeShowsCount = currentShows.length;
   const totalSubscribersCount = subscribers.length;
 
   // Combinar banners y sponsors con sus métricas de impresiones y clicks
@@ -302,7 +306,7 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
               }`}
             >
               <Ticket className="w-4 h-4" />
-              Recitales y Tickets ({shows.length})
+              Recitales y Tickets ({currentShows.length})
             </button>
             <button
               onClick={() => setActiveTab('banners')}
