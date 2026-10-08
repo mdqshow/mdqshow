@@ -88,16 +88,17 @@ export default function App() {
         if (!isLoggingOutRef.current && isAdminRoute()) setIsAdminLoginOpen(true);
         return;
       }
-      // Solo se habilita el modo admin si Firebase confirma que la cuenta tiene permisos reales
+      // Hay una sesión iniciada: el panel se muestra enseguida. Si Firebase confirma que la cuenta
+      // NO es de administrador se cierra la sesión; si la verificación falla por otro motivo
+      // (conexión, límite diario de Firebase), el panel se mantiene: de todos modos, las reglas de
+      // Firebase son las que impiden guardar cambios a quien no tiene permiso.
+      setIsAdmin(true);
       const access = await checkAdminAccess();
       if (access === 'denied') {
         setIsAdmin(false);
         alert('Esta cuenta no tiene permisos de administrador.');
         signOut(auth).catch(() => {});
-        return;
       }
-      // Solo se habilita con confirmación real; si no se pudo verificar ('unknown'), no se muestra el panel
-      setIsAdmin(access === 'admin');
     });
     const handleRouteChange = () => {
       if (!auth.currentUser && !isLoggingOutRef.current && isAdminRoute()) {
@@ -114,7 +115,7 @@ export default function App() {
   }, []);
 
   const handleLoginSuccess = () => {
-    // El panel de administrador se habilita solo cuando Firebase confirma los permisos (ver onAuthStateChanged)
+    setIsAdmin(true);
   };
 
   const handleAdminLogout = async () => {
