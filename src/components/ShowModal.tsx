@@ -179,6 +179,12 @@ export const ShowModal: React.FC<ShowModalProps> = ({
   // Venue helper
   const handleSelectPresetVenue = (presetName: string) => {
     const found = PRESET_VENUES.find((p) => p.name === presetName);
+    if (!found) {
+      // Lugar sin dirección guardada en la lista: se carga el nombre y la dirección se completa a mano
+      setVenue(presetName);
+      setVenueAddress('');
+      return;
+    }
     if (found) {
       setVenue(found.name);
       setVenueAddress(found.address);
@@ -448,12 +454,12 @@ export const ShowModal: React.FC<ShowModalProps> = ({
               {[
                 { label: '🍻 Abbey Road', name: 'Abbey Road Concert Bar' },
                 { label: '🏟️ Arena MDQ', name: 'Arena Mar del Plata' },
-                { label: '🔥 Bendu Arena', name: 'BENDU ARENA' },
+                { label: '🔥 Bendu Arena', name: 'Bendu Arena' },
                 { label: '⭐ Once Unidos', name: 'Once Unidos' },
                 { label: '⚽ Estadio Minella', name: 'Estadio José María Minella' },
                 { label: '🎸 Plaza de la Música', name: 'Plaza de la Música Mar del Plata' },
                 { label: '🏀 Polideportivo', name: 'Polideportivo Islas Malvinas' },
-                { label: '🏛️ Auditorium', name: 'Teatro Auditorium (Centro Provincial de las Artes)' },
+                { label: '🏛️ Auditorium', name: 'Auditorium (Centro Provincial de las Artes)' },
                 { label: '🎭 Teatro Colón', name: 'Teatro Colón Mar del Plata' },
                 { label: '🎭 Radio City', name: 'Teatro Radio City + Roxy + Melany' },
                 { label: '🎪 Teatro Tronador', name: 'Teatro Tronador' },
