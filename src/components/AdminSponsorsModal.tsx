@@ -23,7 +23,6 @@ import { Sponsor, SponsorEffectType } from '../types';
 import { SponsorCard } from './SponsorCard';
 import { compressImage } from '../utils/imageCompressor';
 import { normalizeUserUrl } from '../utils/safeUrl';
-import { INITIAL_SPONSORS } from '../data/mockSponsors';
 
 interface AdminSponsorsModalProps {
   isOpen: boolean;
@@ -31,6 +30,8 @@ interface AdminSponsorsModalProps {
   sponsors: Sponsor[];
   onSaveSponsor: (sponsor: Sponsor) => Promise<void>;
   onDeleteSponsor: (sponsorId: string) => Promise<void>;
+  // De dónde viene la lista que se está viendo: la base real ('cloud'), vacía ('empty') o una copia ('local')
+  sponsorsStatus?: { source: 'cloud' | 'empty' | 'local'; error?: string };
 }
 
 const isHexColor = (v?: string) => !!v && /^#[0-9a-fA-F]{6}$/.test(v.trim());
@@ -52,6 +53,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
   sponsors,
   onSaveSponsor,
   onDeleteSponsor,
+  sponsorsStatus,
 }) => {
   const [editingSponsor, setEditingSponsor] = useState<Sponsor | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -254,6 +256,23 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
 
         {/* Content Body */}
         <div className="p-5 overflow-y-auto space-y-6 flex-1">
+          {/* Aviso: la lista no viene de la base de datos real */}
+          {sponsorsStatus && sponsorsStatus.source === 'local' && (
+            <div className="p-3.5 rounded-2xl bg-rose-950/60 border border-rose-500/50 text-rose-100 text-xs" role="alert">
+              <p className="font-bold">
+                ⚠️ No se pudo leer la base de datos: la lista de sponsors que ves es una copia guardada, no la real.
+              </p>
+              <p className="mt-1 text-rose-200/90">
+                Evitá cargar, editar o borrar sponsors hasta que desaparezca este aviso.
+              </p>
+            </div>
+          )}
+          {sponsorsStatus && sponsorsStatus.source === 'empty' && (
+            <div className="p-3.5 rounded-2xl bg-amber-950/50 border border-amber-500/40 text-amber-100 text-xs" role="status">
+              Todavía no hay sponsors cargados en la base de datos. Los banners usan la lista de teatros y estadios por defecto.
+            </div>
+          )}
+
           {/* Top toolbar */}
           {!isFormActive && (
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">

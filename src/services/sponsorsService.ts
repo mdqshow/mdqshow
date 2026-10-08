@@ -9,7 +9,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Sponsor } from '../types';
-import { INITIAL_SPONSORS } from '../data/mockSponsors';
 
 const SPONSORS_COLLECTION = 'sponsors';
 const LOCAL_STORAGE_SPONSORS_KEY = 'mdqshow_sponsors_v1';
@@ -48,7 +47,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 }
 
 /**
- * Obtiene la lista local guardada o el fallback de sponsors iniciales
+ * Obtiene la última lista real de sponsors guardada en este navegador
  */
 export function getLocalFallbackSponsors(): Sponsor[] {
   try {
@@ -62,7 +61,8 @@ export function getLocalFallbackSponsors(): Sponsor[] {
   } catch {
     // fallback
   }
-  return INITIAL_SPONSORS;
+  // Sin copia local: lista vacía (los banners usan su lista de lugares por defecto)
+  return [];
 }
 
 /**
@@ -85,8 +85,8 @@ export type SponsorsSource = 'cloud' | 'empty' | 'local';
 
 /**
  * Escucha cambios en tiempo real en la colección de sponsors directamente desde Firestore.
- * Informa de dónde viene la lista: 'cloud' (la base de datos real), 'empty' (la base está vacía y se muestra
- * la lista de respaldo del código) o 'local' (falló la conexión y se muestra la copia guardada en este navegador).
+ * Informa de dónde viene la lista: 'cloud' (la base de datos real), 'empty' (la base está vacía)
+ * o 'local' (falló la conexión y se muestra la copia guardada en este navegador).
  * Si la conexión se corta por un error, vuelve a intentar sola a los 5 segundos.
  */
 export function subscribeToSponsors(
@@ -105,8 +105,15 @@ export function subscribeToSponsors(
       sponsorsCol,
       (snapshot) => {
         if (snapshot.empty) {
-          // Base vacía: se muestra la lista de respaldo, sin escribir nada en la nube
-          onUpdate(getLocalFallbackSponsors(), 'empty');
+          // Base vacía: la lista queda vacía de verdad
+          if (!snapshot.metadata.hasPendingWrites) {
+            try {
+              localStorage.removeItem(LOCAL_STORAGE_SPONSORS_KEY);
+            } catch {
+              // ignore
+            }
+          }
+          onUpdate([], 'empty');
           return;
         }
 

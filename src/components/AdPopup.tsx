@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Sponsor } from '../types';
 import { SponsorCard } from './SponsorCard';
 import { trackBannerImpression } from '../services/metricsService';
-import { INITIAL_SPONSORS } from '../data/mockSponsors';
 import { auth } from '../firebase';
 
 interface AdPopupProps {
@@ -96,7 +95,7 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false
   // Selección automática al cargar la web (el administrador no ve este aviso)
   useEffect(() => {
     if (hasTriggeredRef.current) return;
-    const pool = sponsors && sponsors.length > 0 ? sponsors : INITIAL_SPONSORS;
+    const pool = sponsors || [];
     const chosen = pickSponsor(pool);
     if (!chosen) return;
 
@@ -139,7 +138,7 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false
   // Disparo manual para pruebas desde el panel de administración
   useEffect(() => {
     const handleTrigger = (event: CustomEvent<{ sponsorId?: string }>) => {
-      const pool = sponsors && sponsors.length > 0 ? sponsors : INITIAL_SPONSORS;
+      const pool = sponsors || [];
       if (pool.length === 0) return;
 
       let chosen: Sponsor | null | undefined;

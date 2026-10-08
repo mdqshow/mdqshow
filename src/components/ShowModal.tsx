@@ -19,7 +19,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Show } from '../types';
-import { AVAILABLE_CITIES, AVAILABLE_GENRES, PRESET_VENUES } from '../data/mockShows';
+import { AVAILABLE_CITIES, AVAILABLE_GENRES, PRESET_VENUES } from '../data/constants';
 import { formatSingleDate } from '../utils/dateHelpers';
 import { normalizePriceInput } from '../utils/priceHelpers';
 import { detectTicketPortalFromUrl } from '../utils/ticketDetectors';
@@ -306,7 +306,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
 
     const savedShow: Show = {
       id: initialShow ? initialShow.id : `custom-${Date.now()}`,
-      band: formatProperCase(band.trim()),
+      band: band.trim(), // el nombre de la banda se guarda tal cual se escribe (AC/DC, LBC, etc.)
       tourName: tourName.trim() || 'Gira 2026',
       genre,
       city,
@@ -317,7 +317,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       ticketUrl: ticketCheck.url || 'https://articket.com.ar',
       ticketPortalName: formatProperCase(ticketPortalName.trim()) || 'Boletería Oficial',
       ticketPriceRange: normalizePriceInput(ticketPriceRange),
-      ticketStatus: 'disponibles',
+      ticketStatus: initialShow?.ticketStatus || 'disponibles',
       image: image.trim() || defaultImg,
       imagePosition,
       description: initialShow?.description || `${band} en vivo en ${venue}.`,

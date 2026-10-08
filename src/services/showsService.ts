@@ -8,64 +8,71 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Show } from '../types';
-import { INITIAL_SHOWS } from '../data/mockShows';
 import { formatProperCase } from '../utils/textFormatting';
 
 const SHOWS_COLLECTION = 'shows';
 const LOCAL_STORAGE_SHOWS_LIST = 'mdqshow_all_shows_v4';
 
 /**
- * Obtiene la lista local guardada o el fallback de shows iniciales
+ * Revisa un documento leído de la base: completa los textos y las fechas que falten,
+ * para que un show mal cargado no pueda romper la página. Devuelve null si no sirve (sin banda).
+ */
+export function normalizeShow(raw: unknown, id: string): Show | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const data = raw as Record<string, unknown>;
+  const text = (value: unknown) => (typeof value === 'string' ? value : '');
+
+  const band = text(data.band).trim();
+  if (!band || !id) return null;
+
+  const dates = Array.isArray(data.dates)
+    ? (data.dates as unknown[]).filter((d): d is string => typeof d === 'string' && d.length > 0)
+    : [];
+
+  return {
+    ...(data as unknown as Show),
+    id,
+    band,
+    tourName: text(data.tourName),
+    genre: text(data.genre),
+    city: text(data.city),
+    time: text(data.time),
+    dates,
+    ticketUrl: text(data.ticketUrl),
+    venue: formatProperCase(text(data.venue)),
+    venueAddress: formatProperCase(text(data.venueAddress)),
+    ticketPortalName: formatProperCase(text(data.ticketPortalName)) || 'Boletería Oficial',
+  };
+}
+
+/**
+ * Devuelve la última copia de la cartelera real guardada en este navegador (solo datos que
+ * ya llegaron confirmados desde la nube). Si no hay ninguna, devuelve una lista vacía:
+ * ya no se muestran recitales de ejemplo.
  */
 export function getLocalFallbackShows(): Show[] {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_SHOWS_LIST);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed
-          .filter((s) => s && s.id)
-          .map((s) => ({
-            ...s,
-            venue: formatProperCase(s.venue),
-            venueAddress: formatProperCase(s.venueAddress),
-            ticketPortalName: formatProperCase(s.ticketPortalName) || 'Boletería Oficial',
-          }));
+          .map((s) => normalizeShow(s, s && typeof s.id === 'string' ? s.id : ''))
+          .filter((s): s is Show => s !== null);
       }
     }
   } catch {
-    // fallback
+    // sin copia local
   }
-  return INITIAL_SHOWS.map((s) => ({
-    ...s,
-    venue: formatProperCase(s.venue),
-    venueAddress: formatProperCase(s.venueAddress),
-    ticketPortalName: formatProperCase(s.ticketPortalName) || 'Boletería Oficial',
-  }));
-}
-
-/**
- * Inicializa la base de datos en la nube con los shows existentes
- */
-export async function seedInitialShows(showsToSeed: Show[]): Promise<void> {
-  try {
-    const batch = writeBatch(db);
-    for (const show of showsToSeed) {
-      const docRef = doc(db, SHOWS_COLLECTION, show.id);
-      batch.set(docRef, show);
-    }
-    await batch.commit();
-  } catch (error) {
-    console.error('Error al inicializar shows en Firestore:', error);
-  }
+  return [];
 }
 
 export type ShowsSource = 'cloud' | 'empty' | 'local';
 
 /**
  * Escucha cambios en tiempo real en la colección de shows directamente desde Firestore.
- * Informa de dónde viene la lista: 'cloud' (la base de datos real), 'empty' (la base está vacía y se muestra
- * la lista de respaldo) o 'local' (falló la conexión y se muestra la copia guardada en este navegador).
+ * Informa de dónde viene la lista: 'cloud' (la base de datos real), 'empty' (la base está vacía)
+ * o 'local' (falló la conexión y se muestra la última copia real guardada en este navegador).
  * Si la conexión se corta por un error, vuelve a intentar sola.
  */
 export function subscribeToShows(
@@ -84,22 +91,23 @@ export function subscribeToShows(
       showsCol,
       (snapshot) => {
         if (snapshot.empty) {
-          // Base vacía: se muestra la lista local, pero NO se escribe nada en la nube
-          // (antes se re-sembraba automáticamente y eso podía pisar o "resucitar" shows borrados)
-          onUpdate(getLocalFallbackShows(), 'empty');
+          // Base vacía: la lista queda vacía de verdad (sin recitales de ejemplo ni copias viejas)
+          if (!snapshot.metadata.hasPendingWrites) {
+            try {
+              localStorage.removeItem(LOCAL_STORAGE_SHOWS_LIST);
+            } catch {
+              // ignore
+            }
+          }
+          onUpdate([], 'empty');
           return;
         }
 
         const showsList: Show[] = [];
         snapshot.forEach((docSnap) => {
-          const data = docSnap.data() as Show;
-          showsList.push({
-            ...data,
-            id: docSnap.id,
-            venue: formatProperCase(data.venue),
-            venueAddress: formatProperCase(data.venueAddress),
-            ticketPortalName: formatProperCase(data.ticketPortalName) || 'Boletería Oficial',
-          });
+          const normalized = normalizeShow(docSnap.data(), docSnap.id);
+          if (normalized) showsList.push(normalized);
+          else console.warn('Show ignorado por estar incompleto:', docSnap.id);
         });
 
         // La copia local solo se actualiza con datos confirmados por la nube

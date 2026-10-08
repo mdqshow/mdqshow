@@ -4,7 +4,6 @@ import {
   MapPin, 
   Ticket, 
   ExternalLink, 
-  Heart, 
   Clock, 
   Flame, 
   Sparkles,
@@ -28,8 +27,6 @@ import { WhatsAppIcon } from './WhatsAppIcon';
 
 interface ShowCardProps {
   show: Show;
-  isFavorite: boolean;
-  onToggleFavorite: (id: string) => void;
   onSelectShow?: (show: Show) => void;
   isAdmin?: boolean;
   onEditShow?: (show: Show) => void;
@@ -38,8 +35,6 @@ interface ShowCardProps {
 
 export const ShowCard: React.FC<ShowCardProps> = ({
   show,
-  isFavorite,
-  onToggleFavorite,
   onSelectShow,
   isAdmin,
   onEditShow,
@@ -99,7 +94,9 @@ export const ShowCard: React.FC<ShowCardProps> = ({
                   id={`delete-show-${show.id}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDeleteShow?.(show.id);
+                    if (window.confirm(`¿Eliminar "${show.band}" de la cartelera? Esta acción no se puede deshacer.`)) {
+                      onDeleteShow?.(show.id);
+                    }
                   }}
                   className="p-2 rounded-full bg-slate-900/90 hover:bg-red-600 hover:text-white backdrop-blur-md border border-white/20 text-red-400 transition-all shadow-md active:scale-90 cursor-pointer"
                   title="Eliminar este recital de la cartelera"
@@ -109,24 +106,6 @@ export const ShowCard: React.FC<ShowCardProps> = ({
                 </button>
               </>
             )}
-
-            {/* Favorite Button */}
-            <button
-              id={`toggle-favorite-${show.id}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleFavorite(show.id);
-              }}
-              className="p-2 rounded-full bg-slate-950/70 hover:bg-slate-900 backdrop-blur-md border border-white/10 text-slate-300 hover:text-white transition-transform active:scale-90"
-              title={isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos'}
-              aria-label="Guardar show"
-            >
-              <Heart
-                className={`w-4 h-4 transition-colors ${
-                  isFavorite ? 'fill-rose-500 text-rose-500' : 'text-white'
-                }`}
-              />
-            </button>
           </div>
 
           {/* Bottom Info Strip on Image: Genre + Countdown */}

@@ -3,6 +3,14 @@
  */
 
 /**
+ * Los precios de entradas van siempre en pesos enteros: si alguien escribe centavos
+ * ("15.000,50" o "15000.50") se descartan.
+ */
+function stripCents(text: string): string {
+  return text.replace(/(\d)[.,]\d{1,2}(?!\d)/g, '$1');
+}
+
+/**
  * Normaliza cualquier entrada de precio escrita por el usuario a un formato uniforme.
  * Ejemplos:
  *  "80000"      -> "$ 80.000"
@@ -15,7 +23,7 @@
  */
 export function normalizePriceInput(raw?: string): string {
   if (!raw) return '';
-  const trimmed = raw.trim();
+  const trimmed = stripCents(raw.trim());
   if (!trimmed) return '';
 
   const lower = trimmed.toLowerCase();
@@ -57,7 +65,7 @@ export function normalizePriceInput(raw?: string): string {
  */
 export function formatDisplayPrice(raw?: string): string {
   if (!raw) return '';
-  const trimmed = raw.trim();
+  const trimmed = stripCents(raw.trim());
   if (!trimmed) return '';
 
   const lower = trimmed.toLowerCase();

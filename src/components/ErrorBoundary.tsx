@@ -35,11 +35,6 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="text-xs text-slate-400">
               Ocurrió un error al cargar la vista. Podés recargar la cartelera para continuar.
             </p>
-            {this.state.error && (
-              <div className="text-left bg-slate-950 p-3 rounded-xl border border-rose-900/50 text-[11px] text-rose-300 font-mono overflow-auto max-h-36">
-                <p className="font-bold">{this.state.error.name}: {this.state.error.message}</p>
-              </div>
-            )}
             <button
               onClick={() => {
                 this.setState({ hasError: false, error: null });

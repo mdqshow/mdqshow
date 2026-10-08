@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MapPin, Heart, ExternalLink, MessageCircle, CalendarPlus, Ticket, Edit3, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, ExternalLink, MessageCircle, CalendarPlus, Ticket, Edit3, Trash2 } from 'lucide-react';
 import { Show } from '../types';
 import { getDaysUntil } from '../utils/dateHelpers';
 import { trackTicketClick, trackShareEvent } from '../services/metricsService';
@@ -15,8 +15,6 @@ import { Sponsor } from '../types';
 interface TimelineAgendaViewProps {
   shows: Show[];
   onSelectShow: (show: Show) => void;
-  favorites: string[];
-  onToggleFavorite: (id: string) => void;
   isAdmin?: boolean;
   onEditShow?: (show: Show) => void;
   onDeleteShow?: (id: string) => void;
@@ -32,8 +30,6 @@ interface TimelineItem {
 export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
   shows,
   onSelectShow,
-  favorites,
-  onToggleFavorite,
   isAdmin,
   onEditShow,
   onDeleteShow,
@@ -102,7 +98,6 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
           <div className="space-y-3">
             {monthItems.map(({ date, show, globalIndex }) => {
               const countdown = getDaysUntil(date);
-              const isFav = favorites.includes(show.id);
               // Intercalar dos publicidades propias lado a lado cada 6 shows de forma global continua
               const showSponsorBanner = (globalIndex + 1) % 6 === 0 && globalIndex !== rawItems.length - 1;
 
@@ -203,7 +198,9 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                               id={`timeline-delete-${show.id}`}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onDeleteShow?.(show.id);
+                                if (window.confirm(`¿Eliminar "${show.band}" de la cartelera? Esta acción no se puede deshacer.`)) {
+                                  onDeleteShow?.(show.id);
+                                }
                               }}
                               className="p-1.5 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-red-600 hover:text-white border border-slate-700 text-red-400 transition-colors cursor-pointer shrink-0"
                               title="Eliminar este recital de la cartelera"
@@ -213,14 +210,6 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                             </button>
                           </>
                         )}
-
-                        <button
-                          onClick={() => onToggleFavorite(show.id)}
-                          className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors shrink-0"
-                          title={isFav ? 'Quitar de favoritos' : 'Guardar'}
-                        >
-                          <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
-                        </button>
 
                         {/* WhatsApp share */}
                         <button

@@ -1,14 +1,10 @@
 import React, { useRef } from 'react';
-import { MapPin, Plus, Heart, Calendar, LayoutGrid, ShieldCheck, Lock, LogOut, Mail, Bell, Download, FileText, BarChart3, Database, Upload, Megaphone } from 'lucide-react';
+import { MapPin, Plus, Calendar, LayoutGrid, ShieldCheck, Lock, LogOut, Mail, Download, FileText, BarChart3, Database, Upload, Megaphone } from 'lucide-react';
 import { MdqBrandIcon } from './MdqBrandIcon';
-import { AVAILABLE_CITIES } from '../data/mockShows';
 
 interface NavbarProps {
   currentCity: string;
   onSelectCity: (city: string) => void;
-  favoritesCount: number;
-  showFavoritesOnly: boolean;
-  onToggleFavoritesOnly: () => void;
   onOpenAddShow: () => void;
   viewMode: 'grid' | 'timeline';
   onToggleViewMode: (mode: 'grid' | 'timeline') => void;
@@ -16,7 +12,6 @@ interface NavbarProps {
   onOpenAdminLogin: () => void;
   onAdminLogout: () => void;
   onOpenContact: () => void;
-  onOpenNewsletter: () => void;
   onOpenInstallApp: () => void;
   onExportBackup?: () => void;
   onImportBackup?: (file: File) => void;
@@ -28,9 +23,6 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   currentCity,
   onSelectCity,
-  favoritesCount,
-  showFavoritesOnly,
-  onToggleFavoritesOnly,
   onOpenAddShow,
   viewMode,
   onToggleViewMode,
@@ -38,7 +30,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAdminLogin,
   onAdminLogout,
   onOpenContact,
-  onOpenNewsletter,
   onOpenInstallApp,
   onExportBackup,
   onImportBackup,
@@ -134,18 +125,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span className="hidden sm:inline">App</span>
                 </button>
 
-                {/* Newsletter Popup Button */}
-                <button
-                  type="button"
-                  id="navbar-newsletter-btn"
-                  onClick={onOpenNewsletter}
-                  className="flex items-center p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all cursor-pointer shadow-xs active:scale-95"
-                  title="Suscribirme al Newsletter y Alertas"
-                >
-                  <Bell className="w-3.5 h-3.5 text-amber-400 shrink-0 sm:mr-1.5" />
-                  <span className="hidden sm:inline">Newsletter</span>
-                </button>
-
                 {/* Contacto Popup Button (visible on tablets/desktop) */}
                 <button
                   type="button"
@@ -156,25 +135,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <Mail className="w-3.5 h-3.5 mr-1.5 text-rose-400" />
                   <span>Contacto</span>
-                </button>
-
-                {/* Favorites Button (visible para usuarios normales) */}
-                <button
-                  id="favorites-toggle-btn"
-                  onClick={onToggleFavoritesOnly}
-                  className={`relative p-2 sm:p-2.5 rounded-xl border transition-all active:scale-95 cursor-pointer ${
-                    showFavoritesOnly
-                      ? 'bg-rose-500/20 border-rose-500 text-rose-400'
-                      : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-800'
-                  }`}
-                  title={showFavoritesOnly ? 'Ver todos los shows' : 'Ver solo mis shows favoritos'}
-                >
-                  <Heart className={`w-4 h-4 ${showFavoritesOnly ? 'fill-rose-500 text-rose-500' : ''}`} />
-                  {favoritesCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
-                      {favoritesCount}
-                    </span>
-                  )}
                 </button>
               </>
             )}

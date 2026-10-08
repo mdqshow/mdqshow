@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getDaysUntil, isShowPast } from './utils/dateHelpers';
 import { Show, FilterState, Sponsor } from './types';
-import { INITIAL_SHOWS, AVAILABLE_CITIES } from './data/mockShows';
 import { 
   subscribeToShows, 
   saveShowToCloud, 
@@ -27,7 +26,6 @@ import { AdminLoginModal } from './components/AdminLoginModal';
 import { AdminSponsorsModal } from './components/AdminSponsorsModal';
 import { AdPopup } from './components/AdPopup';
 import { ContactModal } from './components/ContactModal';
-import { NewsletterModal } from './components/NewsletterModal';
 import { InstallAppModal } from './components/InstallAppModal';
 import { AdminMetricsModal } from './components/AdminMetricsModal';
 import { AdSenseBanner } from './components/AdSenseBanner';
@@ -38,12 +36,7 @@ import {
   subscribeToBannerMetrics,
   ShowMetrics, 
   BannerMetrics,
-  trackFavoriteEvent 
 } from './services/metricsService';
-import { 
-  subscribeToSubscribers, 
-  Subscriber 
-} from './services/subscribersService';
 import { 
   Flame, 
   Calendar, 
@@ -68,7 +61,6 @@ import {
 } from 'lucide-react';
 
 const LOCAL_STORAGE_SHOWS_LIST = 'mdqshow_all_shows_v4';
-const LOCAL_STORAGE_FAVORITES = 'mdqshow_favorites_v2';
 
 export default function App() {
   const currentCity = 'Mar del Plata';
@@ -104,7 +96,8 @@ export default function App() {
         signOut(auth).catch(() => {});
         return;
       }
-      setIsAdmin(true);
+      // Solo se habilita con confirmación real; si no se pudo verificar ('unknown'), no se muestra el panel
+      setIsAdmin(access === 'admin');
     });
     const handleRouteChange = () => {
       if (!auth.currentUser && !isLoggingOutRef.current && isAdminRoute()) {
@@ -121,7 +114,7 @@ export default function App() {
   }, []);
 
   const handleLoginSuccess = () => {
-    setIsAdmin(true);
+    // El panel de administrador se habilita solo cuando Firebase confirma los permisos (ver onAuthStateChanged)
   };
 
   const handleAdminLogout = async () => {
@@ -151,14 +144,15 @@ export default function App() {
     return () => window.clearInterval(id);
   }, []);
   const [showsStatus, setShowsStatus] = useState<{ source: 'cloud' | 'empty' | 'local'; error?: string }>({ source: 'cloud' });
+  // Pasa a true cuando llega la primera respuesta (de la nube o, si falla, la copia guardada)
+  const [showsLoaded, setShowsLoaded] = useState(false);
 
   // Subscribe to real-time updates from Firebase Firestore
   useEffect(() => {
     const unsubscribe = subscribeToShows((cloudShows, source, errorMessage) => {
-      if (cloudShows && cloudShows.length > 0) {
-        setShows(cloudShows);
-      }
+      setShows(cloudShows || []);
       setShowsStatus({ source, error: errorMessage });
+      setShowsLoaded(true);
     });
     return () => unsubscribe();
   }, []);
@@ -183,19 +177,6 @@ export default function App() {
     };
   }, [isAdmin]);
 
-  // Suscriptores para KPIs del Admin
-  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
-  useEffect(() => {
-    if (!isAdmin) {
-      setSubscribers([]);
-      return;
-    }
-    const unsubSubs = subscribeToSubscribers((subs) => {
-      setSubscribers(subs);
-    });
-    return () => unsubSubs();
-  }, [isAdmin]);
-
   // Sponsors y Publicidades sincronizados con Firestore en tiempo real
   const [sponsors, setSponsors] = useState<Sponsor[]>(() => getLocalFallbackSponsors());
   const [isAdminSponsorsOpen, setIsAdminSponsorsOpen] = useState(false);
@@ -203,9 +184,7 @@ export default function App() {
 
   useEffect(() => {
     const unsubSponsors = subscribeToSponsors((cloudSponsors, source, errorMessage) => {
-      if (cloudSponsors && cloudSponsors.length > 0) {
-        setSponsors(cloudSponsors);
-      }
+      setSponsors(cloudSponsors || []);
       setSponsorsStatus({ source, error: errorMessage });
     });
     return () => unsubSponsors();
@@ -219,29 +198,14 @@ export default function App() {
     await deleteSponsorFromCloud(sponsorId);
   };
 
-  // Favorites state
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_FAVORITES);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  });
-
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   
   // Show modal state (for both Adding and Editing)
   const [isShowModalOpen, setIsShowModalOpen] = useState(false);
   const [editingShow, setEditingShow] = useState<Show | null>(null);
 
-  // Contact, Newsletter, and App Install popup modal states
+  // Contact and App Install popup modal states
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
-  const [isNewsletterModalOpen, setIsNewsletterModalOpen] = useState(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   
   const [viewMode, setViewMode] = useState<'grid' | 'timeline'>('grid');
@@ -293,21 +257,6 @@ export default function App() {
     sortBy: 'date_asc',
   });
 
-  // Persist favorites
-  const toggleFavorite = (showId: string) => {
-    const isAdding = !favorites.includes(showId);
-    const targetShow = shows.find((s) => s.id === showId);
-    trackFavoriteEvent(showId, targetShow?.band, isAdding ? 1 : -1);
-
-    setFavorites((prev) => {
-      const updated = prev.includes(showId)
-        ? prev.filter((id) => id !== showId)
-        : [...prev, showId];
-      localStorage.setItem(LOCAL_STORAGE_FAVORITES, JSON.stringify(updated));
-      return updated;
-    });
-  };
-
   // Helper to persist shows list
   const persistShows = (newShowsList: Show[]) => {
     setShows(newShowsList);
@@ -348,29 +297,27 @@ export default function App() {
   // Toast state for feedback
   const [deleteToast, setDeleteToast] = useState<string | null>(null);
 
-  // Delete show handler
+  // Delete show handler: primero se borra en la nube y solo después se avisa que salió bien
   const handleDeleteShow = async (showId: string) => {
     const showToDelete = allShows.find((s) => s.id === showId);
     const bandName = showToDelete ? showToDelete.band : 'El recital';
 
-    // Immediate optimistic local update
-    setShows((prev) => prev.filter((s) => s.id !== showId));
-
-    if (selectedShow && selectedShow.id === showId) {
-      setSelectedShow(null);
-    }
-
-    setDeleteToast(`"${bandName}" fue eliminado correctamente.`);
-    setTimeout(() => {
-      setDeleteToast(null);
-    }, 3500);
-
-    // Delete from Firebase Firestore
     try {
       await deleteShowFromCloud(showId);
     } catch (err) {
       console.error('Error al eliminar show de Firestore:', err);
+      alert('No se pudo eliminar el recital. Revisá tu conexión y volvé a intentarlo.');
+      return;
     }
+
+    setShows((prev) => prev.filter((s) => s.id !== showId));
+    if (selectedShow && selectedShow.id === showId) {
+      setSelectedShow(null);
+    }
+    setDeleteToast(`"${bandName}" fue eliminado correctamente.`);
+    setTimeout(() => {
+      setDeleteToast(null);
+    }, 3500);
   };
 
   // Open modal to add new show
@@ -479,7 +426,6 @@ export default function App() {
       ticketStatus: 'all',
       sortBy: 'date_asc',
     });
-    setShowFavoritesOnly(false);
   };
 
   // Cartelera visible: los shows que ya pasaron se ocultan solos (se conservan en la base de datos).
@@ -522,11 +468,6 @@ export default function App() {
   const filteredShows = useMemo(() => {
     return shows
       .filter((show) => {
-        // Favorites only filter
-        if (showFavoritesOnly && !favorites.includes(show.id)) {
-          return false;
-        }
-
         // Search text query
         if (filters.searchQuery.trim()) {
           const q = filters.searchQuery.toLowerCase();
@@ -564,7 +505,7 @@ export default function App() {
         const dateB = b.dates[0] || '9999-99-99';
         return dateA.localeCompare(dateB);
       });
-  }, [shows, filters, showFavoritesOnly, favorites]);
+  }, [shows, filters]);
 
   // Featured shows for carousel/banner
   const featuredShows = useMemo(() => {
@@ -577,9 +518,6 @@ export default function App() {
       <Navbar
         currentCity={currentCity}
         onSelectCity={(_city) => {}}
-        favoritesCount={favorites.length}
-        showFavoritesOnly={showFavoritesOnly}
-        onToggleFavoritesOnly={() => setShowFavoritesOnly((prev) => !prev)}
         onOpenAddShow={handleOpenAddShow}
         viewMode={viewMode}
         onToggleViewMode={handleToggleViewMode}
@@ -587,7 +525,6 @@ export default function App() {
         onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
         onAdminLogout={handleAdminLogout}
         onOpenContact={() => setIsContactModalOpen(true)}
-        onOpenNewsletter={() => setIsNewsletterModalOpen(true)}
         onOpenInstallApp={() => setIsInstallModalOpen(true)}
         onExportBackup={handleExportBackup}
         onImportBackup={handleImportBackup}
@@ -602,7 +539,7 @@ export default function App() {
           <div className="max-w-7xl mx-auto">
             <p className="font-bold">
               {showsStatus.source === 'empty'
-                ? '⚠️ La base de datos de recitales está vacía: estás viendo solo la lista de respaldo.'
+                ? '⚠️ La base de datos de recitales está vacía: todavía no hay recitales cargados.'
                 : '⚠️ No se pudo leer la base de datos: la lista de recitales que ves es una copia guardada, no la real.'}
             </p>
             <p className="mt-1 text-rose-200/90">
@@ -849,22 +786,33 @@ export default function App() {
               </button>
             </div>
           )}
-          {showFavoritesOnly && (
-            <div className="mb-6 flex items-center justify-between p-3.5 bg-rose-950/30 border border-rose-800/40 rounded-2xl">
-              <div className="flex items-center space-x-2 text-rose-300 text-sm font-semibold">
-                <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
-                <span>Viendo únicamente tus shows guardados en Favoritos ({favorites.length})</span>
-              </div>
-              <button
-                onClick={() => setShowFavoritesOnly(false)}
-                className="text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 px-3 py-1 rounded-xl transition-colors"
-              >
-                Ver todos
-              </button>
+          {allShows.length === 0 && !isAdmin && (!showsLoaded || showsStatus.source !== 'cloud') ? (
+            <div className="text-center py-20 bg-slate-900/60 border border-slate-800 rounded-3xl p-8 space-y-4">
+              <h3 className="text-xl font-bold text-white">
+                {!showsLoaded
+                  ? 'Cargando cartelera...'
+                  : showsStatus.source === 'empty'
+                    ? 'Todavía no hay recitales publicados'
+                    : 'La cartelera no está disponible por el momento'}
+              </h3>
+              <p className="text-slate-400 text-sm max-w-md mx-auto">
+                {!showsLoaded
+                  ? 'Estamos buscando los próximos recitales de Mar del Plata.'
+                  : showsStatus.source === 'empty'
+                    ? 'Volvé pronto: estamos cargando los próximos shows.'
+                    : 'No pudimos conectarnos. Revisá tu conexión e intentá de nuevo en unos minutos.'}
+              </p>
+              {showsLoaded && showsStatus.source === 'local' && (
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Reintentar
+                </button>
+              )}
             </div>
-          )}
-
-          {filteredShows.length === 0 ? (
+          ) : filteredShows.length === 0 ? (
             <div className="text-center py-20 bg-slate-900/60 border border-slate-800 rounded-3xl p-8 space-y-4">
               <div className="w-16 h-16 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center mx-auto">
                 <Search className="w-8 h-8" />
@@ -908,8 +856,6 @@ export default function App() {
                         <ShowCard
                           key={show.id}
                           show={show}
-                          isFavorite={favorites.includes(show.id)}
-                          onToggleFavorite={toggleFavorite}
                           onSelectShow={setSelectedShow}
                           isAdmin={isAdmin}
                           onEditShow={handleOpenEditShow}
@@ -937,8 +883,6 @@ export default function App() {
             <TimelineAgendaView
               shows={filteredShows}
               onSelectShow={setSelectedShow}
-              favorites={favorites}
-              onToggleFavorite={toggleFavorite}
               isAdmin={isAdmin}
               onEditShow={handleOpenEditShow}
               onDeleteShow={handleDeleteShow}
@@ -971,16 +915,6 @@ export default function App() {
             >
               <Mail className="w-3.5 h-3.5 text-rose-400" />
               <span>Contacto</span>
-            </button>
-            <button
-              type="button"
-              id="footer-newsletter-btn"
-              onClick={() => setIsNewsletterModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-amber-300 hover:text-amber-200 border border-slate-800 hover:border-amber-500/30 transition-all cursor-pointer shadow-xs"
-              title="Suscribirme a las novedades de recitales"
-            >
-              <Bell className="w-3.5 h-3.5 text-amber-400" />
-              <span>Newsletters</span>
             </button>
 
             {isAdmin ? (
@@ -1064,13 +998,6 @@ export default function App() {
         onClose={() => setIsContactModalOpen(false)}
       />
 
-      {/* Newsletter & Alerts Modal */}
-      <NewsletterModal
-        isOpen={isNewsletterModalOpen}
-        onClose={() => setIsNewsletterModalOpen(false)}
-        isAdmin={isAdmin}
-      />
-
       {/* Mobile PWA Install Modal */}
       <InstallAppModal
         isOpen={isInstallModalOpen}
@@ -1084,7 +1011,6 @@ export default function App() {
         shows={allShows}
         metricsMap={metricsMap}
         bannerMetricsMap={bannerMetricsMap}
-        subscribers={subscribers}
         sponsors={sponsors}
       />
 

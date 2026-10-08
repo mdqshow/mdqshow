@@ -14,16 +14,13 @@ import {
   Ticket,
   Search,
   Sparkles,
-  Heart,
   MessageCircle,
   Eye,
   Megaphone
 } from 'lucide-react';
 import { Show, Sponsor } from '../types';
 import { ShowMetrics, BannerMetrics } from '../services/metricsService';
-import { Subscriber } from '../services/subscribersService';
 import { VENUE_SPONSORS } from './AdSenseBanner';
-import { SubscribersPanel } from './SubscribersPanel';
 import { resetMetricCounters } from '../services/metricsService';
 import { safeHttpUrl } from '../utils/safeUrl';
 import { isShowPast } from '../utils/dateHelpers';
@@ -34,7 +31,6 @@ interface AdminMetricsModalProps {
   shows: Show[];
   metricsMap: Record<string, ShowMetrics>;
   bannerMetricsMap: Record<string, BannerMetrics>;
-  subscribers: Subscriber[];
   sponsors?: Sponsor[];
 }
 
@@ -44,10 +40,9 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
   shows,
   metricsMap,
   bannerMetricsMap,
-  subscribers,
   sponsors,
 }) => {
-  const [activeTab, setActiveTab] = useState<'shows' | 'banners' | 'subscribers'>('shows');
+  const [activeTab, setActiveTab] = useState<'shows' | 'banners'>('shows');
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedReport, setCopiedReport] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -79,9 +74,7 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
   // Estadísticas globales de shows
   const totalClicks = showsWithMetrics.reduce((acc, curr) => acc + curr.ticketClicks, 0);
   const totalShares = showsWithMetrics.reduce((acc, curr) => acc + curr.shares, 0);
-  const totalFavorites = showsWithMetrics.reduce((acc, curr) => acc + curr.favoritesCount, 0);
   const activeShowsCount = currentShows.length;
-  const totalSubscribersCount = subscribers.length;
 
   // Combinar banners y sponsors con sus métricas de impresiones y clicks
   const sponsorPool = (sponsors && sponsors.length > 0) ? sponsors : VENUE_SPONSORS;
@@ -120,7 +113,7 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
       'Se van a poner en CERO:\n' +
       '• las visualizaciones y clics de los banners\n' +
       '• los clics en entradas y los compartidos de cada show\n\n' +
-      'NO se tocan: favoritos, suscriptores, shows ni sponsors.\n\n' +
+      'NO se tocan: shows ni sponsors.\n\n' +
       'Si querés conservar los números actuales, cancelá y descargá antes el reporte (botón "Descargar TXT").\n\n' +
       '¿Reiniciar los contadores?'
     );
@@ -145,7 +138,6 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
     lines.push(`Fecha: ${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR')}`);
     lines.push(`Total Clicks a Boleterías Oficiales: ${totalClicks}`);
     lines.push(`Total Compartidos por WhatsApp: ${totalShares}`);
-    lines.push(`Suscriptores al Newsletter: ${totalSubscribersCount}`);
     lines.push(`Total de visitas que vieron banners (una por sponsor y por visita): ${totalBannerImpressions}`);
     lines.push('====================================================\n');
 
@@ -162,7 +154,6 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
       lines.push(`${idx + 1}. ${item.show.band} (${item.show.venue})`);
       lines.push(`   - Clicks en entradas: ${item.ticketClicks}`);
       lines.push(`   - Compartidos por WhatsApp: ${item.shares}`);
-      lines.push(`   - Guardado en Favoritos: ${item.favoritesCount}`);
       lines.push(`   - Ticketera: ${item.show.ticketPortalName}`);
       lines.push('----------------------------------------------------');
     });
@@ -263,16 +254,6 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
             <p className="text-[9px] text-slate-400 mt-0.5">WhatsApp</p>
           </div>
 
-          {/* Suscriptores Newsletter */}
-          <div className="bg-slate-900/90 border border-amber-500/30 rounded-xl p-2.5 shadow-sm">
-            <div className="flex items-center justify-between text-amber-400 text-xs font-semibold mb-0.5">
-              <span>Suscriptores</span>
-              <Users className="w-3.5 h-3.5" />
-            </div>
-            <p className="text-lg sm:text-xl font-black text-white">{totalSubscribersCount}</p>
-            <p className="text-[9px] text-slate-400 mt-0.5">Newsletter</p>
-          </div>
-
           {/* Recitales en Cartelera */}
           <div className="bg-slate-900/90 border border-sky-500/30 rounded-xl p-2.5 shadow-sm">
             <div className="flex items-center justify-between text-sky-400 text-xs font-semibold mb-0.5">
@@ -281,16 +262,6 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
             </div>
             <p className="text-lg sm:text-xl font-black text-white">{activeShowsCount}</p>
             <p className="text-[9px] text-slate-400 mt-0.5">Cartelera</p>
-          </div>
-
-          {/* Favoritos */}
-          <div className="bg-slate-900/90 border border-rose-500/30 rounded-xl p-2.5 shadow-sm">
-            <div className="flex items-center justify-between text-rose-400 text-xs font-semibold mb-0.5">
-              <span>Guardados</span>
-              <Heart className="w-3.5 h-3.5" />
-            </div>
-            <p className="text-lg sm:text-xl font-black text-white">{totalFavorites}</p>
-            <p className="text-[9px] text-slate-400 mt-0.5">Favoritos</p>
           </div>
         </div>
 
@@ -319,17 +290,6 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
               <Megaphone className="w-4 h-4" />
               Publicaciones de Banners ({VENUE_SPONSORS.length} Lugares)
             </button>
-            <button
-              onClick={() => setActiveTab('subscribers')}
-              className={`pb-2.5 px-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'subscribers'
-                  ? 'border-amber-500 text-amber-300'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              Suscriptores ({subscribers.length})
-            </button>
           </div>
 
           <div className="flex items-center space-x-2 pb-2">
@@ -352,9 +312,6 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
           </div>
         </div>
 
-        {activeTab === 'subscribers' ? (
-          <SubscribersPanel subscribers={subscribers} />
-        ) : (
         <>
         {/* Table & Search */}
         <div className="p-4 sm:p-5 flex-1 overflow-hidden flex flex-col space-y-3">
@@ -386,7 +343,6 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
                     <th className="py-3 px-4 text-center">Ticketera</th>
                     <th className="py-3 px-4 text-right text-emerald-400">Clicks Tickets</th>
                     <th className="py-3 px-4 text-right text-emerald-400">WhatsApp</th>
-                    <th className="py-3 px-4 text-right text-rose-400">Favoritos</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/80 text-slate-300">
@@ -417,9 +373,6 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-semibold text-emerald-400">
                         {item.shares}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-semibold text-rose-400">
-                        {item.favoritesCount}
                       </td>
                     </tr>
                   ))}
@@ -498,7 +451,6 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
           )}
         </div>
         </>
-        )}
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between text-xs text-slate-400">
