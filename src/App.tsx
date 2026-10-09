@@ -963,6 +963,10 @@ export default function App() {
               Todas las operaciones de compra y cobro se concretan pura y directamente en las boleterías y plataformas autorizadas por cada productora.
             </p>
 
+            <p className="leading-relaxed text-slate-400">
+              La información de los shows es tomada de la web oficial de turismo de la ciudad de Mar del Plata.
+            </p>
+
             <div className="flex flex-col sm:flex-row items-center justify-between gap-1.5 pt-2 border-t border-slate-800 text-[10px] text-slate-500">
               <span>Marcas y afiches pertenecen a sus respectivos productores y artistas.</span>
               <span>Conforme Ley 24.240 de Defensa del Consumidor • República Argentina</span>
