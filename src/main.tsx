@@ -12,7 +12,7 @@ const App = lazy(() => import('./App.tsx'));
  * false = la web pública (/) muestra solo la pantalla "En breve"; la cartelera completa se ve en /test y el panel en /admin
  * true  = la cartelera completa se ve en todo el sitio (lanzamiento oficial)
  */
-const SITE_PUBLIC = false;
+const SITE_PUBLIC = true;
 
 // Rutas que muestran la cartelera completa aunque la web todavía no sea pública:
 // /test (pruebas) y /admin (panel de administración)
