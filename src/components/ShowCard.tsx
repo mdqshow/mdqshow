@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { Show } from '../types';
 import { formatSingleDate, getDaysUntil } from '../utils/dateHelpers';
-import { getImageObjectPosition } from '../utils/imageFocus';
+import { getImageFrameStyle } from '../utils/imageFocus';
 import { trackTicketClick, trackShareEvent } from '../services/metricsService';
 import { safeHttpUrl } from '../utils/safeUrl';
 import { getWhatsAppShareUrl, addToDeviceCalendar } from '../utils/shareAndCalendar';
@@ -135,7 +135,7 @@ export const ShowCard: React.FC<ShowCardProps> = ({
             onError={() => setImageError(true)}
             loading="lazy"
             referrerPolicy="no-referrer"
-            style={{ objectPosition: getImageObjectPosition(show) }}
+            style={getImageFrameStyle(show)}
             className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${
               imageLoaded ? 'opacity-100' : 'opacity-0'
             }`}

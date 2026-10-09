@@ -16,11 +16,13 @@ import {
   Upload,
   Image as ImageIcon,
   MapPin,
-  Sparkles
+  Sparkles,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
 import { Show } from '../types';
 import { AVAILABLE_CITIES, AVAILABLE_GENRES, PRESET_VENUES } from '../data/constants';
-import { getImageObjectPosition } from '../utils/imageFocus';
+import { getImageFrameStyle, getImageZoom, MIN_IMAGE_ZOOM, MAX_IMAGE_ZOOM } from '../utils/imageFocus';
 import { formatSingleDate } from '../utils/dateHelpers';
 import { normalizePriceInput } from '../utils/priceHelpers';
 import { detectTicketPortalFromUrl } from '../utils/ticketDetectors';
@@ -94,8 +96,10 @@ export const ShowModal: React.FC<ShowModalProps> = ({
   // Encuadre de la foto: qué parte de la imagen se muestra en la tarjeta (porcentajes de 0 a 100)
   const [imageFocusX, setImageFocusX] = useState(50);
   const [imageFocusY, setImageFocusY] = useState(0);
+  const [imageZoom, setImageZoom] = useState(MIN_IMAGE_ZOOM);
+  const focusFrameRef = useRef<HTMLDivElement | null>(null);
   const [imageNatural, setImageNatural] = useState<{ w: number; h: number } | null>(null);
-  const focusDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number; boxW: number; boxH: number } | null>(null);
+  const focusDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number; boxW: number; boxH: number; zoom: number } | null>(null);
   const [isNewBadge, setIsNewBadge] = useState(false);
   const [error, setError] = useState('');
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -136,6 +140,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       const legacyY = initialShow.imagePosition === 'bottom' ? 100 : initialShow.imagePosition === 'center' ? 50 : 0;
       setImageFocusX(typeof initialShow.imageFocusX === 'number' ? initialShow.imageFocusX : 50);
       setImageFocusY(typeof initialShow.imageFocusY === 'number' ? initialShow.imageFocusY : legacyY);
+      setImageZoom(getImageZoom({ imageZoom: initialShow.imageZoom }));
       setIsNewBadge(Boolean(initialShow.isNewBadge));
       setError('');
       setShowConfirmDelete(false);
@@ -163,6 +168,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       setImage('');
       setImageFocusX(50);
       setImageFocusY(0);
+      setImageZoom(MIN_IMAGE_ZOOM);
       setIsNewBadge(false); // Los shows nuevos arrancan sin el tilde MDQ LINE UP
       setError('');
       setShowConfirmDelete(false);
@@ -186,8 +192,24 @@ export const ShowModal: React.FC<ShowModalProps> = ({
   const clampFocus = (value: number) => Math.min(100, Math.max(0, value));
   const imageRatio = imageNatural ? imageNatural.w / imageNatural.h : null;
   const CARD_RATIO = 1.6; // proporción de la foto en la tarjeta de la web (16:10), siempre la misma
-  const canMoveHorizontally = imageRatio !== null && imageRatio > CARD_RATIO + 0.02;
-  const canMoveVertically = imageRatio !== null && imageRatio < CARD_RATIO - 0.02;
+  const isZoomed = imageZoom > 1.01;
+  const canMoveHorizontally = imageRatio !== null && (imageRatio > CARD_RATIO + 0.02 || isZoomed);
+  const canMoveVertically = imageRatio !== null && (imageRatio < CARD_RATIO - 0.02 || isZoomed);
+
+  const clampZoom = (value: number) =>
+    Math.round(Math.min(MAX_IMAGE_ZOOM, Math.max(MIN_IMAGE_ZOOM, value)) * 100) / 100;
+
+  // Rueda del mouse sobre el encuadre = zoom (listener propio para poder frenar el scroll de la página)
+  useEffect(() => {
+    const el = focusFrameRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      setImageZoom((z) => clampZoom(z - e.deltaY * 0.002));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [image, isOpen]);
 
   const handleFocusPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!imageNatural) return;
@@ -199,6 +221,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       baseY: imageFocusY,
       boxW: rect.width,
       boxH: rect.height,
+      zoom: imageZoom,
     };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -207,8 +230,8 @@ export const ShowModal: React.FC<ShowModalProps> = ({
     const drag = focusDragRef.current;
     if (!drag || !imageNatural) return;
     const scale = Math.max(drag.boxW / imageNatural.w, drag.boxH / imageNatural.h);
-    const overflowX = imageNatural.w * scale - drag.boxW;
-    const overflowY = imageNatural.h * scale - drag.boxH;
+    const overflowX = imageNatural.w * scale * drag.zoom - drag.boxW;
+    const overflowY = imageNatural.h * scale * drag.zoom - drag.boxH;
     if (overflowX > 1) setImageFocusX(clampFocus(drag.baseX - ((e.clientX - drag.startX) / overflowX) * 100));
     if (overflowY > 1) setImageFocusY(clampFocus(drag.baseY - ((e.clientY - drag.startY) / overflowY) * 100));
   };
@@ -376,6 +399,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       imagePosition: imageFocusY <= 25 ? 'top' : imageFocusY >= 75 ? 'bottom' : 'center',
       imageFocusX: Math.round(imageFocusX),
       imageFocusY: Math.round(imageFocusY),
+      imageZoom: clampZoom(imageZoom),
       description: initialShow?.description || `${band} en vivo en ${venue}.`,
       isNewBadge,
       spotifyUrl: spotifyCheck.url,
@@ -932,7 +956,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                         alt="Vista previa"
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
-                        style={{ objectPosition: getImageObjectPosition({ imageFocusX, imageFocusY }) }}
+                        style={getImageFrameStyle({ imageFocusX, imageFocusY, imageZoom })}
                         onError={() => setError('No se pudo cargar la imagen desde ese enlace o archivo.')}
                       />
                     </div>
@@ -956,6 +980,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                       onClick={() => {
                         setImage('');
                         setImageNatural(null);
+                        setImageZoom(MIN_IMAGE_ZOOM);
                       }}
                       className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                       title="Quitar imagen"
@@ -970,12 +995,13 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                       <span className="text-[11px] text-slate-300 font-medium">Encuadre en la tarjeta</span>
                       <span className="text-[10px] text-slate-500 text-right">
                         {canMoveHorizontally || canMoveVertically
-                          ? 'Arrastrá la imagen para elegir qué parte se ve'
-                          : 'Esta imagen entra entera, no hace falta moverla'}
+                          ? 'Arrastrá para mover · rueda del mouse o barra para zoom'
+                          : 'Usá el zoom para acercar y elegir el encuadre'}
                       </span>
                     </div>
 
                     <div
+                      ref={focusFrameRef}
                       className={`relative w-full max-w-sm mx-auto aspect-[16/10] rounded-xl overflow-hidden border border-slate-700 bg-slate-950 select-none touch-none ${
                         canMoveHorizontally || canMoveVertically ? 'cursor-grab active:cursor-grabbing' : ''
                       }`}
@@ -993,12 +1019,57 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                           setImageNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })
                         }
                         className="w-full h-full object-cover pointer-events-none"
-                        style={{ objectPosition: getImageObjectPosition({ imageFocusX, imageFocusY }) }}
+                        style={getImageFrameStyle({ imageFocusX, imageFocusY, imageZoom })}
                       />
                       {/* Mismo degradado oscuro que tiene la tarjeta de la web sobre la foto */}
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent pointer-events-none" />
                       <div className="absolute inset-0 ring-1 ring-inset ring-white/10 pointer-events-none" />
                     </div>
+                    {/* Zoom: barra + botones (también funciona la rueda del mouse sobre la imagen) */}
+                    <div className="flex items-center justify-center gap-2 max-w-sm mx-auto">
+                      <button
+                        type="button"
+                        onClick={() => setImageZoom((z) => clampZoom(z - 0.1))}
+                        disabled={imageZoom <= MIN_IMAGE_ZOOM}
+                        className="p-1.5 rounded-md border border-slate-800 bg-slate-950 text-slate-300 hover:text-white disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                        title="Alejar"
+                        aria-label="Alejar"
+                      >
+                        <ZoomOut className="w-4 h-4" />
+                      </button>
+                      <input
+                        type="range"
+                        min={MIN_IMAGE_ZOOM}
+                        max={MAX_IMAGE_ZOOM}
+                        step={0.05}
+                        value={imageZoom}
+                        onChange={(e) => setImageZoom(clampZoom(Number(e.target.value)))}
+                        className="flex-1 accent-rose-500 cursor-pointer"
+                        aria-label="Zoom de la foto"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setImageZoom((z) => clampZoom(z + 0.1))}
+                        disabled={imageZoom >= MAX_IMAGE_ZOOM}
+                        className="p-1.5 rounded-md border border-slate-800 bg-slate-950 text-slate-300 hover:text-white disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                        title="Acercar"
+                        aria-label="Acercar"
+                      >
+                        <ZoomIn className="w-4 h-4" />
+                      </button>
+                      <span className="w-10 text-right text-[11px] font-semibold text-slate-300 tabular-nums">
+                        {Math.round(imageZoom * 100)}%
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setImageZoom(MIN_IMAGE_ZOOM)}
+                        disabled={!isZoomed}
+                        className="px-2 py-1 text-[11px] font-semibold rounded-md border border-slate-800 bg-slate-950 text-slate-300 hover:text-white disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        Restablecer
+                      </button>
+                    </div>
+
                     <p className="text-[10px] text-slate-500 text-center">
                       Así se ve la foto en la tarjeta (la parte de abajo se oscurece para que se lea el texto).
                     </p>
