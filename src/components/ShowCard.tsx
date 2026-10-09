@@ -74,7 +74,7 @@ export const ShowCard: React.FC<ShowCardProps> = ({
     >
       <div>
         {/* Band Photo Container */}
-        <div className="relative h-56 w-full overflow-hidden bg-slate-950">
+        <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-950">
           {/* Action buttons (Favorite & Admin) in Top Right */}
           <div className="absolute top-3 right-3 z-20 flex items-center space-x-1.5">
             {isAdmin && (

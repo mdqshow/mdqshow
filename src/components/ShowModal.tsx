@@ -185,7 +185,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
   // ----- Encuadre de la foto: arrastrar para elegir qué parte se muestra -----
   const clampFocus = (value: number) => Math.min(100, Math.max(0, value));
   const imageRatio = imageNatural ? imageNatural.w / imageNatural.h : null;
-  const CARD_RATIO = 1.7; // proporción aproximada de la foto en la tarjeta
+  const CARD_RATIO = 1.6; // proporción de la foto en la tarjeta de la web (16:10), siempre la misma
   const canMoveHorizontally = imageRatio !== null && imageRatio > CARD_RATIO + 0.02;
   const canMoveVertically = imageRatio !== null && imageRatio < CARD_RATIO - 0.02;
 
@@ -976,7 +976,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                     </div>
 
                     <div
-                      className={`relative w-full max-w-sm mx-auto aspect-[17/10] rounded-xl overflow-hidden border border-slate-700 bg-slate-950 select-none touch-none ${
+                      className={`relative w-full max-w-sm mx-auto aspect-[16/10] rounded-xl overflow-hidden border border-slate-700 bg-slate-950 select-none touch-none ${
                         canMoveHorizontally || canMoveVertically ? 'cursor-grab active:cursor-grabbing' : ''
                       }`}
                       onPointerDown={handleFocusPointerDown}
@@ -995,8 +995,13 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                         className="w-full h-full object-cover pointer-events-none"
                         style={{ objectPosition: getImageObjectPosition({ imageFocusX, imageFocusY }) }}
                       />
+                      {/* Mismo degradado oscuro que tiene la tarjeta de la web sobre la foto */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent pointer-events-none" />
                       <div className="absolute inset-0 ring-1 ring-inset ring-white/10 pointer-events-none" />
                     </div>
+                    <p className="text-[10px] text-slate-500 text-center">
+                      Así se ve la foto en la tarjeta (la parte de abajo se oscurece para que se lea el texto).
+                    </p>
 
                     {canMoveHorizontally && (
                       <div className="flex items-center justify-center gap-1.5 text-[11px]">
