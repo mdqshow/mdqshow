@@ -18,6 +18,8 @@ export interface Show {
   openingActs?: string[];
   isUserAdded?: boolean;
   imagePosition?: 'top' | 'center' | 'bottom';
+  imageFocusX?: number; // Encuadre de la foto: punto horizontal que se muestra (0 = izquierda, 100 = derecha)
+  imageFocusY?: number; // Encuadre de la foto: punto vertical que se muestra (0 = arriba, 100 = abajo)
   createdAt?: string; // ISO string de cuándo se dio de alta
   isNewBadge?: boolean; // Novedad elegida por el administrador
   spotifyUrl?: string; // Link al perfil o playlist de Spotify del artista

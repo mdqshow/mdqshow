@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Show } from '../types';
 import { formatSingleDate, getDaysUntil } from '../utils/dateHelpers';
+import { getImageObjectPosition } from '../utils/imageFocus';
 import { trackTicketClick, trackShareEvent } from '../services/metricsService';
 import { safeHttpUrl } from '../utils/safeUrl';
 import { getWhatsAppShareUrl, addToDeviceCalendar } from '../utils/shareAndCalendar';
@@ -134,13 +135,10 @@ export const ShowCard: React.FC<ShowCardProps> = ({
             onError={() => setImageError(true)}
             loading="lazy"
             referrerPolicy="no-referrer"
+            style={{ objectPosition: getImageObjectPosition(show) }}
             className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${
-              show.imagePosition === 'bottom'
-                ? 'object-bottom'
-                : show.imagePosition === 'center'
-                ? 'object-center'
-                : 'object-top'
-            } ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              imageLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
           />
           {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent pointer-events-none" />

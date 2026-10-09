@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, MapPin, ExternalLink, MessageCircle, CalendarPlus, Ticket, Edit3, Trash2 } from 'lucide-react';
 import { Show } from '../types';
 import { getDaysUntil } from '../utils/dateHelpers';
+import { getImageObjectPosition } from '../utils/imageFocus';
 import { trackTicketClick, trackShareEvent } from '../services/metricsService';
 import { safeHttpUrl } from '../utils/safeUrl';
 import { getWhatsAppShareUrl, addToDeviceCalendar } from '../utils/shareAndCalendar';
@@ -131,13 +132,8 @@ export const TimelineAgendaView: React.FC<TimelineAgendaViewProps> = ({
                         <img
                           src={show.image}
                           alt={show.band}
-                          className={`w-full h-full object-cover ${
-                            show.imagePosition === 'bottom'
-                              ? 'object-bottom'
-                              : show.imagePosition === 'center'
-                              ? 'object-center'
-                              : 'object-top'
-                          }`}
+                          className="w-full h-full object-cover"
+                          style={{ objectPosition: getImageObjectPosition(show) }}
                           loading="lazy"
                           referrerPolicy="no-referrer"
                         />

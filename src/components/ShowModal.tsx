@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Show } from '../types';
 import { AVAILABLE_CITIES, AVAILABLE_GENRES, PRESET_VENUES } from '../data/constants';
+import { getImageObjectPosition } from '../utils/imageFocus';
 import { formatSingleDate } from '../utils/dateHelpers';
 import { normalizePriceInput } from '../utils/priceHelpers';
 import { detectTicketPortalFromUrl } from '../utils/ticketDetectors';
@@ -90,7 +91,11 @@ export const ShowModal: React.FC<ShowModalProps> = ({
   const [spotifyUrl, setSpotifyUrl] = useState('');
 
   const [image, setImage] = useState('');
-  const [imagePosition, setImagePosition] = useState<'top' | 'center' | 'bottom'>('top');
+  // Encuadre de la foto: qué parte de la imagen se muestra en la tarjeta (porcentajes de 0 a 100)
+  const [imageFocusX, setImageFocusX] = useState(50);
+  const [imageFocusY, setImageFocusY] = useState(0);
+  const [imageNatural, setImageNatural] = useState<{ w: number; h: number } | null>(null);
+  const focusDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number; boxW: number; boxH: number } | null>(null);
   const [isNewBadge, setIsNewBadge] = useState(false);
   const [error, setError] = useState('');
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -128,7 +133,9 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       setTicketPriceRange(initialShow.ticketPriceRange || '');
       setSpotifyUrl(initialShow.spotifyUrl || '');
       setImage(initialShow.image || '');
-      setImagePosition(initialShow.imagePosition || 'top');
+      const legacyY = initialShow.imagePosition === 'bottom' ? 100 : initialShow.imagePosition === 'center' ? 50 : 0;
+      setImageFocusX(typeof initialShow.imageFocusX === 'number' ? initialShow.imageFocusX : 50);
+      setImageFocusY(typeof initialShow.imageFocusY === 'number' ? initialShow.imageFocusY : legacyY);
       setIsNewBadge(Boolean(initialShow.isNewBadge));
       setError('');
       setShowConfirmDelete(false);
@@ -154,7 +161,8 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       setTicketPriceRange('');
       setSpotifyUrl('');
       setImage('');
-      setImagePosition('top');
+      setImageFocusX(50);
+      setImageFocusY(0);
       setIsNewBadge(false); // Los shows nuevos arrancan sin el tilde MDQ LINE UP
       setError('');
       setShowConfirmDelete(false);
@@ -173,6 +181,46 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
   }, [isOpen, onClose]);
+
+  // ----- Encuadre de la foto: arrastrar para elegir qué parte se muestra -----
+  const clampFocus = (value: number) => Math.min(100, Math.max(0, value));
+  const imageRatio = imageNatural ? imageNatural.w / imageNatural.h : null;
+  const CARD_RATIO = 1.7; // proporción aproximada de la foto en la tarjeta
+  const canMoveHorizontally = imageRatio !== null && imageRatio > CARD_RATIO + 0.02;
+  const canMoveVertically = imageRatio !== null && imageRatio < CARD_RATIO - 0.02;
+
+  const handleFocusPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!imageNatural) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    focusDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      baseX: imageFocusX,
+      baseY: imageFocusY,
+      boxW: rect.width,
+      boxH: rect.height,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handleFocusPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = focusDragRef.current;
+    if (!drag || !imageNatural) return;
+    const scale = Math.max(drag.boxW / imageNatural.w, drag.boxH / imageNatural.h);
+    const overflowX = imageNatural.w * scale - drag.boxW;
+    const overflowY = imageNatural.h * scale - drag.boxH;
+    if (overflowX > 1) setImageFocusX(clampFocus(drag.baseX - ((e.clientX - drag.startX) / overflowX) * 100));
+    if (overflowY > 1) setImageFocusY(clampFocus(drag.baseY - ((e.clientY - drag.startY) / overflowY) * 100));
+  };
+
+  const handleFocusPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    focusDragRef.current = null;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -325,7 +373,9 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       ticketPriceRange: normalizePriceInput(ticketPriceRange),
       ticketStatus: initialShow?.ticketStatus || 'disponibles',
       image: image.trim() || defaultImg,
-      imagePosition,
+      imagePosition: imageFocusY <= 25 ? 'top' : imageFocusY >= 75 ? 'bottom' : 'center',
+      imageFocusX: Math.round(imageFocusX),
+      imageFocusY: Math.round(imageFocusY),
       description: initialShow?.description || `${band} en vivo en ${venue}.`,
       isNewBadge,
       spotifyUrl: spotifyCheck.url,
@@ -872,21 +922,17 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                 </label>
               </div>
 
-              {/* Live Preview & Alignment Control if image is present */}
+              {/* Vista previa y encuadre de la foto */}
               {image && (
-                <div className="mt-2 p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-2.5">
+                <div className="mt-2 p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-3">
                   <div className="flex items-center gap-3">
                     <div className="w-16 h-16 rounded-lg overflow-hidden border border-slate-700 shrink-0 bg-slate-950">
                       <img
                         src={image}
                         alt="Vista previa"
-                        className={`w-full h-full object-cover ${
-                          imagePosition === 'bottom'
-                            ? 'object-bottom'
-                            : imagePosition === 'center'
-                            ? 'object-center'
-                            : 'object-top'
-                        }`}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                        style={{ objectPosition: getImageObjectPosition({ imageFocusX, imageFocusY }) }}
                         onError={() => setError('No se pudo cargar la imagen desde ese enlace o archivo.')}
                       />
                     </div>
@@ -902,12 +948,15 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                           : '🟢 Imagen cargada'}
                       </p>
                       <p className="text-[10px] text-amber-400 mt-0.5">
-                        Alineada: {imagePosition === 'top' ? 'Desde arriba (ideal afiches)' : imagePosition === 'center' ? 'Al centro' : 'Desde abajo'}
+                        Este cuadrado es cómo se ve en la agenda.
                       </p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => setImage('')}
+                      onClick={() => {
+                        setImage('');
+                        setImageNatural(null);
+                      }}
                       className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                       title="Quitar imagen"
                     >
@@ -915,47 +964,87 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                     </button>
                   </div>
 
-                  {/* Selector de encuadre / alineación de imagen */}
-                  <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                    <span className="text-[11px] text-slate-300 font-medium">
-                      Encuadre en tarjeta:
-                    </span>
-                    <div className="inline-flex rounded-lg bg-slate-950 p-0.5 border border-slate-800">
-                      <button
-                        type="button"
-                        onClick={() => setImagePosition('top')}
-                        className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
-                          imagePosition === 'top'
-                            ? 'bg-rose-600 text-white shadow-xs'
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                        title="Toma la imagen desde arriba hacia abajo (recomendado para afiches y flyers oficiales)"
-                      >
-                        Arriba (Recomendado)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setImagePosition('center')}
-                        className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
-                          imagePosition === 'center'
-                            ? 'bg-rose-600 text-white shadow-xs'
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        Centro
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setImagePosition('bottom')}
-                        className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
-                          imagePosition === 'bottom'
-                            ? 'bg-rose-600 text-white shadow-xs'
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        Abajo
-                      </button>
+                  {/* Encuadre en la tarjeta: se arrastra la imagen para elegir qué parte se ve */}
+                  <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] text-slate-300 font-medium">Encuadre en la tarjeta</span>
+                      <span className="text-[10px] text-slate-500 text-right">
+                        {canMoveHorizontally || canMoveVertically
+                          ? 'Arrastrá la imagen para elegir qué parte se ve'
+                          : 'Esta imagen entra entera, no hace falta moverla'}
+                      </span>
                     </div>
+
+                    <div
+                      className={`relative w-full max-w-sm mx-auto aspect-[17/10] rounded-xl overflow-hidden border border-slate-700 bg-slate-950 select-none touch-none ${
+                        canMoveHorizontally || canMoveVertically ? 'cursor-grab active:cursor-grabbing' : ''
+                      }`}
+                      onPointerDown={handleFocusPointerDown}
+                      onPointerMove={handleFocusPointerMove}
+                      onPointerUp={handleFocusPointerUp}
+                      onPointerCancel={handleFocusPointerUp}
+                    >
+                      <img
+                        src={image}
+                        alt="Encuadre de la tarjeta"
+                        draggable={false}
+                        referrerPolicy="no-referrer"
+                        onLoad={(e) =>
+                          setImageNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })
+                        }
+                        className="w-full h-full object-cover pointer-events-none"
+                        style={{ objectPosition: getImageObjectPosition({ imageFocusX, imageFocusY }) }}
+                      />
+                      <div className="absolute inset-0 ring-1 ring-inset ring-white/10 pointer-events-none" />
+                    </div>
+
+                    {canMoveHorizontally && (
+                      <div className="flex items-center justify-center gap-1.5 text-[11px]">
+                        <span className="text-slate-400 mr-1">Horizontal:</span>
+                        {[
+                          { label: '⬅ Izquierda', value: 0 },
+                          { label: 'Centro', value: 50 },
+                          { label: 'Derecha ➡', value: 100 },
+                        ].map((opt) => (
+                          <button
+                            key={opt.label}
+                            type="button"
+                            onClick={() => setImageFocusX(opt.value)}
+                            className={`px-2.5 py-1 font-semibold rounded-md border transition-all cursor-pointer ${
+                              Math.round(imageFocusX) === opt.value
+                                ? 'bg-rose-600 border-rose-500 text-white'
+                                : 'bg-slate-950 border-slate-800 text-slate-300 hover:text-white'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {canMoveVertically && (
+                      <div className="flex items-center justify-center gap-1.5 text-[11px]">
+                        <span className="text-slate-400 mr-1">Vertical:</span>
+                        {[
+                          { label: '⬆ Arriba', value: 0 },
+                          { label: 'Centro', value: 50 },
+                          { label: 'Abajo ⬇', value: 100 },
+                        ].map((opt) => (
+                          <button
+                            key={opt.label}
+                            type="button"
+                            onClick={() => setImageFocusY(opt.value)}
+                            className={`px-2.5 py-1 font-semibold rounded-md border transition-all cursor-pointer ${
+                              Math.round(imageFocusY) === opt.value
+                                ? 'bg-rose-600 border-rose-500 text-white'
+                                : 'bg-slate-950 border-slate-800 text-slate-300 hover:text-white'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
