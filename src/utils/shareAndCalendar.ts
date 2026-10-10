@@ -12,7 +12,7 @@ export function getWhatsAppShareUrl(show: Show): string {
     `📅 *Fecha:* ${datesText}${show.time ? ` a las ${show.time}` : ''}`,
   ];
   if (show.ticketUrl) lines.push(`🎟️ *Entradas oficiales:* ${show.ticketUrl}`);
-  lines.push('', 'Encontrá toda la cartelera en https://mdqshow.com.ar');
+  lines.push('', 'Encontrá toda la cartelera en https://www.mdqshow.com.ar');
 
   return `https://api.whatsapp.com/send?text=${encodeURIComponent(lines.join('\n'))}`;
 }
@@ -64,7 +64,7 @@ export function getGoogleCalendarUrl(show: Show, dateStr?: string): string {
     `Show de ${show.band} (${show.tourName || 'En Vivo'})\n` +
     `Lugar: ${show.venue} - ${show.venueAddress}\n` +
     `Entradas oficiales en ${show.ticketPortalName}: ${show.ticketUrl}\n\n` +
-    `Organizado y publicado en MDQSHOW (https://mdqshow.com.ar)`
+    `Organizado y publicado en MDQSHOW (https://www.mdqshow.com.ar)`
   );
   const location = encodeURIComponent(`${show.venue}, ${show.venueAddress}, Mar del Plata, Argentina`);
   const ctz = encodeURIComponent('America/Argentina/Buenos_Aires');
