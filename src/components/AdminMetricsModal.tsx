@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, 
   MousePointerClick, 
@@ -16,10 +16,11 @@ import {
   Sparkles,
   MessageCircle,
   Eye,
-  Megaphone
+  Megaphone,
+  Globe
 } from 'lucide-react';
 import { Show, Sponsor } from '../types';
-import { ShowMetrics, BannerMetrics } from '../services/metricsService';
+import { ShowMetrics, BannerMetrics, DailyVisitMetrics, getRecentVisitMetrics } from '../services/metricsService';
 import { VENUE_SPONSORS } from './AdSenseBanner';
 import { resetMetricCounters } from '../services/metricsService';
 import { safeHttpUrl } from '../utils/safeUrl';
@@ -46,8 +47,37 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedReport, setCopiedReport] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [visitDays, setVisitDays] = useState<DailyVisitMetrics[]>([]);
+
+  // Visitas por día: una sola lectura cada vez que se abre el panel
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    getRecentVisitMetrics(30)
+      .then((days) => {
+        if (!cancelled) setVisitDays(days);
+      })
+      .catch((err) => console.warn('No se pudieron leer las visitas:', err));
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
+
+  // Visitas: hoy (hora de Argentina), últimos 7 y 30 días
+  const todayKey = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  const todayVisits = visitDays.find((d) => d.day === todayKey);
+  const last7 = visitDays.slice(-7);
+  const visits7 = last7.reduce((acc, d) => acc + d.visits, 0);
+  const visits30 = visitDays.reduce((acc, d) => acc + d.visits, 0);
+  const last14 = visitDays.slice(-14);
+  const maxVisits14 = Math.max(1, ...last14.map((d) => d.visits));
 
   // Solo se cuentan los recitales vigentes: los que ya pasaron (todas sus fechas) quedan afuera
   const currentShows = shows.filter((show) => !isShowPast(show.dates));
@@ -224,6 +254,26 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
 
         {/* Global KPI Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 p-3 sm:p-4 border-b border-slate-800/80 bg-slate-950/30">
+          {/* Visitas de hoy */}
+          <div className="bg-slate-900/90 border border-violet-500/40 rounded-xl p-2.5 shadow-sm">
+            <div className="flex items-center justify-between text-violet-400 text-xs font-semibold mb-0.5">
+              <span>Visitas hoy</span>
+              <Globe className="w-3.5 h-3.5" />
+            </div>
+            <p className="text-lg sm:text-xl font-black text-violet-300">{todayVisits?.visits ?? 0}</p>
+            <p className="text-[9px] text-slate-400 mt-0.5">{todayVisits?.visitors ?? 0} visitantes únicos</p>
+          </div>
+
+          {/* Visitas de los últimos 7 días */}
+          <div className="bg-slate-900/90 border border-violet-500/40 rounded-xl p-2.5 shadow-sm">
+            <div className="flex items-center justify-between text-violet-400 text-xs font-semibold mb-0.5">
+              <span>Visitas 7 días</span>
+              <Globe className="w-3.5 h-3.5" />
+            </div>
+            <p className="text-lg sm:text-xl font-black text-violet-300">{visits7}</p>
+            <p className="text-[9px] text-slate-400 mt-0.5">{visits30} en 30 días</p>
+          </div>
+
           {/* Publicaciones de Banners */}
           <div className="bg-slate-900/90 border border-amber-500/40 rounded-xl p-2.5 shadow-sm col-span-2 sm:col-span-1">
             <div className="flex items-center justify-between text-amber-400 text-xs font-semibold mb-0.5">
@@ -263,6 +313,25 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
             <p className="text-lg sm:text-xl font-black text-white">{activeShowsCount}</p>
             <p className="text-[9px] text-slate-400 mt-0.5">Cartelera</p>
           </div>
+        </div>
+
+        {/* Visitas por día (últimos 14 días) */}
+        <div className="px-4 sm:px-5 py-2 border-b border-slate-800/80 bg-slate-950/20">
+          <p className="text-[10px] text-slate-400 mb-1">Visitas por día (últimos 14 días)</p>
+          {last14.length === 0 ? (
+            <p className="text-[11px] text-slate-500">Todavía no hay visitas registradas.</p>
+          ) : (
+            <div className="flex items-end gap-1 h-10">
+              {last14.map((d) => (
+                <div
+                  key={d.day}
+                  className="flex-1 bg-violet-500/70 rounded-sm min-h-[2px]"
+                  style={{ height: `${Math.max(6, (d.visits / maxVisits14) * 100)}%` }}
+                  title={`${d.day.split('-').reverse().join('/')}: ${d.visits} visitas, ${d.visitors} únicos`}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Tabs de Selección */}

@@ -5,7 +5,11 @@ import {
   onSnapshot, 
   increment,
   getDocs,
-  writeBatch
+  writeBatch,
+  query,
+  orderBy,
+  limit,
+  documentId
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { shouldCountVisit, onceThisSession } from '../utils/visitorFilter';
@@ -298,4 +302,83 @@ export async function resetMetricCounters(): Promise<void> {
   } catch {
     // ignore
   }
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Contador de visitas                                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Interruptor del contador de visitas.
+ * true  = cada visita real suma 1 escritura en Firebase (un documento por día).
+ * false = deja de registrar visitas (libera escrituras); el historial ya guardado se sigue viendo en el panel.
+ */
+export const VISIT_COUNTER_ENABLED = true;
+
+const VISIT_METRICS_COLLECTION = 'visit_metrics';
+
+export interface DailyVisitMetrics {
+  day: string; // AAAA-MM-DD (hora de Argentina)
+  visits: number; // visitas (una por sesión del navegador)
+  visitors: number; // visitantes únicos del día (aprox., un navegador cuenta una vez por día)
+}
+
+function todayKeyArgentina(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
+/**
+ * Registra una visita real (sin administrador ni robots, una vez por sesión).
+ * Todo va en un solo documento por día, así que cada visita es 1 sola escritura.
+ */
+export async function trackVisit(): Promise<void> {
+  if (!VISIT_COUNTER_ENABLED) return;
+  if (!(await shouldCountVisit())) return;
+  if (!onceThisSession('mdq_visit')) return;
+
+  const day = todayKeyArgentina();
+  let isNewVisitorToday = true;
+  try {
+    const key = 'mdq_visitor_day';
+    if (localStorage.getItem(key) === day) isNewVisitorToday = false;
+    else localStorage.setItem(key, day);
+  } catch {
+    // ignore
+  }
+
+  try {
+    await setDoc(
+      doc(db, VISIT_METRICS_COLLECTION, day),
+      {
+        day,
+        visits: increment(1),
+        visitors: increment(isNewVisitorToday ? 1 : 0),
+        lastVisitAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.warn('No se pudo registrar la visita:', error);
+  }
+}
+
+/**
+ * Lee las visitas de los últimos días (solo el administrador puede leerlas).
+ * Una sola lectura al abrir el panel: cuesta como mucho `days` lecturas.
+ */
+export async function getRecentVisitMetrics(days = 30): Promise<DailyVisitMetrics[]> {
+  const q = query(collection(db, VISIT_METRICS_COLLECTION), orderBy(documentId(), 'desc'), limit(days));
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => {
+      const data = d.data();
+      return { day: d.id, visits: Number(data.visits) || 0, visitors: Number(data.visitors) || 0 };
+    })
+    .sort((a, b) => a.day.localeCompare(b.day));
 }

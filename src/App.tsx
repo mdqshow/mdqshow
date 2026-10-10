@@ -34,6 +34,7 @@ import { AirportBoardHeader } from './components/AirportBoardHeader';
 import { 
   subscribeToMetrics, 
   subscribeToBannerMetrics,
+  trackVisit,
   ShowMetrics, 
   BannerMetrics,
 } from './services/metricsService';
@@ -162,6 +163,13 @@ export default function App() {
   const [metricsMap, setMetricsMap] = useState<Record<string, ShowMetrics>>({});
   const [bannerMetricsMap, setBannerMetricsMap] = useState<Record<string, BannerMetrics>>({});
   const [isAdminMetricsOpen, setIsAdminMetricsOpen] = useState(false);
+
+  // Contador de visitas reales (no cuenta /admin, ni al administrador, ni robots; una vez por sesión)
+  useEffect(() => {
+    const path = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+    if (path.endsWith('/admin') || window.location.hash.toLowerCase() === '#admin') return;
+    void trackVisit();
+  }, []);
 
   // Solo el administrador necesita las métricas: los visitantes no las escuchan (ahorra lecturas de Firebase)
   useEffect(() => {
