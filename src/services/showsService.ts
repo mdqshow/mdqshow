@@ -7,6 +7,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import firebaseConfig from '../../firebase-applet-config.json';
 import { Show } from '../types';
 import { formatProperCase } from '../utils/textFormatting';
 
@@ -65,6 +66,76 @@ export function getLocalFallbackShows(): Show[] {
     // sin copia local
   }
   return [];
+}
+
+/**
+ * Buscadores (Google, Bing...): su navegador de lectura no logra mantener la conexión en tiempo real
+ * con Firestore y se quedaba viendo "Cargando cartelera...". Para ellos los shows se piden con una
+ * consulta común (la misma información que ve cualquier visitante), así pueden leer la cartelera.
+ */
+const SEARCH_BOT_REGEX = /googlebot|google-inspectiontool|googleother|adsbot-google|bingbot|duckduckbot|yandexbot|baiduspider/i;
+
+function isSearchEngineBot(): boolean {
+  try {
+    return SEARCH_BOT_REGEX.test(navigator.userAgent);
+  } catch {
+    return false;
+  }
+}
+
+type FsValue = {
+  stringValue?: string;
+  integerValue?: string;
+  doubleValue?: number;
+  booleanValue?: boolean;
+  nullValue?: null;
+  timestampValue?: string;
+  arrayValue?: { values?: FsValue[] };
+  mapValue?: { fields?: Record<string, FsValue> };
+};
+
+function fromFsValue(v: FsValue): unknown {
+  if ('stringValue' in v) return v.stringValue;
+  if ('integerValue' in v) return Number(v.integerValue);
+  if ('doubleValue' in v) return v.doubleValue;
+  if ('booleanValue' in v) return v.booleanValue;
+  if ('timestampValue' in v) return v.timestampValue;
+  if ('arrayValue' in v) return (v.arrayValue?.values ?? []).map(fromFsValue);
+  if ('mapValue' in v) return fromFsFields(v.mapValue?.fields ?? {});
+  return null;
+}
+
+function fromFsFields(fields: Record<string, FsValue>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(fields)) out[key] = fromFsValue(value);
+  return out;
+}
+
+async function fetchShowsViaRest(): Promise<Show[]> {
+  const base =
+    `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}` +
+    `/databases/${encodeURIComponent(firebaseConfig.firestoreDatabaseId)}/documents/${SHOWS_COLLECTION}`;
+  const list: Show[] = [];
+  let pageToken = '';
+  for (let page = 0; page < 10; page++) {
+    const url =
+      `${base}?pageSize=300&key=${encodeURIComponent(firebaseConfig.apiKey)}` +
+      (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '');
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = (await res.json()) as {
+      documents?: { name: string; fields?: Record<string, FsValue> }[];
+      nextPageToken?: string;
+    };
+    for (const d of json.documents ?? []) {
+      const id = String(d.name).split('/').pop() ?? '';
+      const normalized = normalizeShow(fromFsFields(d.fields ?? {}), id);
+      if (normalized) list.push(normalized);
+    }
+    pageToken = json.nextPageToken ?? '';
+    if (!pageToken) break;
+  }
+  return list;
 }
 
 export type ShowsSource = 'cloud' | 'empty' | 'local';
@@ -134,7 +205,20 @@ export function subscribeToShows(
     );
   };
 
-  start();
+  if (isSearchEngineBot()) {
+    // Buscadores: una sola consulta común; si falla, se usa la conexión normal
+    fetchShowsViaRest()
+      .then((list) => {
+        if (stopped) return;
+        onUpdate(list, list.length > 0 ? 'cloud' : 'empty');
+      })
+      .catch((err) => {
+        console.warn('No se pudo leer la cartelera por consulta común:', err);
+        start();
+      });
+  } else {
+    start();
+  }
 
   return () => {
     stopped = true;
