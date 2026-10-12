@@ -7,7 +7,6 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import firebaseConfig from '../../firebase-applet-config.json';
 import { Show } from '../types';
 import { formatProperCase } from '../utils/textFormatting';
 
@@ -68,21 +67,6 @@ export function getLocalFallbackShows(): Show[] {
   return [];
 }
 
-/**
- * Buscadores (Google, Bing...): su navegador de lectura no logra mantener la conexión en tiempo real
- * con Firestore y se quedaba viendo "Cargando cartelera...". Para ellos los shows se piden con una
- * consulta común (la misma información que ve cualquier visitante), así pueden leer la cartelera.
- */
-const SEARCH_BOT_REGEX = /googlebot|google-inspectiontool|googleother|adsbot-google|bingbot|duckduckbot|yandexbot|baiduspider/i;
-
-function isSearchEngineBot(): boolean {
-  try {
-    return SEARCH_BOT_REGEX.test(navigator.userAgent);
-  } catch {
-    return false;
-  }
-}
-
 type FsValue = {
   stringValue?: string;
   integerValue?: string;
@@ -111,29 +95,19 @@ function fromFsFields(fields: Record<string, FsValue>): Record<string, unknown> 
   return out;
 }
 
-async function fetchShowsViaRest(): Promise<Show[]> {
-  const base =
-    `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}` +
-    `/databases/${encodeURIComponent(firebaseConfig.firestoreDatabaseId)}/documents/${SHOWS_COLLECTION}`;
+/**
+ * Respaldo: pide la cartelera al propio dominio (/api/shows), que la lee de Firebase por una consulta común.
+ * Sirve cuando la conexión en tiempo real no llega (por ejemplo, el robot de Google).
+ */
+async function fetchShowsViaOwnDomain(): Promise<Show[]> {
+  const res = await fetch('/api/shows');
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const json = (await res.json()) as { documents?: { name: string; fields?: Record<string, FsValue> }[] };
   const list: Show[] = [];
-  let pageToken = '';
-  for (let page = 0; page < 10; page++) {
-    const url =
-      `${base}?pageSize=300&key=${encodeURIComponent(firebaseConfig.apiKey)}` +
-      (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '');
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = (await res.json()) as {
-      documents?: { name: string; fields?: Record<string, FsValue> }[];
-      nextPageToken?: string;
-    };
-    for (const d of json.documents ?? []) {
-      const id = String(d.name).split('/').pop() ?? '';
-      const normalized = normalizeShow(fromFsFields(d.fields ?? {}), id);
-      if (normalized) list.push(normalized);
-    }
-    pageToken = json.nextPageToken ?? '';
-    if (!pageToken) break;
+  for (const d of json.documents ?? []) {
+    const id = String(d.name).split('/').pop() ?? '';
+    const normalized = normalizeShow(fromFsFields(d.fields ?? {}), id);
+    if (normalized) list.push(normalized);
   }
   return list;
 }
@@ -153,6 +127,9 @@ export function subscribeToShows(
   let stopped = false;
   let unsubscribe: (() => void) | null = null;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+  let gotLiveData = false; // llegó la primera lista por la conexión en tiempo real
+  let gotFallbackData = false; // llegó la lista por el respaldo
 
   const start = () => {
     if (stopped) return;
@@ -161,6 +138,7 @@ export function subscribeToShows(
     unsubscribe = onSnapshot(
       showsCol,
       (snapshot) => {
+        gotLiveData = true;
         if (snapshot.empty) {
           // Base vacía: la lista queda vacía de verdad (sin recitales de ejemplo ni copias viejas)
           if (!snapshot.metadata.hasPendingWrites) {
@@ -195,7 +173,8 @@ export function subscribeToShows(
       (err) => {
         console.warn('Firestore shows listener error:', err.message || err);
         // Se muestra la copia local, avisando que NO es la lista real
-        onUpdate(getLocalFallbackShows(), 'local', err.message || String(err));
+        // (salvo que ya haya llegado la lista real por el respaldo)
+        if (!gotFallbackData) onUpdate(getLocalFallbackShows(), 'local', err.message || String(err));
         if (onError) onError(err);
         // Un listener con error queda cortado: se reintenta solo.
         // Si el error es por límite de uso (cuota), se espera mucho más para no empeorarlo.
@@ -205,24 +184,24 @@ export function subscribeToShows(
     );
   };
 
-  if (isSearchEngineBot()) {
-    // Buscadores: una sola consulta común; si falla, se usa la conexión normal
-    fetchShowsViaRest()
+  start();
+
+  // Si la conexión en tiempo real no trae nada en unos segundos, se pide la lista por el propio dominio
+  fallbackTimer = setTimeout(() => {
+    if (stopped || gotLiveData) return;
+    fetchShowsViaOwnDomain()
       .then((list) => {
-        if (stopped) return;
+        if (stopped || gotLiveData) return;
+        gotFallbackData = true;
         onUpdate(list, list.length > 0 ? 'cloud' : 'empty');
       })
-      .catch((err) => {
-        console.warn('No se pudo leer la cartelera por consulta común:', err);
-        start();
-      });
-  } else {
-    start();
-  }
+      .catch((err) => console.warn('No se pudo leer la cartelera por el respaldo:', err));
+  }, 2500);
 
   return () => {
     stopped = true;
     if (retryTimer) clearTimeout(retryTimer);
+    if (fallbackTimer) clearTimeout(fallbackTimer);
     if (unsubscribe) unsubscribe();
   };
 }
