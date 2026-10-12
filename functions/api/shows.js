@@ -12,29 +12,28 @@ const SITE_ORIGIN = 'https://www.mdqshow.com.ar';
 const CACHE_SECONDS = 60;
 
 async function loadAllShows() {
-  const base =
+  // Se usa la consulta "runQuery" (la misma que usan las apps y webs de Firebase), que cumple las reglas de seguridad
+  const url =
     `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}` +
-    `/databases/${encodeURIComponent(DATABASE_ID)}/documents/shows`;
-  const documents = [];
-  let pageToken = '';
-  for (let page = 0; page < 10; page++) {
-    const url =
-      `${base}?pageSize=300&key=${encodeURIComponent(API_KEY)}` +
-      (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '');
-    const res = await fetch(url, { headers: { Referer: SITE_ORIGIN + '/' } });
-    if (!res.ok) {
-      let detail = '';
-      try {
-        detail = (await res.text()).slice(0, 400);
-      } catch (e) {
-        // ignore
-      }
-      throw new Error('Firestore HTTP ' + res.status + ' ' + detail);
+    `/databases/${encodeURIComponent(DATABASE_ID)}/documents:runQuery?key=${encodeURIComponent(API_KEY)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Referer: SITE_ORIGIN + '/' },
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'shows' }], limit: 500 } }),
+  });
+  if (!res.ok) {
+    let detail = '';
+    try {
+      detail = (await res.text()).slice(0, 400);
+    } catch (e) {
+      // ignore
     }
-    const json = await res.json();
-    for (const d of json.documents || []) documents.push(d);
-    pageToken = json.nextPageToken || '';
-    if (!pageToken) break;
+    throw new Error('Firestore HTTP ' + res.status + ' ' + detail);
+  }
+  const rows = await res.json();
+  const documents = [];
+  for (const row of rows || []) {
+    if (row && row.document) documents.push(row.document);
   }
   return documents;
 }
