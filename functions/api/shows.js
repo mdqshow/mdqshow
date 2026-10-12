@@ -22,7 +22,15 @@ async function loadAllShows() {
       `${base}?pageSize=300&key=${encodeURIComponent(API_KEY)}` +
       (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '');
     const res = await fetch(url, { headers: { Referer: SITE_ORIGIN + '/' } });
-    if (!res.ok) throw new Error('Firestore HTTP ' + res.status);
+    if (!res.ok) {
+      let detail = '';
+      try {
+        detail = (await res.text()).slice(0, 400);
+      } catch (e) {
+        // ignore
+      }
+      throw new Error('Firestore HTTP ' + res.status + ' ' + detail);
+    }
     const json = await res.json();
     for (const d of json.documents || []) documents.push(d);
     pageToken = json.nextPageToken || '';
@@ -50,8 +58,9 @@ export async function onRequestGet(context) {
     context.waitUntil(cache.put(cacheKey, response.clone()));
     return response;
   } catch (error) {
+    // Se responde 200 con el detalle del error (en vez de 502) para poder leerlo desde el navegador
     return new Response(JSON.stringify({ error: String(error && error.message ? error.message : error) }), {
-      status: 502,
+      status: 200,
       headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
     });
   }

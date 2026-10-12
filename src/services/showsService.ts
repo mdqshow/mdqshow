@@ -102,7 +102,11 @@ function fromFsFields(fields: Record<string, FsValue>): Record<string, unknown> 
 async function fetchShowsViaOwnDomain(): Promise<Show[]> {
   const res = await fetch('/api/shows');
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = (await res.json()) as { documents?: { name: string; fields?: Record<string, FsValue> }[] };
+  const json = (await res.json()) as {
+    documents?: { name: string; fields?: Record<string, FsValue> }[];
+    error?: string;
+  };
+  if (json.error) throw new Error(json.error);
   const list: Show[] = [];
   for (const d of json.documents ?? []) {
     const id = String(d.name).split('/').pop() ?? '';
