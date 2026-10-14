@@ -17,12 +17,16 @@ import {
   AlertCircle,
   Megaphone,
   Play,
-  RotateCcw
+  RotateCcw,
+  AppWindow,
+  PanelTop,
+  LayoutList
 } from 'lucide-react';
 import { Sponsor, SponsorEffectType } from '../types';
 import { SponsorCard } from './SponsorCard';
 import { compressImage } from '../utils/imageCompressor';
 import { normalizeUserUrl } from '../utils/safeUrl';
+import { isSponsorPaused } from '../utils/sponsorStatus';
 
 interface AdminSponsorsModalProps {
   isOpen: boolean;
@@ -515,7 +519,10 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                       {formData.showInPopup ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                     </div>
                     <div>
-                      <span className="block text-xs font-bold text-amber-300">Pop-up de inicio</span>
+                      <span className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                        <AppWindow className="w-4 h-4 text-amber-400 shrink-0" />
+                        Pop-up de inicio
+                      </span>
                       <span className="block text-[11px] text-slate-400 mt-0.5 leading-tight">
                         Ventana emergente de 5s al abrir la web
                       </span>
@@ -535,7 +542,10 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                       {formData.showInTopBanner ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                     </div>
                     <div>
-                      <span className="block text-xs font-bold text-amber-300">Los dos primeros</span>
+                      <span className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                        <PanelTop className="w-4 h-4 text-sky-400 shrink-0" />
+                        Los dos primeros
+                      </span>
                       <span className="block text-[11px] text-slate-400 mt-0.5 leading-tight">
                         Banner superior (solo los que marques acá)
                       </span>
@@ -555,13 +565,27 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                       {formData.showInFeed ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                     </div>
                     <div>
-                      <span className="block text-xs font-bold text-amber-300">Resto de la página</span>
+                      <span className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                        <LayoutList className="w-4 h-4 text-violet-400 shrink-0" />
+                        Resto de la página
+                      </span>
                       <span className="block text-[11px] text-slate-400 mt-0.5 leading-tight">
                         Alternando cada 6 recitales en la cartelera
                       </span>
                     </div>
                   </label>
                 </div>
+
+                {isSponsorPaused({
+                  showInPopup: formData.showInPopup,
+                  showInTopBanner: formData.showInTopBanner,
+                  showInFeed: formData.showInFeed,
+                }) && (
+                  <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-slate-500 shrink-0" aria-hidden="true" />
+                    Sin ninguna ubicación marcada, este sponsor queda en pausa y no se muestra en la web.
+                  </p>
+                )}
               </div>
 
               {/* Configuración de Transición y Efectos para Texto */}
@@ -806,13 +830,14 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
                     {sponsors.map((sponsor) => {
-                      const isActive = sponsor.isActive !== false;
+                      // Sin ninguna de las 3 ubicaciones elegidas = en pausa
+                      const isActive = !isSponsorPaused(sponsor);
                       return (
                         <button
                           key={sponsor.id}
                           type="button"
                           onClick={() => handleStartEdit(sponsor)}
-                          title={`Editar: ${sponsor.name}${isActive ? '' : ' (pausado)'}`}
+                          title={`Editar: ${sponsor.name}${isActive ? '' : ' (en pausa: sin ubicación elegida)'}`}
                           className={`flex items-center gap-1.5 max-w-full px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer active:scale-95 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/60 hover:border-amber-500/60 ${
                             isActive ? 'text-slate-200' : 'text-slate-500'
                           }`}
@@ -822,18 +847,32 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                             aria-hidden="true"
                           />
                           <span className="truncate max-w-[180px]">{sponsor.name || 'Sin nombre'}</span>
-                          <span className="shrink-0 text-[11px] leading-none" aria-hidden="true">
-                            {sponsor.showInPopup ? '🌟' : ''}
-                            {sponsor.showInTopBanner ? '🔝' : ''}
-                            {sponsor.type === 'image' ? '🖼️' : sponsor.type === 'video' ? '🎬' : ''}
+                          <span className="shrink-0 flex items-center gap-1" aria-hidden="true">
+                            {sponsor.showInPopup === true && (
+                              <span title="Pop-up de inicio"><AppWindow className="w-3.5 h-3.5 text-amber-400" /></span>
+                            )}
+                            {sponsor.showInTopBanner === true && (
+                              <span title="Los dos primeros banners"><PanelTop className="w-3.5 h-3.5 text-sky-400" /></span>
+                            )}
+                            {sponsor.showInFeed !== false && (
+                              <span title="Resto de la página"><LayoutList className="w-3.5 h-3.5 text-violet-400" /></span>
+                            )}
+                            <span className="text-[11px] leading-none">
+                              {sponsor.type === 'image' ? '🖼️' : sponsor.type === 'video' ? '🎬' : ''}
+                            </span>
                           </span>
                         </button>
                       );
                     })}
                   </div>
-                  <p className="text-[10px] text-slate-500">
-                    Punto verde = activo · gris = pausado · 🌟 popup · 🔝 banners de arriba · 🖼️ imagen · 🎬 video
-                  </p>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-500">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> activo</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-600" /> en pausa (sin ubicación)</span>
+                    <span className="flex items-center gap-1"><AppWindow className="w-3.5 h-3.5 text-amber-400" /> pop-up</span>
+                    <span className="flex items-center gap-1"><PanelTop className="w-3.5 h-3.5 text-sky-400" /> dos primeros</span>
+                    <span className="flex items-center gap-1"><LayoutList className="w-3.5 h-3.5 text-violet-400" /> resto de la página</span>
+                    <span>🖼️ imagen · 🎬 video</span>
+                  </div>
                 </div>
               )}
             </div>

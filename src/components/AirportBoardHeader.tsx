@@ -212,8 +212,9 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
     const FOLD_TIME = 240;   // Tiempo de giro a 90°
     const UNFOLD_TIME = 240; // Tiempo de apertura a 0°
     const PAUSE_BETWEEN_ROWS = 2000; // 2 segundos constantes entre cada fila
-    const INITIAL_FILL_DELAY = 1200; // Pausa corta antes de empezar a cargar el 4to show
-    const INITIAL_ROTATION_DELAY = 4000; // Pausa antes de empezar a rotar cuando ya están todas las filas llenas
+    const POPUP_DELAY = 5000; // El pop-up de inicio dura 5 s: la carga empieza recién cuando se va
+    const INITIAL_FILL_DELAY = POPUP_DELAY + 1200; // Pausa antes de empezar a cargar el 4to show
+    const INITIAL_ROTATION_DELAY = POPUP_DELAY + 4000; // Pausa antes de empezar a rotar cuando ya están todas las filas llenas
 
     // Puntero cíclico global de cuál es el siguiente show de la lista a ingresar en la cartelera
     // Cuando las 5 filas están llenas (posiciones 0..4), el siguiente elemento a entrar es el índice 5.

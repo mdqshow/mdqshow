@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { isSponsorPaused } from '../utils/sponsorStatus';
 import { Sponsor } from '../types';
 import { SponsorCard } from './SponsorCard';
 import { trackBannerImpression } from '../services/metricsService';
@@ -47,7 +48,8 @@ const POPUP_STYLES = `
 `;
 
 function pickSponsor(pool: Sponsor[]): Sponsor | null {
-  const active = pool.filter((s) => s.isActive !== false);
+  // Los sponsors en pausa (sin ninguna ubicación elegida) no se muestran
+  const active = pool.filter((s) => s.isActive !== false && !isSponsorPaused(s));
   // Solo los marcados para el popup; si ninguno lo está, no se muestra nada raro: se usa cualquiera activo
   const forPopup = active.filter((s) => s.showInPopup === true);
   let candidates = forPopup.length > 0 ? forPopup : active;
