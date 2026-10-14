@@ -91,6 +91,8 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false
     window.setTimeout(() => {
       setIsOpen(false);
       setIsClosing(false);
+      // Avisa que el aviso ya se cerró (el panel de sponsors lo usa para volver a abrirse después de una prueba)
+      window.dispatchEvent(new CustomEvent('mdq_ad_popup_closed'));
     }, CLOSE_ANIMATION_MS);
   }, []);
 

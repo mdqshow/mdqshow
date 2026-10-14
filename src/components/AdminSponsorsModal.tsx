@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, 
   Plus, 
@@ -27,6 +27,15 @@ import { SponsorCard } from './SponsorCard';
 import { compressImage } from '../utils/imageCompressor';
 import { normalizeUserUrl } from '../utils/safeUrl';
 import { isSponsorPaused } from '../utils/sponsorStatus';
+
+type PlacementField = 'showInPopup' | 'showInTopBanner' | 'showInFeed';
+
+// Las 3 ubicaciones donde puede salir una publicidad, con su icono
+const PLACEMENTS: { field: PlacementField; label: string; Icon: React.ComponentType<{ className?: string }>; onClass: string }[] = [
+  { field: 'showInPopup', label: 'Pop-up de inicio', Icon: AppWindow, onClass: 'text-amber-400 bg-amber-500/15' },
+  { field: 'showInTopBanner', label: 'Los dos primeros banners', Icon: PanelTop, onClass: 'text-sky-400 bg-sky-500/15' },
+  { field: 'showInFeed', label: 'Resto de la página', Icon: LayoutList, onClass: 'text-violet-400 bg-violet-500/15' },
+];
 
 interface AdminSponsorsModalProps {
   isOpen: boolean;
@@ -64,6 +73,22 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Mientras se prueba el pop-up el panel se oculta (sin perder lo que se estaba editando) y vuelve al terminar
+  const [isPreviewingPopup, setIsPreviewingPopup] = useState(false);
+  // Sponsor al que se le está cambiando una ubicación desde la lista
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isPreviewingPopup) return;
+    const handleClosed = () => setIsPreviewingPopup(false);
+    window.addEventListener('mdq_ad_popup_closed', handleClosed);
+    // Por las dudas (si el pop-up no llegara a abrirse), el panel vuelve solo a los 12 segundos
+    const safetyTimer = window.setTimeout(() => setIsPreviewingPopup(false), 12000);
+    return () => {
+      window.removeEventListener('mdq_ad_popup_closed', handleClosed);
+      window.clearTimeout(safetyTimer);
+    };
+  }, [isPreviewingPopup]);
 
   // Form State
   const [formData, setFormData] = useState<Partial<Sponsor>>({
@@ -82,7 +107,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
     isActive: true,
   });
 
-  if (!isOpen) return null;
+  if (!isOpen || isPreviewingPopup) return null;
 
   const handleStartCreate = () => {
     setIsCreatingNew(true);
@@ -210,8 +235,27 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
   };
 
   const handleTestPopup = (sponsorId: string) => {
+    // Se oculta el panel (sin cerrarlo) para ver el pop-up sobre la web; cuando el pop-up termina, el panel vuelve
+    setIsPreviewingPopup(true);
     window.dispatchEvent(new CustomEvent('mdq_trigger_ad_popup', { detail: { sponsorId } }));
-    onClose();
+  };
+
+  // Activa o desactiva una ubicación (pop-up / dos primeros / resto de la página) de un sponsor ya cargado
+  const handleTogglePlacement = async (sponsor: Sponsor, field: PlacementField) => {
+    if (togglingId) return;
+    const currentlyOn = field === 'showInFeed' ? sponsor.showInFeed !== false : sponsor[field] === true;
+    setTogglingId(sponsor.id);
+    try {
+      await onSaveSponsor({ ...sponsor, [field]: !currentlyOn });
+      const label = PLACEMENTS.find((p) => p.field === field)?.label || '';
+      setFeedbackMsg(`${sponsor.name}: ${label} ${currentlyOn ? 'desactivado' : 'activado'}`);
+      setTimeout(() => setFeedbackMsg(null), 2500);
+    } catch (err) {
+      console.error('Error al cambiar la ubicación del sponsor:', err);
+      alert('No se pudo cambiar la ubicación del sponsor. Probá de nuevo.');
+    } finally {
+      setTogglingId(null);
+    }
   };
 
   const isFormActive = isCreatingNew || editingSponsor !== null;
@@ -833,45 +877,65 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                       // Sin ninguna de las 3 ubicaciones elegidas = en pausa
                       const isActive = !isSponsorPaused(sponsor);
                       return (
-                        <button
+                        <div
                           key={sponsor.id}
-                          type="button"
-                          onClick={() => handleStartEdit(sponsor)}
-                          title={`Editar: ${sponsor.name}${isActive ? '' : ' (en pausa: sin ubicación elegida)'}`}
-                          className={`flex items-center gap-1.5 max-w-full px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer active:scale-95 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/60 hover:border-amber-500/60 ${
+                          className={`flex items-center gap-1 max-w-full pl-3 pr-1.5 py-1 rounded-full text-xs font-semibold bg-slate-800/90 border border-slate-700/60 hover:border-amber-500/60 transition-colors ${
                             isActive ? 'text-slate-200' : 'text-slate-500'
                           }`}
                         >
-                          <span
-                            className={`w-2 h-2 rounded-full shrink-0 ${isActive ? 'bg-emerald-400' : 'bg-slate-600'}`}
-                            aria-hidden="true"
-                          />
-                          <span className="truncate max-w-[180px]">{sponsor.name || 'Sin nombre'}</span>
-                          <span className="shrink-0 flex items-center gap-1" aria-hidden="true">
-                            {sponsor.showInPopup === true && (
-                              <span title="Pop-up de inicio"><AppWindow className="w-3.5 h-3.5 text-amber-400" /></span>
-                            )}
-                            {sponsor.showInTopBanner === true && (
-                              <span title="Los dos primeros banners"><PanelTop className="w-3.5 h-3.5 text-sky-400" /></span>
-                            )}
-                            {sponsor.showInFeed !== false && (
-                              <span title="Resto de la página"><LayoutList className="w-3.5 h-3.5 text-violet-400" /></span>
-                            )}
-                            <span className="text-[11px] leading-none">
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(sponsor)}
+                            title={`Editar: ${sponsor.name}${isActive ? '' : ' (en pausa: sin ubicación elegida)'}`}
+                            className="flex items-center gap-1.5 min-w-0 cursor-pointer hover:text-white active:scale-95 transition-all"
+                          >
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${isActive ? 'bg-emerald-400' : 'bg-slate-600'}`}
+                              aria-hidden="true"
+                            />
+                            <span className="truncate max-w-[160px]">{sponsor.name || 'Sin nombre'}</span>
+                            <span className="shrink-0 text-[11px] leading-none" aria-hidden="true">
                               {sponsor.type === 'image' ? '🖼️' : sponsor.type === 'video' ? '🎬' : ''}
                             </span>
+                          </button>
+
+                          {/* Las 3 ubicaciones: tocá un icono para activarla o desactivarla sin abrir el sponsor */}
+                          <span className="flex items-center gap-0.5 ml-1 shrink-0">
+                            {PLACEMENTS.map(({ field, label, Icon, onClass }) => {
+                              const on = field === 'showInFeed' ? sponsor.showInFeed !== false : sponsor[field] === true;
+                              return (
+                                <button
+                                  key={field}
+                                  type="button"
+                                  onClick={() => handleTogglePlacement(sponsor, field)}
+                                  disabled={togglingId !== null}
+                                  aria-pressed={on}
+                                  title={`${label}: ${on ? 'activado (tocá para desactivar)' : 'desactivado (tocá para activar)'}`}
+                                  className={`p-1.5 rounded-full transition-colors cursor-pointer disabled:cursor-wait disabled:opacity-60 ${
+                                    on ? onClass : 'text-slate-600 hover:text-slate-300 hover:bg-slate-700'
+                                  }`}
+                                >
+                                  <Icon className="w-3.5 h-3.5" />
+                                </button>
+                              );
+                            })}
                           </span>
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-500">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> activo</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-600" /> en pausa (sin ubicación)</span>
-                    <span className="flex items-center gap-1"><AppWindow className="w-3.5 h-3.5 text-amber-400" /> pop-up</span>
-                    <span className="flex items-center gap-1"><PanelTop className="w-3.5 h-3.5 text-sky-400" /> dos primeros</span>
-                    <span className="flex items-center gap-1"><LayoutList className="w-3.5 h-3.5 text-violet-400" /> resto de la página</span>
-                    <span>🖼️ imagen · 🎬 video</span>
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-500">
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> activo</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-600" /> en pausa (sin ubicación)</span>
+                      <span className="flex items-center gap-1"><AppWindow className="w-3.5 h-3.5 text-amber-400" /> pop-up</span>
+                      <span className="flex items-center gap-1"><PanelTop className="w-3.5 h-3.5 text-sky-400" /> dos primeros</span>
+                      <span className="flex items-center gap-1"><LayoutList className="w-3.5 h-3.5 text-violet-400" /> resto de la página</span>
+                      <span>🖼️ imagen · 🎬 video</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500">
+                      Icono de color = ubicación activada · gris = desactivada. Tocá un icono para cambiarla sin abrir el sponsor.
+                    </p>
                   </div>
                 </div>
               )}
