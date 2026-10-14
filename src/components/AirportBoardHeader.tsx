@@ -87,16 +87,40 @@ interface DisplayRowState {
   bandFolded: boolean;
 }
 
-// Texto que se muestra cuando todavía no hay ningún show marcado con MDQ LINE UP
-const PLACEHOLDER_ROW_ITEM: { date?: string; band: string } = {
-  date: '',
-  band: 'PROXIMAMENTE'.padEnd(15, ' '),
-};
+interface BoardItem {
+  date?: string;
+  band: string;
+}
 
-// Fila vacía de separación (las mismas casillas pero sin letras)
-const EMPTY_ROW_ITEM: { date?: string; band: string } = {
+// Fila vacía (las mismas casillas pero sin letras). También se usa como separador al final de la lista
+// y cuando todavía no hay ningún show marcado con MDQ LINE UP (ya no se muestra "PROXIMAMENTE").
+const EMPTY_ROW_ITEM: BoardItem = {
   date: '',
   band: '               ', // 15 espacios vacíos
+};
+
+// Cantidad de shows que ya se ven completos apenas se entra. Desde el siguiente empieza la animación de carga.
+const INITIAL_VISIBLE_ROWS = 3;
+
+const blankRow = (): DisplayRowState => ({
+  day: '  ',
+  month: '   ',
+  band: ' '.repeat(15),
+  dayFolded: false,
+  monthFolded: false,
+  bandFolded: false,
+});
+
+const rowFromItem = (item: BoardItem): DisplayRowState => {
+  const parts = parseAirportDateParts(item.date);
+  return {
+    day: parts.day.padEnd(2, ' ').slice(0, 2),
+    month: parts.month.padEnd(3, ' ').slice(0, 3),
+    band: (item.band || '').padEnd(15, ' ').slice(0, 15),
+    dayFolded: false,
+    monthFolded: false,
+    bandFolded: false,
+  };
 };
 
 export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = [] }) => {
@@ -124,8 +148,8 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
   // Lista unificada para la cartelera: Todos los shows ordenados + 1 FILA VACÍA de separación al final
   // Esto genera el efecto solicitado: luego de mostrar el último show (el más lejano en fecha),
   // rota una fila completamente vacía como separador antes de volver a empezar desde el show más próximo.
-  const boardItems = React.useMemo(() => {
-    if (sortedShows.length === 0) return [PLACEHOLDER_ROW_ITEM];
+  const boardItems = React.useMemo<BoardItem[]>(() => {
+    if (sortedShows.length === 0) return [EMPTY_ROW_ITEM];
     return [
       ...sortedShows.map(s => {
         const earliest = Array.isArray(s.dates) && s.dates.length > 0 ? [...s.dates].sort()[0] : '';
@@ -140,109 +164,89 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
 
   const ROWS_TO_SHOW = 5;
 
-  // Estado inicial de las 5 filas
-  const [rows, setRows] = useState<DisplayRowState[]>(() => {
-    return Array.from({ length: ROWS_TO_SHOW }, (_, i) => {
-      const item = boardItems[i] || { date: '', band: '               ' };
-      const parts = parseAirportDateParts(item.date);
-      return {
-        day: parts.day.padEnd(2, ' ').slice(0, 2),
-        month: parts.month.padEnd(3, ' ').slice(0, 3),
-        band: (item.band || '').padEnd(15, ' ').slice(0, 15),
-        dayFolded: false,
-        monthFolded: false,
-        bandFolded: false,
-      };
-    });
-  });
+  // Estado inicial: los primeros 3 shows ya están a la vista; las demás filas arrancan vacías y se cargan con animación
+  const [rows, setRows] = useState<DisplayRowState[]>(() =>
+    Array.from({ length: ROWS_TO_SHOW }, (_, i) =>
+      i < INITIAL_VISIBLE_ROWS && boardItems[i] ? rowFromItem(boardItems[i]) : blankRow()
+    )
+  );
 
-  // Sincroniza las filas con la lista. Si hay pocos shows (no hay rotación), se actualizan
-  // cada vez que cambia la lista; si hay muchos, se conservan las filas que ya están girando.
+  // Copia de las filas para consultarlas desde los efectos sin reiniciarlos
+  const rowsRef = React.useRef(rows);
+  rowsRef.current = rows;
+
+  // Sincroniza las filas con la lista cuando cambia (por ejemplo, cuando terminan de llegar los shows).
   useEffect(() => {
     if (boardItems.length === 0) return;
     setRows((prev) => {
       const hasContent = prev.some(r => r.band.trim().length > 0);
-      if (hasContent && boardItems.length > ROWS_TO_SHOW) return prev;
-      return Array.from({ length: ROWS_TO_SHOW }, (_, i) => {
-        const item =
-          boardItems.length > ROWS_TO_SHOW
-            ? boardItems[i % boardItems.length]
-            : (boardItems[i] || EMPTY_ROW_ITEM);
-        const parts = parseAirportDateParts(item.date);
-        return {
-          day: parts.day.padEnd(2, ' ').slice(0, 2),
-          month: parts.month.padEnd(3, ' ').slice(0, 3),
-          band: (item.band || '').padEnd(15, ' ').slice(0, 15),
-          dayFolded: false,
-          monthFolded: false,
-          bandFolded: false,
-        };
-      });
+      if (!hasContent) {
+        // Todavía no había nada en el cartel: se muestran los primeros 3 y el resto se carga con animación
+        return Array.from({ length: ROWS_TO_SHOW }, (_, i) =>
+          i < INITIAL_VISIBLE_ROWS && boardItems[i] ? rowFromItem(boardItems[i]) : blankRow()
+        );
+      }
+      // Si hay muchos shows, se conservan las filas que ya están girando
+      if (boardItems.length > ROWS_TO_SHOW) return prev;
+      // Pocos shows (no hay rotación): el cartel se actualiza completo
+      return Array.from({ length: ROWS_TO_SHOW }, (_, i) =>
+        boardItems[i] ? rowFromItem(boardItems[i]) : blankRow()
+      );
     });
   }, [boardItems]);
 
   useEffect(() => {
-    if (boardItems.length <= ROWS_TO_SHOW) return;
+    // Pasos de "carga inicial": las filas que están vacías y ya tienen un show para mostrar (la 4 y la 5)
+    const fillSteps: { row: number; item: BoardItem }[] = [];
+    for (let r = INITIAL_VISIBLE_ROWS; r < ROWS_TO_SHOW; r++) {
+      const item = boardItems[r];
+      const rowIsBlank = !rowsRef.current[r] || rowsRef.current[r].band.trim().length === 0;
+      if (item && item.band.trim().length > 0 && rowIsBlank) fillSteps.push({ row: r, item });
+    }
+    const hasRotation = boardItems.length > ROWS_TO_SHOW;
+    if (fillSteps.length === 0 && !hasRotation) return;
 
     let isCancelled = false;
-    const timeouts: NodeJS.Timeout[] = [];
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
 
     const FOLD_TIME = 240;   // Tiempo de giro a 90°
     const UNFOLD_TIME = 240; // Tiempo de apertura a 0°
     const PAUSE_BETWEEN_ROWS = 2000; // 2 segundos constantes entre cada fila
+    const INITIAL_FILL_DELAY = 1200; // Pausa corta antes de empezar a cargar el 4to show
+    const INITIAL_ROTATION_DELAY = 4000; // Pausa antes de empezar a rotar cuando ya están todas las filas llenas
 
     // Puntero cíclico global de cuál es el siguiente show de la lista a ingresar en la cartelera
-    // Inicialmente los primeros 5 shows están en las posiciones 0, 1, 2, 3, 4.
-    // Por lo tanto, el siguiente elemento a entrar cuando rote la fila 0 es el índice 5.
+    // Cuando las 5 filas están llenas (posiciones 0..4), el siguiente elemento a entrar es el índice 5.
     let nextItemPointer = ROWS_TO_SHOW % boardItems.length;
     let currentRowToAnimate = 0;
+    let fillIndex = 0;
 
-    const animateNextRow = () => {
-      if (isCancelled) return;
-
-      const r = currentRowToAnimate;
-      // Obtenemos el próximo elemento garantizado
-      const targetItem = boardItems[nextItemPointer];
+    // Anima UNA fila: primero el día, después el mes y por último el artista
+    const animateRow = (r: number, targetItem: BoardItem, onFinished: () => void) => {
       const targetParts = parseAirportDateParts(targetItem.date);
       const targetDay = targetParts.day.padEnd(2, ' ').slice(0, 2);
       const targetMonth = targetParts.month.padEnd(3, ' ').slice(0, 3);
       const targetBand = (targetItem.band || '').padEnd(15, ' ').slice(0, 15);
 
-      // Avanzamos el puntero para la próxima fila
-      nextItemPointer = (nextItemPointer + 1) % boardItems.length;
-
-      // ==========================================
-      // ETAPA 1: DÍA
-      // ==========================================
-      // 1.1 Doblar el DÍA a 90° (todavía muestra el día viejo mientras gira)
+      // ETAPA 1: DÍA (se dobla a 90°, en el punto ciego cambia el texto y se desdobla)
       setRows((prev) => {
         const next = [...prev];
         next[r] = { ...next[r], dayFolded: true };
         return next;
       });
-
-      // 1.2 En 90° (punto ciego): cambiamos el texto a targetDay y desdoblamos
       timeouts.push(
         setTimeout(() => {
           if (isCancelled) return;
           setRows((prev) => {
             const next = [...prev];
-            next[r] = {
-              ...next[r],
-              day: targetDay,
-              dayFolded: false,
-            };
+            next[r] = { ...next[r], day: targetDay, dayFolded: false };
             return next;
           });
         }, FOLD_TIME)
       );
 
-      // ==========================================
       // ETAPA 2: MES (inicia recién al terminar de desdoblarse el día)
-      // ==========================================
       const START_MONTH = FOLD_TIME + UNFOLD_TIME + 60;
-
-      // 2.1 Doblar el MES a 90°
       timeouts.push(
         setTimeout(() => {
           if (isCancelled) return;
@@ -253,29 +257,19 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
           });
         }, START_MONTH)
       );
-
-      // 2.2 En 90°: cambiamos el texto a targetMonth y desdoblamos
       timeouts.push(
         setTimeout(() => {
           if (isCancelled) return;
           setRows((prev) => {
             const next = [...prev];
-            next[r] = {
-              ...next[r],
-              month: targetMonth,
-              monthFolded: false,
-            };
+            next[r] = { ...next[r], month: targetMonth, monthFolded: false };
             return next;
           });
         }, START_MONTH + FOLD_TIME)
       );
 
-      // ==========================================
       // ETAPA 3: ARTISTA (inicia recién al terminar de desdoblarse el mes)
-      // ==========================================
       const START_BAND = START_MONTH + FOLD_TIME + UNFOLD_TIME + 60;
-
-      // 3.1 Doblar el ARTISTA a 90° (conserva el nombre viejo mientras gira)
       timeouts.push(
         setTimeout(() => {
           if (isCancelled) return;
@@ -286,50 +280,52 @@ export const AirportBoardHeader: React.FC<AirportBoardHeaderProps> = ({ shows = 
           });
         }, START_BAND)
       );
-
-      // 3.2 En 90°: cambiamos el texto a targetBand y desdoblamos
       timeouts.push(
         setTimeout(() => {
           if (isCancelled) return;
           setRows((prev) => {
             const next = [...prev];
-            next[r] = {
-              ...next[r],
-              band: targetBand,
-              bandFolded: false,
-            };
+            next[r] = { ...next[r], band: targetBand, bandFolded: false };
             return next;
           });
         }, START_BAND + FOLD_TIME)
       );
 
-      // ==========================================
       // ETAPA 4: FIN DE FILA Y ESPERA DE 2 SEGUNDOS
-      // ==========================================
       const TOTAL_ROW_ANIMATION = START_BAND + FOLD_TIME + UNFOLD_TIME;
-
       timeouts.push(
         setTimeout(() => {
           if (isCancelled) return;
-          // Avanzamos al siguiente renglón (0 -> 1 -> 2 -> 3 -> 4 -> 0...)
-          currentRowToAnimate = (currentRowToAnimate + 1) % ROWS_TO_SHOW;
-
-          // PAUSA DE EXACTAMENTE 2 SEGUNDOS antes de la siguiente fila
           timeouts.push(
             setTimeout(() => {
               if (isCancelled) return;
-              animateNextRow();
+              onFinished();
             }, PAUSE_BETWEEN_ROWS)
           );
         }, TOTAL_ROW_ANIMATION)
       );
     };
 
-    // Pausa inicial antes del primer giro
-    const initialTimer = setTimeout(() => {
-      animateNextRow();
-    }, 4000);
-    timeouts.push(initialTimer);
+    const runNext = () => {
+      if (isCancelled) return;
+
+      // Primero se terminan de cargar las filas vacías (la 4 y la 5)
+      if (fillIndex < fillSteps.length) {
+        const step = fillSteps[fillIndex++];
+        animateRow(step.row, step.item, runNext);
+        return;
+      }
+
+      // Después, la rotación normal (solo si hay más shows que filas)
+      if (!hasRotation) return;
+      const r = currentRowToAnimate;
+      const targetItem = boardItems[nextItemPointer];
+      nextItemPointer = (nextItemPointer + 1) % boardItems.length;
+      currentRowToAnimate = (currentRowToAnimate + 1) % ROWS_TO_SHOW;
+      animateRow(r, targetItem, runNext);
+    };
+
+    timeouts.push(setTimeout(runNext, fillSteps.length > 0 ? INITIAL_FILL_DELAY : INITIAL_ROTATION_DELAY));
 
     return () => {
       isCancelled = true;
