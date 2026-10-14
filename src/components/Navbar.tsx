@@ -67,11 +67,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </span>
                 )}
               </div>
-              {/* Mar del Plata subtext on mobile */}
-              <div className="flex items-center text-[10px] text-rose-400/90 font-medium sm:hidden mt-0.5">
-                <MapPin className="w-2.5 h-2.5 mr-1 text-rose-400 shrink-0" />
-                <span>Mar del Plata</span>
-              </div>
+              {/* Bajada de la marca en el celular: en 2 renglones, debajo del logo */}
+              <p className="sm:hidden mt-1 text-[9px] leading-[1.15] text-slate-400 font-medium">
+                <span className="block whitespace-nowrap">Cartelera de recitales</span>
+                <span className="block whitespace-nowrap">y shows en Mar del Plata</span>
+              </p>
               <p className="text-xs text-slate-400 hidden sm:block">
                 Cartelera de recitales y shows en Mar del Plata
               </p>
@@ -125,16 +125,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span className="hidden sm:inline">App</span>
                 </button>
 
-                {/* Contacto Popup Button (visible on tablets/desktop) */}
+                {/* Contacto: en celular y tablet solo el icono; en pantalla grande, icono + texto */}
                 <button
                   type="button"
                   id="navbar-contact-btn"
                   onClick={onOpenContact}
-                  className="hidden lg:flex items-center px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 transition-colors cursor-pointer"
+                  className="flex items-center p-2 lg:px-3 lg:py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 transition-colors cursor-pointer active:scale-95"
                   title="Abrir formulario de contacto"
+                  aria-label="Contacto"
                 >
-                  <Mail className="w-3.5 h-3.5 mr-1.5 text-rose-400" />
-                  <span>Contacto</span>
+                  <Mail className="w-4 h-4 lg:w-3.5 lg:h-3.5 lg:mr-1.5 text-rose-400 shrink-0" />
+                  <span className="hidden lg:inline">Contacto</span>
                 </button>
               </>
             )}
