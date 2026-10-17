@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { isSponsorPaused } from '../utils/sponsorStatus';
 import { Sponsor } from '../types';
 import { SponsorCard } from './SponsorCard';
 import { ImpressionTracker } from './ImpressionTracker';
@@ -33,12 +34,12 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
         return markedForTop;
       }
       // Fallback seguro si todavía no marcó ninguno para no dejar el espacio en blanco
-      return list.filter(s => s.isActive !== false).slice(0, 2);
+      return list.filter(s => s.isActive !== false && !isSponsorPaused(s)).slice(0, 2);
     }
 
     // Para el resto de la página / feed:
     const markedForFeed = list.filter(s => s.isActive !== false && s.showInFeed !== false);
-    return markedForFeed.length > 0 ? markedForFeed : list.filter(s => s.isActive !== false);
+    return markedForFeed.length > 0 ? markedForFeed : list.filter(s => s.isActive !== false && !isSponsorPaused(s));
   }, [sponsors, isTopBanner]);
 
   // Los sponsors se reparten en dos grupos que NO comparten ningún aviso:

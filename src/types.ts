@@ -23,6 +23,7 @@ export interface Show {
   imageZoom?: number; // Zoom de la foto (1 = sin zoom, hasta 3)
   createdAt?: string; // ISO string de cuándo se dio de alta
   isNewBadge?: boolean; // Novedad elegida por el administrador
+  showInPopup?: boolean; // Aparece en el aviso de inicio de 5 segundos (junto con los sponsors)
   spotifyUrl?: string; // Link al perfil o playlist de Spotify del artista
 }
 

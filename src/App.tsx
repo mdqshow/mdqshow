@@ -25,6 +25,7 @@ import { TimelineAgendaView } from './components/TimelineAgendaView';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { AdminSponsorsModal } from './components/AdminSponsorsModal';
 import { AdPopup } from './components/AdPopup';
+import { LA_FELIZ_VENUES } from './data/constants';
 import { ContactModal } from './components/ContactModal';
 import { InstallAppModal } from './components/InstallAppModal';
 import { AdminMetricsModal } from './components/AdminMetricsModal';
@@ -473,6 +474,15 @@ export default function App() {
     return Array.from(venuesSet).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
   }, [shows]);
 
+  // Lugares del filtro "Lugares en La Feliz": solo los que tienen al menos un recital cargado
+  const venueChips = useMemo(
+    () =>
+      LA_FELIZ_VENUES.filter((short) =>
+        availableVenues.some((venue) => venue.toLowerCase().includes(short.toLowerCase()))
+      ),
+    [availableVenues]
+  );
+
   // Filtered & Sorted shows
   const filteredShows = useMemo(() => {
     return shows
@@ -604,19 +614,7 @@ export default function App() {
                     )}
                   </div>
                   <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 -mx-4 px-4 scroll-smooth">
-                    {[
-                      'Abbey Road',
-                      'Arena Mar del Plata',
-                      'Auditorium',
-                      'Bendu Arena',
-                      'Bruto',
-                      'Mute',
-                      'Plaza de la Música',
-                      'Polideportivo',
-                      'Radio City',
-                      'Teatro Tronador',
-                      'Vorterix'
-                    ].map((venueShort) => {
+                    {venueChips.map((venueShort) => {
                       const isActive = filters.venue !== 'all' && filters.venue.toLowerCase().includes(venueShort.toLowerCase());
                       return (
                         <button
@@ -653,13 +651,7 @@ export default function App() {
                   {/* Renglón 1: Frase y primeros lugares a la izquierda */}
                   <div className="flex flex-wrap items-center justify-start gap-2 w-full">
                     <span className="text-slate-400 font-medium shrink-0">Lugares en La Feliz:</span>
-                    {[
-                      'Abbey Road',
-                      'Arena Mar del Plata',
-                      'Auditorium',
-                      'Bendu Arena',
-                      'Bruto',
-                    ].map((venueShort) => {
+                    {venueChips.slice(0, 5).map((venueShort) => {
                       const isActive = filters.venue !== 'all' && filters.venue.toLowerCase().includes(venueShort.toLowerCase());
                       return (
                         <button
@@ -692,14 +684,7 @@ export default function App() {
 
                   {/* Renglón 2: Resto de los lugares centrado respecto al renglón superior */}
                   <div className="flex flex-wrap items-center justify-center gap-2 w-full">
-                    {[
-                      'Mute',
-                      'Plaza de la Música',
-                      'Polideportivo',
-                      'Radio City',
-                      'Teatro Tronador',
-                      'Vorterix'
-                    ].map((venueShort) => {
+                    {venueChips.slice(5).map((venueShort) => {
                       const isActive = filters.venue !== 'all' && filters.venue.toLowerCase().includes(venueShort.toLowerCase());
                       return (
                         <button
@@ -944,10 +929,10 @@ export default function App() {
                   id="footer-test-ad-btn"
                   onClick={() => window.dispatchEvent(new CustomEvent('mdq_trigger_ad_popup'))}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all cursor-pointer shadow-xs"
-                  title="Probar el popup: cada vez que lo tocás muestra el siguiente sponsor, así los ves a todos"
+                  title="Probar el popup: cada vez que lo tocás muestra el siguiente (sponsors y recitales con POP UP), así los ves a todos"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Probar Popup Sponsor (siguiente)</span>
+                  <span>Probar Popup (siguiente)</span>
                 </button>
               </>
             ) : null}
@@ -993,7 +978,7 @@ export default function App() {
       </footer>
 
       {/* Welcome / Entry 5-second Ad Popup for Sponsors */}
-      <AdPopup sponsors={sponsors} isAdmin={isAdmin} />
+      <AdPopup sponsors={sponsors} shows={shows} isAdmin={isAdmin} />
 
       {/* Admin Sponsors & Publicidades Modal */}
       <AdminSponsorsModal

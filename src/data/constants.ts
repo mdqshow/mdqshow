@@ -71,6 +71,11 @@ export const PRESET_VENUES: PresetVenue[] = [
     ticketUrl: 'https://www.ticketek.com.ar'
   },
   { 
+    name: 'Ciudad Cultural Brew House', 
+    address: 'Diagonal Garibaldi 4830', 
+    defaultTicketPortal: 'Boletería Oficial'
+  },
+  { 
     name: 'Estadio José María Minella', 
     address: 'Av. Pedro Luro y Canosa', 
     defaultTicketPortal: 'Ticketek',
@@ -118,4 +123,23 @@ export const PRESET_VENUES: PresetVenue[] = [
     defaultTicketPortal: 'Articket',
     ticketUrl: 'https://www.articket.com.ar'
   }
+];
+
+/**
+ * Nombres cortos de los lugares del filtro "Lugares en La Feliz" (portada).
+ * Cada uno se muestra solo si hay al menos un recital cargado en ese lugar.
+ */
+export const LA_FELIZ_VENUES: string[] = [
+  'Abbey Road',
+  'Arena Mar del Plata',
+  'Auditorium',
+  'Bendu Arena',
+  'Bruto',
+  'Brew House',
+  'Mute',
+  'Plaza de la Música',
+  'Polideportivo',
+  'Radio City',
+  'Teatro Tronador',
+  'Vorterix'
 ];

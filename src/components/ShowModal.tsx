@@ -101,6 +101,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
   const [imageNatural, setImageNatural] = useState<{ w: number; h: number } | null>(null);
   const focusDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number; boxW: number; boxH: number; zoom: number } | null>(null);
   const [isNewBadge, setIsNewBadge] = useState(false);
+  const [showInPopup, setShowInPopup] = useState(false);
   const [error, setError] = useState('');
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
@@ -142,6 +143,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       setImageFocusY(typeof initialShow.imageFocusY === 'number' ? initialShow.imageFocusY : legacyY);
       setImageZoom(getImageZoom({ imageZoom: initialShow.imageZoom }));
       setIsNewBadge(Boolean(initialShow.isNewBadge));
+      setShowInPopup(Boolean(initialShow.showInPopup));
       setError('');
       setShowConfirmDelete(false);
     } else {
@@ -170,6 +172,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       setImageFocusY(0);
       setImageZoom(MIN_IMAGE_ZOOM);
       setIsNewBadge(false); // Los shows nuevos arrancan sin el tilde MDQ LINE UP
+      setShowInPopup(false); // ...ni el tilde POP UP
       setError('');
       setShowConfirmDelete(false);
     }
@@ -402,6 +405,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       imageZoom: clampZoom(imageZoom),
       description: initialShow?.description || `${band} en vivo en ${venue}.`,
       isNewBadge,
+      showInPopup,
       spotifyUrl: spotifyCheck.url,
       createdAt: initialShow?.createdAt || new Date().toISOString(),
       isUserAdded: true,
@@ -1140,6 +1144,23 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                   </span>
                   <span className="text-[11px] text-slate-400 block mt-0.5">
                     Aparece en el cartel del aeropuerto (MDQ LINE UP - DESTACADOS)
+                  </span>
+                </div>
+              </label>
+
+              <label className="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-950/70 border border-slate-800 cursor-pointer hover:bg-slate-950">
+                <input
+                  type="checkbox"
+                  checked={showInPopup}
+                  onChange={(e) => setShowInPopup(e.target.checked)}
+                  className="w-4 h-4 text-rose-500 rounded bg-slate-900 border-slate-700 focus:ring-rose-500 cursor-pointer"
+                />
+                <div>
+                  <span className="text-xs font-bold text-slate-200 block uppercase tracking-wide">
+                    POP UP
+                  </span>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">
+                    Aparece en el aviso de 5 segundos al entrar a la web (se alterna con los sponsors)
                   </span>
                 </div>
               </label>

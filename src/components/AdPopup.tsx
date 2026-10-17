@@ -1,19 +1,31 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { isSponsorPaused } from '../utils/sponsorStatus';
-import { Sponsor } from '../types';
+import { Sponsor, Show } from '../types';
 import { SponsorCard } from './SponsorCard';
+import { ShowPopupCard } from './ShowPopupCard';
+import { isShowPast } from '../utils/dateHelpers';
 import { trackBannerImpression } from '../services/metricsService';
 import { auth } from '../firebase';
 
 interface AdPopupProps {
   sponsors?: Sponsor[];
+  shows?: Show[];
   isAdmin?: boolean;
 }
+
+// Lo que puede mostrar el aviso de inicio: un sponsor o un recital marcado con POP UP
+type PopupItem = { kind: 'sponsor'; sponsor: Sponsor } | { kind: 'show'; show: Show };
+
+const itemKey = (item: PopupItem): string =>
+  item.kind === 'show' ? `show:${item.show.id}` : `sponsor:${item.sponsor.id}`;
+
+// Recitales con POP UP que todavía no pasaron
+const popupShowsOf = (shows: Show[]): Show[] => shows.filter((s) => s.showInPopup === true && !isShowPast(s.dates));
 
 const POPUP_DURATION_SECONDS = 5; // el aviso se cierra solo cuando el borde completa la vuelta
 const OPEN_DELAY_MS = 1200; // deja que la cartelera cargue y que lleguen los sponsors de la nube
 const CLOSE_ANIMATION_MS = 380;
-const LAST_POPUP_KEY = 'mdqshow_last_popup_sponsor';
+const LAST_POPUP_KEY = 'mdqshow_last_popup_item';
 
 const POPUP_STYLES = `
 @keyframes mdqOverlayIn { from { opacity: 0; } to { opacity: 1; } }
@@ -47,19 +59,27 @@ const POPUP_STYLES = `
 }
 `;
 
-function pickSponsor(pool: Sponsor[]): Sponsor | null {
+function pickItem(sponsors: Sponsor[], shows: Show[]): PopupItem | null {
   // Los sponsors en pausa (sin ninguna ubicación elegida) no se muestran
-  const active = pool.filter((s) => s.isActive !== false && !isSponsorPaused(s));
-  // Solo los marcados para el popup; si ninguno lo está, no se muestra nada raro: se usa cualquiera activo
-  const forPopup = active.filter((s) => s.showInPopup === true);
-  let candidates = forPopup.length > 0 ? forPopup : active;
+  const active = sponsors.filter((s) => s.isActive !== false && !isSponsorPaused(s));
+  const sponsorItems: PopupItem[] = active
+    .filter((s) => s.showInPopup === true)
+    .map((sponsor): PopupItem => ({ kind: 'sponsor', sponsor }));
+  const showItems: PopupItem[] = popupShowsOf(shows).map((show): PopupItem => ({ kind: 'show', show }));
+
+  let candidates: PopupItem[] = [...sponsorItems, ...showItems];
+  // Si nada está marcado para el popup, se usa cualquier sponsor activo (como antes)
+  if (candidates.length === 0) candidates = active.map((sponsor): PopupItem => ({ kind: 'sponsor', sponsor }));
   if (candidates.length === 0) return null;
 
-  // Rotación: evita repetir el mismo aviso que se vio la última vez
+  // Rotación: se alterna entre sponsors y recitales, y se evita repetir el mismo aviso de la última vez
   try {
-    const lastId = localStorage.getItem(LAST_POPUP_KEY);
-    if (lastId && candidates.length > 1) {
-      const others = candidates.filter((s) => s.id !== lastId);
+    const lastKey = localStorage.getItem(LAST_POPUP_KEY);
+    if (lastKey && candidates.length > 1) {
+      const lastKind = lastKey.startsWith('show:') ? 'show' : 'sponsor';
+      const otherKind = candidates.filter((c) => c.kind !== lastKind);
+      if (otherKind.length > 0) candidates = otherKind;
+      const others = candidates.filter((c) => itemKey(c) !== lastKey);
       if (others.length > 0) candidates = others;
     }
   } catch {
@@ -69,18 +89,20 @@ function pickSponsor(pool: Sponsor[]): Sponsor | null {
   return candidates[Math.floor(Math.random() * candidates.length)] || candidates[0];
 }
 
-export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false }) => {
+export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], shows = [], isAdmin = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [adSponsor, setAdSponsor] = useState<Sponsor | null>(null);
+  const [adItem, setAdItem] = useState<PopupItem | null>(null);
   const [progress, setProgress] = useState(0); // 0 = recién abierto, 1 = el borde completó la vuelta
   const hasTriggeredRef = useRef(false);
   const openedManuallyRef = useRef(false); // true si lo abrió el botón de prueba del admin
-  const testIndexRef = useRef(0); // para que el botón de prueba recorra los sponsors uno por uno
+  const testIndexRef = useRef(0); // para que el botón de prueba recorra los avisos uno por uno
+  const latestRef = useRef({ sponsors, shows });
+  latestRef.current = { sponsors, shows };
 
-  const rememberSponsor = (sponsor: Sponsor) => {
+  const rememberItem = (item: PopupItem) => {
     try {
-      localStorage.setItem(LAST_POPUP_KEY, sponsor.id);
+      localStorage.setItem(LAST_POPUP_KEY, itemKey(item));
     } catch {
       // ignore
     }
@@ -96,12 +118,11 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false
     }, CLOSE_ANIMATION_MS);
   }, []);
 
-  // Selección automática al cargar la web (el administrador no ve este aviso)
+  // Selección automática al cargar la web (el administrador no ve este aviso).
+  // La elección se hace recién cuando pasa la espera, con los datos que ya llegaron (sponsors y recitales).
   useEffect(() => {
     if (hasTriggeredRef.current) return;
-    const pool = sponsors || [];
-    const chosen = pickSponsor(pool);
-    if (!chosen) return;
+    if (pickItem(sponsors || [], shows || []) === null) return;
 
     let cancelled = false;
     const openTimer = window.setTimeout(async () => {
@@ -114,15 +135,18 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false
       if (cancelled || hasTriggeredRef.current) return;
       if (auth.currentUser) return;
 
+      const chosen = pickItem(latestRef.current.sponsors || [], latestRef.current.shows || []);
+      if (!chosen) return;
+
       hasTriggeredRef.current = true;
       openedManuallyRef.current = false;
-      rememberSponsor(chosen);
-      setAdSponsor(chosen);
+      rememberItem(chosen);
+      setAdItem(chosen);
       setProgress(0);
       setIsClosing(false);
       setIsOpen(true);
-      if (chosen.id && chosen.name) {
-        trackBannerImpression(chosen.id, chosen.name, chosen.address || 'Popup');
+      if (chosen.kind === 'sponsor' && chosen.sponsor.id && chosen.sponsor.name) {
+        trackBannerImpression(chosen.sponsor.id, chosen.sponsor.name, chosen.sponsor.address || 'Popup');
       }
     }, OPEN_DELAY_MS);
 
@@ -130,7 +154,7 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false
       cancelled = true;
       window.clearTimeout(openTimer);
     };
-  }, [sponsors]);
+  }, [sponsors, shows]);
 
   // Si el administrador inicia sesión mientras el aviso automático está abierto, se cierra
   useEffect(() => {
@@ -141,24 +165,31 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false
 
   // Disparo manual para pruebas desde el panel de administración
   useEffect(() => {
-    const handleTrigger = (event: CustomEvent<{ sponsorId?: string }>) => {
-      const pool = sponsors || [];
-      if (pool.length === 0) return;
+    const handleTrigger = (event: CustomEvent<{ sponsorId?: string; showId?: string }>) => {
+      const sponsorPool = sponsors || [];
+      const showPool = shows || [];
 
-      let chosen: Sponsor | null | undefined;
+      let chosen: PopupItem | null = null;
       if (event.detail && event.detail.sponsorId) {
-        chosen = pool.find((s) => s.id === event.detail.sponsorId);
+        const found = sponsorPool.find((s) => s.id === event.detail.sponsorId);
+        if (found) chosen = { kind: 'sponsor', sponsor: found };
+      } else if (event.detail && event.detail.showId) {
+        const found = showPool.find((s) => s.id === event.detail.showId);
+        if (found) chosen = { kind: 'show', show: found };
       }
       if (!chosen) {
-        // Botón de prueba general: muestra los sponsors activos de a uno, en orden, para poder ver todos
-        const active = pool.filter((s) => s.isActive !== false);
-        if (active.length === 0) return;
-        chosen = active[testIndexRef.current % active.length];
+        // Botón de prueba general: muestra los avisos de a uno, en orden, para poder ver todos
+        const list: PopupItem[] = [
+          ...sponsorPool.filter((s) => s.isActive !== false).map((sponsor): PopupItem => ({ kind: 'sponsor', sponsor })),
+          ...popupShowsOf(showPool).map((show): PopupItem => ({ kind: 'show', show })),
+        ];
+        if (list.length === 0) return;
+        chosen = list[testIndexRef.current % list.length];
         testIndexRef.current += 1;
       }
 
       openedManuallyRef.current = true;
-      setAdSponsor(chosen);
+      setAdItem(chosen);
       setProgress(0);
       setIsClosing(false);
       setIsOpen(true);
@@ -166,11 +197,11 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false
 
     window.addEventListener('mdq_trigger_ad_popup' as any, handleTrigger);
     return () => window.removeEventListener('mdq_trigger_ad_popup' as any, handleTrigger);
-  }, [sponsors]);
+  }, [sponsors, shows]);
 
   // Temporizador: el borde da una vuelta completa en 5 segundos y al terminar el aviso se cierra solo
   useEffect(() => {
-    if (!isOpen || !adSponsor) return;
+    if (!isOpen || !adItem) return;
 
     const startTime = performance.now();
     const durationMs = POPUP_DURATION_SECONDS * 1000;
@@ -188,7 +219,7 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false
     frameId = window.requestAnimationFrame(tick);
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [isOpen, adSponsor, closePopup]);
+  }, [isOpen, adItem, closePopup]);
 
   // Bloquea el scroll de fondo mientras el aviso está abierto
   useEffect(() => {
@@ -200,7 +231,9 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false
     };
   }, [isOpen]);
 
-  if (!isOpen || !adSponsor) return null;
+  if (!isOpen || !adItem) return null;
+
+  const isShow = adItem.kind === 'show';
 
   // Borde que da la vuelta: el color recorre toda la rueda de colores (arranca en ámbar)
   const borderColor = `hsl(${(40 + progress * 360) % 360} 95% 60%)`;
@@ -209,7 +242,7 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Main sponsor"
+      aria-label={isShow ? 'Recital destacado' : 'Main sponsor'}
       className={`fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/75 backdrop-blur-md overflow-y-auto select-none ${
         isClosing ? 'mdq-popup-overlay-out' : 'mdq-popup-overlay-in'
       }`}
@@ -217,21 +250,25 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false
       <style>{POPUP_STYLES}</style>
 
       <div
-        className={`relative w-full max-w-md my-auto ${isClosing ? 'mdq-popup-card-out' : 'mdq-popup-card-in'}`}
+        className={`relative w-full ${isShow ? 'max-w-sm' : 'max-w-md'} my-auto ${isClosing ? 'mdq-popup-card-out' : 'mdq-popup-card-in'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Resplandor suave detrás del aviso */}
         <div className="mdq-popup-glow pointer-events-none absolute -inset-3 rounded-[2rem] bg-gradient-to-br from-amber-500/40 via-rose-500/25 to-amber-300/30 blur-2xl" />
 
-        {/* Aviso: texto, imagen o video (el mismo diseño que en la cartelera, en tamaño grande) */}
+        {/* Aviso: un recital (foto con los datos) o un sponsor (texto, imagen o video) */}
         <div className="relative">
-          <SponsorCard
-            sponsor={adSponsor}
-            heightClass="h-64 sm:h-72"
-            showBadge={false}
-            variant="popup"
-            onClick={closePopup}
-          />
+          {adItem.kind === 'show' ? (
+            <ShowPopupCard show={adItem.show} onClick={closePopup} />
+          ) : (
+            <SponsorCard
+              sponsor={adItem.sponsor}
+              heightClass="h-64 sm:h-72"
+              showBadge={false}
+              variant="popup"
+              onClick={closePopup}
+            />
+          )}
 
           {/* Borde de la tarjeta, en sentido antihorario: da una vuelta completa cambiando de color; al volver al inicio el aviso se cierra solo */}
           <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl overflow-hidden" aria-hidden="true">
@@ -255,7 +292,7 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], isAdmin = false
         </div>
 
         <p className="relative mt-4 text-center text-[10px] font-semibold tracking-[0.3em] uppercase text-white/45">
-          Main Sponsor
+          {isShow ? 'MDQSHOW' : 'Main Sponsor'}
         </p>
       </div>
     </div>
