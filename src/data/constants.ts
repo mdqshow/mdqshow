@@ -76,6 +76,10 @@ export const PRESET_VENUES: PresetVenue[] = [
     defaultTicketPortal: 'Boletería Oficial'
   },
   { 
+    name: 'Club Tri', 
+    address: '20 de Septiembre 2650'
+  },
+  { 
     name: 'Estadio José María Minella', 
     address: 'Av. Pedro Luro y Canosa', 
     defaultTicketPortal: 'Ticketek',
@@ -136,6 +140,7 @@ export const LA_FELIZ_VENUES: string[] = [
   'Bendu Arena',
   'Bruto',
   'Brew House',
+  'Club Tri',
   'Mute',
   'Plaza de la Música',
   'Polideportivo',
