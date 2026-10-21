@@ -1,4 +1,5 @@
 import { normalizeUserUrl } from '../utils/safeUrl';
+import { cleanPastedUrl } from '../utils/pastedUrl';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
@@ -123,7 +124,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       }
 
       setTime(initialShow.time || '21:00 hs');
-      setTicketUrl(initialShow.ticketUrl || '');
+      setTicketUrl(cleanPastedUrl(initialShow.ticketUrl || ''));
       
       const isPreset = PRESET_TICKET_PORTALS.some(p => p.name.toLowerCase() === (initialShow.ticketPortalName || '').toLowerCase());
       if (isPreset) {
@@ -282,7 +283,8 @@ export const ShowModal: React.FC<ShowModalProps> = ({
   };
 
   // URL change with auto-detection of ticketera
-  const handleTicketUrlChange = (newUrl: string) => {
+  const handleTicketUrlChange = (rawUrl: string) => {
+    const newUrl = cleanPastedUrl(rawUrl);
     setTicketUrl(newUrl);
     const detectedName = detectTicketPortalFromUrl(newUrl);
     if (detectedName) {
@@ -371,7 +373,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       return;
     }
 
-    const ticketCheck = normalizeUserUrl(ticketUrl || 'https://articket.com.ar');
+    const ticketCheck = normalizeUserUrl(cleanPastedUrl(ticketUrl) || 'https://articket.com.ar');
     if (!ticketCheck.valid) {
       setError('El link de entradas tiene que ser una dirección web válida (por ejemplo https://www.ticketek.com.ar/...).');
       return;
@@ -893,7 +895,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
             <input
               type="url"
               value={spotifyUrl}
-              onChange={(e) => setSpotifyUrl(e.target.value)}
+              onChange={(e) => setSpotifyUrl(cleanPastedUrl(e.target.value))}
               placeholder="https://open.spotify.com/artist/... o https://open.spotify.com/album/..."
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-green-500 transition-colors text-xs"
             />
@@ -922,7 +924,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                 <input
                   type="url"
                   value={image.startsWith('data:') ? '' : image}
-                  onChange={(e) => setImage(e.target.value)}
+                  onChange={(e) => setImage(cleanPastedUrl(e.target.value))}
                   placeholder="https://ejemplo.com/foto-banda.webp (o .jpg)"
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 text-xs"
                 />

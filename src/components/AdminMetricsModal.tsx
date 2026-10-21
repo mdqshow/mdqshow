@@ -12,7 +12,6 @@ import {
   Check, 
   Copy,
   Ticket,
-  Search,
   Sparkles,
   MessageCircle,
   Eye,
@@ -44,7 +43,6 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
   sponsors,
 }) => {
   const [activeTab, setActiveTab] = useState<'shows' | 'banners'>('shows');
-  const [searchTerm, setSearchTerm] = useState('');
   const [copiedReport, setCopiedReport] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [visitDays, setVisitDays] = useState<DailyVisitMetrics[]>([]);
@@ -124,19 +122,36 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
     };
   }).sort((a, b) => b.impressions - a.impressions);
 
-  const totalBannerImpressions = venueBannersWithMetrics.reduce((acc, curr) => acc + curr.impressions, 0);
-  const totalBannerClicks = venueBannersWithMetrics.reduce((acc, curr) => acc + curr.clicks, 0);
+  // Recitales que salen en el pop-up de inicio: se cuentan en la misma tabla de publicidad
+  const popupShowRows = currentShows
+    .filter((show) => show.showInPopup === true || (bannerMetricsMap[`show-popup-${show.id}`]?.impressions || 0) > 0)
+    .map((show) => ({
+      id: `show-popup-${show.id}`,
+      name: show.band,
+      address: show.venue || '',
+      link: '',
+      isShow: true,
+      impressions: bannerMetricsMap[`show-popup-${show.id}`]?.impressions || 0,
+      clicks: 0,
+    }));
 
-  // Filtrado por buscador
-  const filteredShowsList = sortedByClicks.filter((item) =>
-    item.show.band.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.show.venue.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const bannerRows = [
+    ...venueBannersWithMetrics.map((item) => ({
+      id: item.venue.id,
+      name: item.venue.name,
+      address: item.venue.address || '',
+      link: item.venue.link,
+      isShow: false,
+      impressions: item.impressions,
+      clicks: item.clicks,
+    })),
+    ...popupShowRows,
+  ].sort((a, b) => b.impressions - a.impressions);
 
-  const filteredBannersList = venueBannersWithMetrics.filter((item) =>
-    item.venue.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.venue.address.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const totalBannerImpressions = bannerRows.reduce((acc, curr) => acc + curr.impressions, 0);
+  const totalBannerClicks = bannerRows.reduce((acc, curr) => acc + curr.clicks, 0);
+
+  const filteredShowsList = sortedByClicks;
 
   const handleResetCounters = async () => {
     const ok = window.confirm(
@@ -178,6 +193,15 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
       lines.push(`   - Clics al Instagram/Sitio Oficial: ${item.clicks}`);
       lines.push('----------------------------------------------------');
     });
+
+    if (popupShowRows.length > 0) {
+      lines.push('\n1 bis. RECITALES EN EL POP-UP DE INICIO:');
+      popupShowRows.forEach((item, idx) => {
+        lines.push(`${idx + 1}. ${item.name} - ${item.address}`);
+        lines.push(`   - Visitas que lo vieron: ${item.impressions}`);
+        lines.push('----------------------------------------------------');
+      });
+    }
 
     lines.push('\n2. RANKING DE RECITALES POR INTERÉS (CLICKS A COMPRA):');
     sortedByClicks.slice(0, 15).forEach((item, idx) => {
@@ -382,24 +406,8 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
         </div>
 
         <>
-        {/* Table & Search */}
+        {/* Tablas */}
         <div className="p-4 sm:p-5 flex-1 overflow-hidden flex flex-col space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={activeTab === 'shows' ? "Buscar show en la tabla de métricas..." : "Buscar teatro / estadio..."}
-                className="w-full pl-9 pr-3 py-2 bg-slate-950/80 border border-slate-700/80 rounded-xl text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <span className="text-xs text-slate-400 shrink-0">
-              {activeTab === 'shows' ? `${filteredShowsList.length} recitales` : `${filteredBannersList.length} lugares`}
-            </span>
-          </div>
-
           {/* Table: Shows */}
           {activeTab === 'shows' && (
             <div className="flex-1 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/50">
@@ -473,8 +481,8 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/80 text-slate-300">
-                  {filteredBannersList.map((item, index) => (
-                    <tr key={item.venue.id} className="hover:bg-slate-900/60 transition-colors">
+                  {bannerRows.map((item, index) => (
+                    <tr key={item.id} className="hover:bg-slate-900/60 transition-colors">
                       <td className="py-3 px-4 font-mono font-bold text-slate-500">
                         {index === 0 && <span className="text-amber-400 mr-1">🥇</span>}
                         {index === 1 && <span className="text-slate-300 mr-1">🥈</span>}
@@ -482,21 +490,30 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
                         #{index + 1}
                       </td>
                       <td className="py-3 px-4 font-bold text-white uppercase tracking-wider">
-                        {item.venue.name}
+                        {item.name}
+                        {item.isShow && (
+                          <span className="ml-2 align-middle text-[9px] font-bold tracking-wider text-rose-300 bg-rose-500/15 border border-rose-500/30 rounded-full px-2 py-0.5">
+                            POP-UP RECITAL
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-slate-300 text-xs">
-                        {item.venue.address}
+                        {item.address}
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <a 
-                          href={safeHttpUrl(item.venue.link)} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="inline-flex items-center text-xs text-sky-400 hover:text-sky-300 hover:underline"
-                        >
-                          Instagram
-                          <ExternalLink className="w-3 h-3 ml-1" />
-                        </a>
+                        {item.isShow ? (
+                          <span className="text-xs text-slate-500">—</span>
+                        ) : (
+                          <a 
+                            href={safeHttpUrl(item.link)} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="inline-flex items-center text-xs text-sky-400 hover:text-sky-300 hover:underline"
+                          >
+                            Instagram
+                            <ExternalLink className="w-3 h-3 ml-1" />
+                          </a>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-black text-amber-300 text-sm">
                         {item.impressions}
@@ -507,10 +524,10 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
                     </tr>
                   ))}
 
-                  {filteredBannersList.length === 0 && (
+                  {bannerRows.length === 0 && (
                     <tr>
                       <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
-                        No se encontraron lugares con ese criterio.
+                        Todavía no hay publicidades ni recitales en el pop-up.
                       </td>
                     </tr>
                   )}

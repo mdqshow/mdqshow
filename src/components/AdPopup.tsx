@@ -31,8 +31,8 @@ const POPUP_STYLES = `
 @keyframes mdqOverlayIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes mdqOverlayOut { from { opacity: 1; } to { opacity: 0; } }
 @keyframes mdqCardIn {
-  0%   { opacity: 0; transform: translateY(22px) scale(0.94); filter: blur(8px); }
-  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  from { opacity: 0; transform: translateY(22px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
 }
 @keyframes mdqCardOut {
   0%   { opacity: 1; transform: translateY(0) scale(1); }
@@ -48,7 +48,8 @@ const POPUP_STYLES = `
 }
 .mdq-popup-overlay-in  { animation: mdqOverlayIn 0.55s ease-out both; }
 .mdq-popup-overlay-out { animation: mdqOverlayOut 0.38s ease-in both; }
-.mdq-popup-card-in     { animation: mdqCardIn 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both; }
+/* 'backwards': al terminar la entrada no queda ningún filtro ni escala aplicados (en iPhone dejaban el texto borroso) */
+.mdq-popup-card-in     { animation: mdqCardIn 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.1s backwards; }
 .mdq-popup-card-out    { animation: mdqCardOut 0.38s ease-in both; }
 .mdq-popup-glow        { animation: mdqGlow 3.6s ease-in-out infinite; }
 .mdq-popup-fade-up     { animation: mdqFadeUp 0.6s ease-out both; }
@@ -147,6 +148,13 @@ export const AdPopup: React.FC<AdPopupProps> = ({ sponsors = [], shows = [], isA
       setIsOpen(true);
       if (chosen.kind === 'sponsor' && chosen.sponsor.id && chosen.sponsor.name) {
         trackBannerImpression(chosen.sponsor.id, chosen.sponsor.name, chosen.sponsor.address || 'Popup');
+      } else if (chosen.kind === 'show' && chosen.show.id) {
+        // Los recitales del popup se cuentan en la misma tabla de publicidad de las métricas
+        trackBannerImpression(
+          `show-popup-${chosen.show.id}`,
+          `Popup recital: ${chosen.show.band}`.slice(0, 200),
+          (chosen.show.venue || 'Popup recital').slice(0, 300)
+        );
       }
     }, OPEN_DELAY_MS);
 
