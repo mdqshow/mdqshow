@@ -1,5 +1,4 @@
 import { 
-import { getPublicCartelera, PUBLIC_REFRESH_MS } from './publicCartelera';
   collection, 
   doc, 
   setDoc, 
@@ -9,6 +8,7 @@ import { getPublicCartelera, PUBLIC_REFRESH_MS } from './publicCartelera';
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { getPublicCartelera, PUBLIC_REFRESH_MS } from './publicCartelera';
 import { Sponsor } from '../types';
 
 const SPONSORS_COLLECTION = 'sponsors';

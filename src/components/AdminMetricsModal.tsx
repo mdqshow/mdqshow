@@ -171,7 +171,7 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
           shares: metric?.shares || 0,
         };
       }),
-    ...Object.values(metricsMap)
+    ...(Object.values(metricsMap) as ShowMetrics[])
       .filter((metric) => !knownShowIds.has(metric.showId))
       .map((metric) => ({
         id: metric.showId,
