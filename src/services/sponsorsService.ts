@@ -1,4 +1,5 @@
 import { 
+import { getPublicCartelera, PUBLIC_REFRESH_MS } from './publicCartelera';
   collection, 
   doc, 
   setDoc, 
@@ -89,7 +90,7 @@ export type SponsorsSource = 'cloud' | 'empty' | 'local';
  * o 'local' (falló la conexión y se muestra la copia guardada en este navegador).
  * Si la conexión se corta por un error, vuelve a intentar sola a los 5 segundos.
  */
-export function subscribeToSponsors(
+function subscribeToSponsorsRealtime(
   onUpdate: (sponsors: Sponsor[], source: SponsorsSource, errorMessage?: string) => void,
   onError?: (error: Error) => void
 ): () => void {
@@ -287,4 +288,50 @@ export async function importMissingSponsors(seeds: Sponsor[]): Promise<number> {
     handleFirestoreError(error, OperationType.WRITE, SPONSORS_COLLECTION);
   }
   return toCreate.length;
+}
+
+/**
+ * Suscripción a los sponsors.
+ * - Administrador (realtime: true): tiempo real con Firebase.
+ * - Visitantes: la misma consulta guardada 5 minutos que usan los shows (/api/cartelera);
+ *   si falla, se usa la conexión en tiempo real como respaldo.
+ */
+export function subscribeToSponsors(
+  onUpdate: (sponsors: Sponsor[], source: SponsorsSource, errorMessage?: string) => void,
+  onError?: (error: Error) => void,
+  options?: { realtime?: boolean }
+): () => void {
+  if (options?.realtime) return subscribeToSponsorsRealtime(onUpdate, onError);
+
+  let stopped = false;
+  let fallbackUnsub: (() => void) | null = null;
+
+  const load = async () => {
+    if (stopped || fallbackUnsub) return;
+    try {
+      const data = await getPublicCartelera();
+      if (stopped || fallbackUnsub) return;
+      const list: Sponsor[] = data.sponsors.map((doc) => ({ ...(doc.data as unknown as Sponsor), id: doc.id }));
+      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      onUpdate(list, list.length > 0 ? 'cloud' : 'empty');
+    } catch (err) {
+      if (stopped || fallbackUnsub) return;
+      console.warn('Sponsors públicos no disponibles, se usa la conexión en tiempo real:', err);
+      fallbackUnsub = subscribeToSponsorsRealtime(onUpdate, onError);
+    }
+  };
+
+  void load();
+  const timer = window.setInterval(() => void load(), PUBLIC_REFRESH_MS);
+  const onVisible = () => {
+    if (document.visibilityState === 'visible') void load();
+  };
+  document.addEventListener('visibilitychange', onVisible);
+
+  return () => {
+    stopped = true;
+    window.clearInterval(timer);
+    document.removeEventListener('visibilitychange', onVisible);
+    if (fallbackUnsub) fallbackUnsub();
+  };
 }

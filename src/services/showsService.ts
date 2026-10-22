@@ -7,6 +7,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { getPublicCartelera, PUBLIC_REFRESH_MS } from './publicCartelera';
 import { Show } from '../types';
 import { formatProperCase } from '../utils/textFormatting';
 
@@ -124,7 +125,7 @@ export type ShowsSource = 'cloud' | 'empty' | 'local';
  * o 'local' (falló la conexión y se muestra la última copia real guardada en este navegador).
  * Si la conexión se corta por un error, vuelve a intentar sola.
  */
-export function subscribeToShows(
+function subscribeToShowsRealtime(
   onUpdate: (shows: Show[], source: ShowsSource, errorMessage?: string) => void,
   onError?: (error: Error) => void
 ): () => void {
@@ -326,3 +327,52 @@ export async function restoreShowsFromBackup(showsToRestore: Show[]): Promise<{ 
   return { count: showsToRestore.length };
 }
 
+
+/**
+ * Suscripción a los shows.
+ * - Administrador (realtime: true): conexión en tiempo real con Firebase, ve todo al instante.
+ * - Visitantes: una sola consulta a /api/cartelera (guardada 5 minutos en Cloudflare), renovada cada 5 minutos.
+ *   Si esa consulta falla, se usa la conexión en tiempo real como respaldo.
+ */
+export function subscribeToShows(
+  onUpdate: (shows: Show[], source: ShowsSource, errorMessage?: string) => void,
+  onError?: (error: Error) => void,
+  options?: { realtime?: boolean }
+): () => void {
+  if (options?.realtime) return subscribeToShowsRealtime(onUpdate, onError);
+
+  let stopped = false;
+  let fallbackUnsub: (() => void) | null = null;
+
+  const load = async () => {
+    if (stopped || fallbackUnsub) return;
+    try {
+      const data = await getPublicCartelera();
+      if (stopped || fallbackUnsub) return;
+      const list: Show[] = [];
+      for (const doc of data.shows) {
+        const normalized = normalizeShow(doc.data, doc.id);
+        if (normalized) list.push(normalized);
+      }
+      onUpdate(list, list.length > 0 ? 'cloud' : 'empty');
+    } catch (err) {
+      if (stopped || fallbackUnsub) return;
+      console.warn('Cartelera pública no disponible, se usa la conexión en tiempo real:', err);
+      fallbackUnsub = subscribeToShowsRealtime(onUpdate, onError);
+    }
+  };
+
+  void load();
+  const timer = window.setInterval(() => void load(), PUBLIC_REFRESH_MS);
+  const onVisible = () => {
+    if (document.visibilityState === 'visible') void load();
+  };
+  document.addEventListener('visibilitychange', onVisible);
+
+  return () => {
+    stopped = true;
+    window.clearInterval(timer);
+    document.removeEventListener('visibilitychange', onVisible);
+    if (fallbackUnsub) fallbackUnsub();
+  };
+}

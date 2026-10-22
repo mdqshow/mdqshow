@@ -46,6 +46,8 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
   const [copiedReport, setCopiedReport] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [visitDays, setVisitDays] = useState<DailyVisitMetrics[]>([]);
+  // Recitales que ya pasaron: se ven por separado, solo si se tilda la opción
+  const [showFinished, setShowFinished] = useState(false);
 
   // Visitas por día: una sola lectura cada vez que se abre el panel
   useEffect(() => {
@@ -152,6 +154,36 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
   const totalBannerClicks = bannerRows.reduce((acc, curr) => acc + curr.clicks, 0);
 
   const filteredShowsList = sortedByClicks;
+
+  // Recitales finalizados (todas sus fechas ya pasaron) + métricas de shows que ya no existen en la base
+  const knownShowIds = new Set(shows.map((show) => show.id));
+  const finishedRows = [
+    ...shows
+      .filter((show) => isShowPast(show.dates))
+      .map((show) => {
+        const metric = metricsMap[show.id];
+        return {
+          id: show.id,
+          band: show.band,
+          tourName: show.tourName || '',
+          venue: show.venue || '',
+          ticketClicks: metric?.ticketClicks || 0,
+          shares: metric?.shares || 0,
+        };
+      }),
+    ...Object.values(metricsMap)
+      .filter((metric) => !knownShowIds.has(metric.showId))
+      .map((metric) => ({
+        id: metric.showId,
+        band: metric.bandName || 'Show eliminado',
+        tourName: '',
+        venue: '',
+        ticketClicks: metric.ticketClicks || 0,
+        shares: metric.shares || 0,
+      })),
+  ].sort((a, b) => b.ticketClicks - a.ticketClicks);
+  const finishedClicks = finishedRows.reduce((acc, curr) => acc + curr.ticketClicks, 0);
+  const finishedShares = finishedRows.reduce((acc, curr) => acc + curr.shares, 0);
 
   const handleResetCounters = async () => {
     const ok = window.confirm(
@@ -411,6 +443,15 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
           {/* Table: Shows */}
           {activeTab === 'shows' && (
             <div className="flex-1 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/50">
+              <label className="flex items-center gap-2 px-4 py-2 border-b border-slate-800 bg-slate-900/60 text-xs text-slate-300 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={showFinished}
+                  onChange={(e) => setShowFinished(e.target.checked)}
+                  className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-emerald-500 cursor-pointer"
+                />
+                Mostrar finalizados por separado ({finishedRows.length})
+              </label>
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="sticky top-0 bg-slate-900 border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
                   <tr>
@@ -457,12 +498,48 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
                   {filteredShowsList.length === 0 && (
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
-                        No se encontraron recitales con ese criterio.
+                        No hay recitales vigentes.
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
+
+              {showFinished && (
+                <div className="border-t-2 border-slate-700">
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 bg-slate-900 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
+                    <span>Finalizados ({finishedRows.length})</span>
+                    <span className="normal-case tracking-normal text-slate-400">
+                      Total finalizados: <b className="text-emerald-400">{finishedClicks}</b> clicks ·{' '}
+                      <b className="text-emerald-400">{finishedShares}</b> WhatsApp
+                    </span>
+                  </div>
+                  <table className="w-full text-left text-xs sm:text-sm">
+                    <tbody className="divide-y divide-slate-800/80 text-slate-300">
+                      {finishedRows.map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-900/60 transition-colors">
+                          <td className="py-3 px-4 font-bold text-white">
+                            {item.band}
+                            {item.tourName && (
+                              <p className="text-[11px] font-normal text-slate-400">{item.tourName}</p>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-slate-300">{item.venue}</td>
+                          <td className="py-3 px-4 text-right font-mono font-black text-emerald-400">{item.ticketClicks}</td>
+                          <td className="py-3 px-4 text-right font-mono font-semibold text-emerald-400">{item.shares}</td>
+                        </tr>
+                      ))}
+                      {finishedRows.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="py-6 text-center text-slate-400 text-xs">
+                            Todavía no hay recitales finalizados.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 

@@ -136,6 +136,34 @@ export default function App() {
     window.location.replace(destination);
   };
 
+  // Cierre de sesión automático del administrador por inactividad (30 minutos sin tocar nada),
+  // para no quedar "dentro" del panel al volver más tarde a la web.
+  useEffect(() => {
+    if (!isAdmin) return;
+    const IDLE_LIMIT_MS = 30 * 60 * 1000;
+    let lastActivity = Date.now();
+    const markActivity = () => {
+      lastActivity = Date.now();
+    };
+    const checkIdle = () => {
+      if (Date.now() - lastActivity > IDLE_LIMIT_MS) {
+        void handleAdminLogout();
+      }
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') checkIdle();
+    };
+    const events = ['pointerdown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach((name) => window.addEventListener(name, markActivity, { passive: true }));
+    document.addEventListener('visibilitychange', onVisible);
+    const timer = window.setInterval(checkIdle, 30 * 1000);
+    return () => {
+      events.forEach((name) => window.removeEventListener(name, markActivity));
+      document.removeEventListener('visibilitychange', onVisible);
+      window.clearInterval(timer);
+    };
+  }, [isAdmin]);
+
   // Shows list initialized from local fallback, then synced with Firestore in real time
   const [allShows, setShows] = useState<Show[]>(() => getLocalFallbackShows());
   // Solo el administrador puede pedir ver también los shows que ya pasaron
@@ -152,13 +180,18 @@ export default function App() {
 
   // Subscribe to real-time updates from Firebase Firestore
   useEffect(() => {
-    const unsubscribe = subscribeToShows((cloudShows, source, errorMessage) => {
-      setShows(cloudShows || []);
-      setShowsStatus({ source, error: errorMessage });
-      setShowsLoaded(true);
-    });
+    // Administrador: tiempo real. Visitantes: consulta guardada 5 minutos (gasta muy pocas lecturas de Firebase)
+    const unsubscribe = subscribeToShows(
+      (cloudShows, source, errorMessage) => {
+        setShows(cloudShows || []);
+        setShowsStatus({ source, error: errorMessage });
+        setShowsLoaded(true);
+      },
+      undefined,
+      { realtime: isAdmin }
+    );
     return () => unsubscribe();
-  }, []);
+  }, [isAdmin]);
 
   // Métricas en tiempo real de Firebase
   const [metricsMap, setMetricsMap] = useState<Record<string, ShowMetrics>>({});
@@ -193,12 +226,16 @@ export default function App() {
   const [sponsorsStatus, setSponsorsStatus] = useState<{ source: 'cloud' | 'empty' | 'local'; error?: string }>({ source: 'local' });
 
   useEffect(() => {
-    const unsubSponsors = subscribeToSponsors((cloudSponsors, source, errorMessage) => {
-      setSponsors(cloudSponsors || []);
-      setSponsorsStatus({ source, error: errorMessage });
-    });
+    const unsubSponsors = subscribeToSponsors(
+      (cloudSponsors, source, errorMessage) => {
+        setSponsors(cloudSponsors || []);
+        setSponsorsStatus({ source, error: errorMessage });
+      },
+      undefined,
+      { realtime: isAdmin }
+    );
     return () => unsubSponsors();
-  }, []);
+  }, [isAdmin]);
 
   const handleSaveSponsor = async (sponsor: Sponsor) => {
     await saveSponsorToCloud(sponsor);
@@ -380,7 +417,8 @@ export default function App() {
   // Descarga del listado rápido de shows en formato TXT (para verificación rápida)
   const handleDownloadTxt = () => {
     // Ordenar shows cronológicamente por primera fecha
-    const sorted = [...allShows].sort((a, b) => {
+    // Solo los recitales vigentes (los que ya pasaron quedan afuera)
+    const sorted = allShows.filter((show) => !isShowPast(show.dates)).sort((a, b) => {
       const dateA = a.dates && a.dates[0] ? a.dates[0] : '9999-99-99';
       const dateB = b.dates && b.dates[0] ? b.dates[0] : '9999-99-99';
       return dateA.localeCompare(dateB);
@@ -388,7 +426,7 @@ export default function App() {
 
     const lines: string[] = [];
     lines.push('====================================================');
-    lines.push('MDQSHOW - LISTADO COMPLETO DE SHOWS Y RECITALES');
+    lines.push('MDQSHOW - LISTADO DE SHOWS Y RECITALES VIGENTES');
     lines.push(`Mar del Plata | Generado el: ${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR')}`);
     lines.push(`Total de shows cargados: ${sorted.length}`);
     lines.push('====================================================\n');
