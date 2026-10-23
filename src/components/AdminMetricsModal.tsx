@@ -16,7 +16,8 @@ import {
   MessageCircle,
   Eye,
   Megaphone,
-  Globe
+  Globe,
+  Clock
 } from 'lucide-react';
 import { Show, Sponsor } from '../types';
 import { ShowMetrics, BannerMetrics, DailyVisitMetrics, getRecentVisitMetrics } from '../services/metricsService';
@@ -42,12 +43,10 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
   bannerMetricsMap,
   sponsors,
 }) => {
-  const [activeTab, setActiveTab] = useState<'shows' | 'banners'>('shows');
+  const [activeTab, setActiveTab] = useState<'shows' | 'finished' | 'banners'>('shows');
   const [copiedReport, setCopiedReport] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [visitDays, setVisitDays] = useState<DailyVisitMetrics[]>([]);
-  // Recitales que ya pasaron: se ven por separado, solo si se tilda la opción
-  const [showFinished, setShowFinished] = useState(false);
 
   // Visitas por día: una sola lectura cada vez que se abre el panel
   useEffect(() => {
@@ -392,28 +391,39 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
 
         {/* Tabs de Selección */}
         <div className="px-5 pt-3 bg-slate-950/40 border-b border-slate-800 flex items-center justify-between gap-4">
-          <div className="flex space-x-2">
+          <div className="flex space-x-1 sm:space-x-2 overflow-x-auto">
             <button
               onClick={() => setActiveTab('shows')}
-              className={`pb-2.5 px-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`pb-2.5 px-2 sm:px-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === 'shows'
                   ? 'border-emerald-500 text-emerald-400'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
               <Ticket className="w-4 h-4" />
-              Recitales y Tickets ({currentShows.length})
+              Recitales vigentes ({currentShows.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('finished')}
+              className={`pb-2.5 px-2 sm:px-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                activeTab === 'finished'
+                  ? 'border-sky-500 text-sky-300'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Clock className="w-4 h-4" />
+              Recitales pasados ({finishedRows.length})
             </button>
             <button
               onClick={() => setActiveTab('banners')}
-              className={`pb-2.5 px-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`pb-2.5 px-2 sm:px-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === 'banners'
                   ? 'border-amber-500 text-amber-300'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
               <Megaphone className="w-4 h-4" />
-              Publicaciones de Banners ({VENUE_SPONSORS.length} Lugares)
+              Sponsors ({bannerRows.length})
             </button>
           </div>
 
@@ -443,15 +453,6 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
           {/* Table: Shows */}
           {activeTab === 'shows' && (
             <div className="flex-1 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/50">
-              <label className="flex items-center gap-2 px-4 py-2 border-b border-slate-800 bg-slate-900/60 text-xs text-slate-300 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={showFinished}
-                  onChange={(e) => setShowFinished(e.target.checked)}
-                  className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-emerald-500 cursor-pointer"
-                />
-                Mostrar finalizados por separado ({finishedRows.length})
-              </label>
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="sticky top-0 bg-slate-900 border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
                   <tr>
@@ -505,41 +506,53 @@ export const AdminMetricsModal: React.FC<AdminMetricsModalProps> = ({
                 </tbody>
               </table>
 
-              {showFinished && (
-                <div className="border-t-2 border-slate-700">
-                  <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 bg-slate-900 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                    <span>Finalizados ({finishedRows.length})</span>
-                    <span className="normal-case tracking-normal text-slate-400">
-                      Total finalizados: <b className="text-emerald-400">{finishedClicks}</b> clicks ·{' '}
-                      <b className="text-emerald-400">{finishedShares}</b> WhatsApp
-                    </span>
-                  </div>
-                  <table className="w-full text-left text-xs sm:text-sm">
-                    <tbody className="divide-y divide-slate-800/80 text-slate-300">
-                      {finishedRows.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-900/60 transition-colors">
-                          <td className="py-3 px-4 font-bold text-white">
-                            {item.band}
-                            {item.tourName && (
-                              <p className="text-[11px] font-normal text-slate-400">{item.tourName}</p>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-slate-300">{item.venue}</td>
-                          <td className="py-3 px-4 text-right font-mono font-black text-emerald-400">{item.ticketClicks}</td>
-                          <td className="py-3 px-4 text-right font-mono font-semibold text-emerald-400">{item.shares}</td>
-                        </tr>
-                      ))}
-                      {finishedRows.length === 0 && (
-                        <tr>
-                          <td colSpan={4} className="py-6 text-center text-slate-400 text-xs">
-                            Todavía no hay recitales finalizados.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+            </div>
+          )}
+
+          {/* Table: Recitales pasados */}
+          {activeTab === 'finished' && (
+            <div className="flex-1 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/50">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-b border-slate-800 bg-slate-900/60 text-xs text-slate-400">
+                <span>Recitales cuyas fechas ya pasaron</span>
+                <span>
+                  Total: <b className="text-emerald-400">{finishedClicks}</b> clicks ·{' '}
+                  <b className="text-emerald-400">{finishedShares}</b> WhatsApp
+                </span>
+              </div>
+              <table className="w-full text-left text-xs sm:text-sm">
+                <thead className="sticky top-0 bg-slate-900 border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
+                  <tr>
+                    <th className="py-3 px-4"># Posición</th>
+                    <th className="py-3 px-4">Banda / Show</th>
+                    <th className="py-3 px-4">Lugar</th>
+                    <th className="py-3 px-4 text-right text-emerald-400">Clicks Tickets</th>
+                    <th className="py-3 px-4 text-right text-emerald-400">WhatsApp</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/80 text-slate-300">
+                  {finishedRows.map((item, index) => (
+                    <tr key={item.id} className="hover:bg-slate-900/60 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-500">#{index + 1}</td>
+                      <td className="py-3 px-4 font-bold text-white">
+                        {item.band}
+                        {item.tourName && (
+                          <p className="text-[11px] font-normal text-slate-400">{item.tourName}</p>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-slate-300">{item.venue}</td>
+                      <td className="py-3 px-4 text-right font-mono font-black text-emerald-400">{item.ticketClicks}</td>
+                      <td className="py-3 px-4 text-right font-mono font-semibold text-emerald-400">{item.shares}</td>
+                    </tr>
+                  ))}
+                  {finishedRows.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
+                        Todavía no hay recitales pasados.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
 
