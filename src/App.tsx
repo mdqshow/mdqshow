@@ -1010,6 +1010,10 @@ export default function App() {
             </p>
             <p className="text-slate-600 text-[11px]">
               © {new Date().getFullYear()} MDQSHOW. Todos los derechos reservados.
+              {' · '}
+              <a href="/privacidad" className="underline hover:text-slate-400 transition-colors">
+                Política de privacidad
+              </a>
             </p>
           </div>
         </div>
