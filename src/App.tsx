@@ -991,7 +991,7 @@ export default function App() {
             </p>
 
             <p className="leading-relaxed text-slate-400">
-              Todas las operaciones de compra y cobro se concretan pura y directamente en las boleterías y plataformas autorizadas por cada productora.
+              Todas las operaciones de compra y cobro se concretan pura y directamente en las boleterías y plataformas autorizadas.
             </p>
 
             <p className="leading-relaxed text-slate-400">
