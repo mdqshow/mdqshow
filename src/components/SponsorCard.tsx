@@ -140,12 +140,22 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
             className="absolute inset-0 w-full h-full object-cover scale-125 blur-xl opacity-80"
             referrerPolicy="no-referrer"
           />
-          <img
-            src={sponsor.image}
-            alt={sponsor.name}
-            className="relative w-full h-full object-contain object-center animate-sponsor-art"
-            referrerPolicy="no-referrer"
-          />
+          {/* Encuadre elegido en el admin: zoom y desplazamiento (en % del marco, así sirve para cualquier tamaño de tarjeta) */}
+          <div
+            className="absolute inset-0"
+            style={{
+              transform: `translate(${sponsor.imageOffsetX ?? 0}%, ${sponsor.imageOffsetY ?? 0}%) scale(${sponsor.imageZoom ?? 1})`,
+              transformOrigin: 'center',
+            }}
+          >
+            <img
+              src={sponsor.image}
+              alt={sponsor.name}
+              draggable={false}
+              className="w-full h-full object-contain object-center animate-sponsor-art"
+              referrerPolicy="no-referrer"
+            />
+          </div>
           {/* Brillo suave que pasa de costado */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="animate-sponsor-sheen absolute top-0 -left-1/3 h-full w-1/4" />

@@ -20,7 +20,9 @@ import {
   RotateCcw,
   AppWindow,
   PanelTop,
-  LayoutList
+  LayoutList,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
 import { Sponsor, SponsorEffectType } from '../types';
 import { SponsorCard } from './SponsorCard';
@@ -73,6 +75,8 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Arrastre de la imagen en la vista previa (encuadre del sponsor con imagen completa)
+  const frameDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number; boxW: number; boxH: number } | null>(null);
   // Mientras se prueba el pop-up el panel se oculta (sin perder lo que se estaba editando) y vuelve al terminar
   const [isPreviewingPopup, setIsPreviewingPopup] = useState(false);
   // Sponsor al que se le está cambiando una ubicación desde la lista
@@ -141,6 +145,42 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
     setIsCreatingNew(false);
   };
 
+  // ----- Encuadre de la imagen: arrastrar para mover y barra / botones para el zoom -----
+  const MIN_ART_ZOOM = 0.5;
+  const MAX_ART_ZOOM = 3;
+  const clampArtZoom = (v: number) => Math.round(Math.min(MAX_ART_ZOOM, Math.max(MIN_ART_ZOOM, v)) * 100) / 100;
+  const clampOffset = (v: number) => Math.round(Math.min(100, Math.max(-100, v)) * 10) / 10;
+  const artZoom = formData.imageZoom ?? 1;
+  const artX = formData.imageOffsetX ?? 0;
+  const artY = formData.imageOffsetY ?? 0;
+  const isArtAdjusted = artZoom !== 1 || artX !== 0 || artY !== 0;
+
+  const handleFramePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (formData.type !== 'image' || formData.imageFit !== 'contain') return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    frameDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: artX, baseY: artY, boxW: rect.width, boxH: rect.height };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handleFramePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = frameDragRef.current;
+    if (!drag) return;
+    const nx = clampOffset(drag.baseX + ((e.clientX - drag.startX) / drag.boxW) * 100);
+    const ny = clampOffset(drag.baseY + ((e.clientY - drag.startY) / drag.boxH) * 100);
+    setFormData(prev => ({ ...prev, imageOffsetX: nx, imageOffsetY: ny }));
+  };
+
+  const handleFramePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    frameDragRef.current = null;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleResetFrame = () => setFormData(prev => ({ ...prev, imageZoom: 1, imageOffsetX: 0, imageOffsetY: 0 }));
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -151,7 +191,8 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
       setFormData(prev => ({
         ...prev,
         image: compressedBase64,
-        type: 'image'
+        type: 'image',
+        imageFit: prev.imageFit ?? 'contain'
       }));
       setFeedbackMsg('Imagen cargada y optimizada con éxito');
       setTimeout(() => setFeedbackMsg(null), 3000);
@@ -194,6 +235,9 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
         link: linkCheck.url,
         image: formData.image || '',
         imageFit: formData.type === 'image' && formData.imageFit === 'contain' ? 'contain' : 'cover',
+        imageZoom: formData.type === 'image' && formData.imageFit === 'contain' ? clampArtZoom(artZoom) : 1,
+        imageOffsetX: formData.type === 'image' && formData.imageFit === 'contain' ? clampOffset(artX) : 0,
+        imageOffsetY: formData.type === 'image' && formData.imageFit === 'contain' ? clampOffset(artY) : 0,
         video: videoCheck.url,
         showInPopup: Boolean(formData.showInPopup),
         showInTopBanner: Boolean(formData.showInTopBanner),
@@ -491,8 +535,8 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                       className="mt-0.5 accent-amber-500"
                     />
                     <span>
-                      <span className="font-bold text-amber-300">Mostrar la imagen completa (sin recortar)</span>
-                      <span className="block text-slate-500">Con una animación suave. Ideal para logos o artes que ya traen el nombre del negocio.</span>
+                      <span className="font-bold text-amber-300">Mostrar la imagen completa y ajustar el encuadre</span>
+                      <span className="block text-slate-500">Sin recortar, con animación suave, y podés moverla y hacerle zoom en la vista previa de abajo. Ideal para logos o artes que ya traen el nombre del negocio.</span>
                     </span>
                   </label>
                 </div>
@@ -801,7 +845,15 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                   <Eye className="w-3.5 h-3.5 text-amber-400" />
                   <span>Vista Previa en Vivo:</span>
                 </span>
-                <div className="max-w-lg mx-auto">
+                <div
+                  className={`max-w-lg mx-auto select-none ${
+                    formData.type === 'image' && formData.imageFit === 'contain' ? 'touch-none cursor-grab active:cursor-grabbing' : ''
+                  }`}
+                  onPointerDown={handleFramePointerDown}
+                  onPointerMove={handleFramePointerMove}
+                  onPointerUp={handleFramePointerUp}
+                  onPointerCancel={handleFramePointerUp}
+                >
                   <SponsorCard
                     sponsor={{
                       id: 'preview',
@@ -810,6 +862,9 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                       address: formData.address || 'DIRECCIÓN O BAJADA',
                       image: formData.image,
                       imageFit: formData.imageFit,
+                      imageZoom: formData.imageZoom,
+                      imageOffsetX: formData.imageOffsetX,
+                      imageOffsetY: formData.imageOffsetY,
                       video: formData.video,
                       link: formData.link,
                       effectType: formData.effectType || 'random',
@@ -822,6 +877,58 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                     variant="preview"
                   />
                 </div>
+
+                {/* Encuadre: zoom con barra o botones; para mover, se arrastra la imagen en la vista previa */}
+                {formData.type === 'image' && formData.imageFit === 'contain' && (
+                  <div className="max-w-lg mx-auto space-y-1.5">
+                    <p className="text-[10px] text-slate-500 text-center">
+                      Arrastrá la imagen para moverla · usá la barra para el zoom (no hace falta guardar para probar)
+                    </p>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, imageZoom: clampArtZoom((prev.imageZoom ?? 1) - 0.1) }))}
+                        disabled={artZoom <= MIN_ART_ZOOM}
+                        className="p-1.5 rounded-md border border-slate-800 bg-slate-950 text-slate-300 hover:text-white disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                        title="Alejar"
+                        aria-label="Alejar"
+                      >
+                        <ZoomOut className="w-4 h-4" />
+                      </button>
+                      <input
+                        type="range"
+                        min={MIN_ART_ZOOM}
+                        max={MAX_ART_ZOOM}
+                        step={0.05}
+                        value={artZoom}
+                        onChange={(e) => setFormData(prev => ({ ...prev, imageZoom: clampArtZoom(Number(e.target.value)) }))}
+                        className="flex-1 accent-amber-500 cursor-pointer"
+                        aria-label="Zoom de la imagen"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, imageZoom: clampArtZoom((prev.imageZoom ?? 1) + 0.1) }))}
+                        disabled={artZoom >= MAX_ART_ZOOM}
+                        className="p-1.5 rounded-md border border-slate-800 bg-slate-950 text-slate-300 hover:text-white disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                        title="Acercar"
+                        aria-label="Acercar"
+                      >
+                        <ZoomIn className="w-4 h-4" />
+                      </button>
+                      <span className="w-10 text-right text-[11px] font-semibold text-slate-300 tabular-nums">
+                        {Math.round(artZoom * 100)}%
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleResetFrame}
+                        disabled={!isArtAdjusted}
+                        className="px-2 py-1 text-[11px] font-semibold rounded-md border border-slate-800 bg-slate-950 text-slate-300 hover:text-white disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        Restablecer
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Botones de acción */}

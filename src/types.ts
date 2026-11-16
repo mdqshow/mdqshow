@@ -65,6 +65,9 @@ export interface Sponsor {
   address: string;           // Renglón 2: Dirección, zona o bajada breve
   image?: string;            // Imagen subida o URL (en tipo video se usa como portada opcional)
   imageFit?: 'cover' | 'contain'; // 'contain' = muestra la imagen completa (sin recortar) con animación suave
+  imageZoom?: number;        // Solo con imageFit 'contain': zoom de la imagen (1 = entera, hasta 3 para acercar)
+  imageOffsetX?: number;     // Solo con imageFit 'contain': desplazamiento horizontal en % del marco (se arrastra en el admin)
+  imageOffsetY?: number;     // Solo con imageFit 'contain': desplazamiento vertical en % del marco
   video?: string;            // URL directa de un video (.mp4 / .webm) para el tipo video
   link?: string;             // Enlace web o red social (ej. Instagram)
   
