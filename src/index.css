@@ -383,3 +383,27 @@
   font-size: clamp(13px, 4.6cqw, 21px);
   line-height: 1.3;
 }
+
+
+/* ---------- Sponsor con arte completo (imageFit = 'contain') ---------- */
+@keyframes sponsorArtFloat {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.035) translateY(-2px); }
+}
+.animate-sponsor-art {
+  animation: sponsorArtFloat 6s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes sponsorSheenPass {
+  0%, 55% { transform: translateX(0) skewX(-18deg); opacity: 0; }
+  62% { opacity: 1; }
+  100% { transform: translateX(520%) skewX(-18deg); opacity: 0; }
+}
+.animate-sponsor-sheen {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: sponsorSheenPass 6s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-sponsor-art, .animate-sponsor-sheen { animation: none; }
+}

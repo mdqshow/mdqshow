@@ -193,6 +193,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
         address: (formData.address || '').trim().toUpperCase(),
         link: linkCheck.url,
         image: formData.image || '',
+        imageFit: formData.type === 'image' && formData.imageFit === 'contain' ? 'contain' : 'cover',
         video: videoCheck.url,
         showInPopup: Boolean(formData.showInPopup),
         showInTopBanner: Boolean(formData.showInTopBanner),
@@ -481,6 +482,19 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                       />
                     </div>
                   )}
+
+                  <label className="flex items-start gap-2 text-xs text-slate-300 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={formData.imageFit === 'contain'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, imageFit: e.target.checked ? 'contain' : 'cover' }))}
+                      className="mt-0.5 accent-amber-500"
+                    />
+                    <span>
+                      <span className="font-bold text-amber-300">Mostrar la imagen completa (sin recortar)</span>
+                      <span className="block text-slate-500">Con una animación suave. Ideal para logos o artes que ya traen el nombre del negocio.</span>
+                    </span>
+                  </label>
                 </div>
               )}
 
@@ -795,6 +809,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                       name: formData.name || 'NOMBRE DEL NEGOCIO',
                       address: formData.address || 'DIRECCIÓN O BAJADA',
                       image: formData.image,
+                      imageFit: formData.imageFit,
                       video: formData.video,
                       link: formData.link,
                       effectType: formData.effectType || 'random',

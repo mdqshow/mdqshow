@@ -64,6 +64,7 @@ export interface Sponsor {
   name: string;              // Renglón 1: Nombre del negocio / sponsor en mayúsculas
   address: string;           // Renglón 2: Dirección, zona o bajada breve
   image?: string;            // Imagen subida o URL (en tipo video se usa como portada opcional)
+  imageFit?: 'cover' | 'contain'; // 'contain' = muestra la imagen completa (sin recortar) con animación suave
   video?: string;            // URL directa de un video (.mp4 / .webm) para el tipo video
   link?: string;             // Enlace web o red social (ej. Instagram)
   

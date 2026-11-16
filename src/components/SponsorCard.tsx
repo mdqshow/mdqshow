@@ -129,6 +129,34 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
             </div>
           )}
         </div>
+      ) : isImageSponsor && sponsor.imageFit === 'contain' ? (
+        /* Imagen completa (sin recortar) con animación suave: el arte del sponsor ya trae su nombre */
+        <div className="relative w-full h-full bg-[#f6f1e7] overflow-hidden">
+          {/* Fondo: la misma imagen desenfocada para que los costados se vean parejos */}
+          <img
+            src={sponsor.image}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover scale-125 blur-xl opacity-80"
+            referrerPolicy="no-referrer"
+          />
+          <img
+            src={sponsor.image}
+            alt={sponsor.name}
+            className="relative w-full h-full object-contain object-center animate-sponsor-art"
+            referrerPolicy="no-referrer"
+          />
+          {/* Brillo suave que pasa de costado */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="animate-sponsor-sheen absolute top-0 -left-1/3 h-full w-1/4" />
+          </div>
+          {sponsor.link && (
+            <span className="absolute bottom-1.5 right-2 z-10 p-1 px-1.5 rounded-lg bg-black/55 backdrop-blur-md text-amber-300 border border-amber-500/40 text-[10px] font-bold flex items-center gap-1 group-hover:bg-amber-500 group-hover:text-black transition-colors">
+              <span>Ver</span>
+              <ExternalLink className="w-3 h-3" />
+            </span>
+          )}
+        </div>
       ) : isImageSponsor ? (
         <div className="relative w-full h-full">
           <img
