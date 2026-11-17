@@ -235,6 +235,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
         link: linkCheck.url,
         image: formData.image || '',
         imageFit: formData.type === 'image' && formData.imageFit === 'contain' ? 'contain' : 'cover',
+        typeAddress: formData.type === 'image' && formData.imageFit === 'contain' && formData.typeAddress === true,
         imageZoom: formData.type === 'image' && formData.imageFit === 'contain' ? clampArtZoom(artZoom) : 1,
         imageOffsetX: formData.type === 'image' && formData.imageFit === 'contain' ? clampOffset(artX) : 0,
         imageOffsetY: formData.type === 'image' && formData.imageFit === 'contain' ? clampOffset(artY) : 0,
@@ -458,6 +459,21 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                   <label className="text-xs font-bold text-slate-300 block">
                     Link directo del video (.mp4 o .webm):
                   </label>
+
+                  {formData.imageFit === 'contain' && (
+                    <label className="flex items-start gap-2 text-xs text-slate-300 cursor-pointer pt-1">
+                      <input
+                        type="checkbox"
+                        checked={formData.typeAddress === true}
+                        onChange={(e) => setFormData(prev => ({ ...prev, typeAddress: e.target.checked }))}
+                        className="mt-0.5 accent-amber-500"
+                      />
+                      <span>
+                        <span className="font-bold text-amber-300">Escribir la dirección a máquina sobre la imagen</span>
+                        <span className="block text-slate-500">Toma el texto del campo "Dirección o bajada" y lo escribe y borra en bucle, en el lugar libre debajo del nombre. La imagen tiene que dejar ese espacio vacío.</span>
+                      </span>
+                    </label>
+                  )}
                   <input
                     type="url"
                     placeholder="https://mdqshow.com.ar/ads/mi-video.mp4"
@@ -862,6 +878,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                       address: formData.address || 'DIRECCIÓN O BAJADA',
                       image: formData.image,
                       imageFit: formData.imageFit,
+                      typeAddress: formData.typeAddress,
                       imageZoom: formData.imageZoom,
                       imageOffsetX: formData.imageOffsetX,
                       imageOffsetY: formData.imageOffsetY,

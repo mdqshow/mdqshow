@@ -94,8 +94,8 @@ export const PRESET_VENUES: PresetVenue[] = [
   { 
     name: 'GAP', 
     address: 'Av. Constitución 5780', 
-    defaultTicketPortal: 'Articket',
-    ticketUrl: 'https://www.articket.com.ar'
+    defaultTicketPortal: 'OJA Tickets',
+    ticketUrl: 'https://www.ojatickets.com'
   },
   { 
     name: 'Polideportivo Islas Malvinas', 

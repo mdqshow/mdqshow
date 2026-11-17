@@ -19,6 +19,8 @@ const KNOWN_CANONICAL: Record<string, string> = {
   'passline': 'Passline',
   'tuentrada': 'TuEntrada',
   'entradauno': 'EntradaUno',
+  'oja tickets': 'OJA Tickets',
+  'ojatickets': 'OJA Tickets',
   'livepass': 'Livepass',
   'ticketportal': 'Ticketportal',
   'eventbrite': 'Eventbrite',

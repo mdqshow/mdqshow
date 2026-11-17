@@ -11,6 +11,7 @@ const KNOWN_PORTAL_DOMAINS: KnownPortal[] = [
   { domainKey: 'allaccess', name: 'AllAccess' },
   { domainKey: 'articket', name: 'Articket' },
   { domainKey: 'entradauno', name: 'EntradaUno' },
+  { domainKey: 'ojatickets', name: 'OJA Tickets' },
   { domainKey: 'ticketek', name: 'Ticketek' },
   { domainKey: 'passline', name: 'Passline' },
   { domainKey: 'plateanet', name: 'PlateaNet' },

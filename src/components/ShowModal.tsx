@@ -46,6 +46,7 @@ const PRESET_TICKET_PORTALS = [
   { name: 'Articket', url: 'https://articket.com.ar' },
   { name: 'Boletería del lugar', url: '' },
   { name: 'EntradaUno', url: 'https://www.entradauno.com' },
+  { name: 'OJA Tickets', url: 'https://www.ojatickets.com' },
   { name: 'Passline', url: 'https://www.passline.com' },
   { name: 'PlateaNet', url: 'https://www.plateanet.com' },
   { name: 'Ticketek', url: 'https://www.ticketek.com.ar' },
@@ -267,7 +268,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
         setTicketPortalName(found.defaultTicketPortal);
         setIsCustomPortal(false);
       }
-      if (found.ticketUrl && (!ticketUrl || ticketUrl.includes('articket') || ticketUrl.includes('ticketek'))) {
+      if (found.ticketUrl && (!ticketUrl || ticketUrl.includes('articket') || ticketUrl.includes('ticketek') || ticketUrl.includes('ojatickets'))) {
         setTicketUrl(found.ticketUrl);
       }
     }

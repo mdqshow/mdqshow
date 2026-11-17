@@ -387,23 +387,29 @@
 
 /* ---------- Sponsor con arte completo (imageFit = 'contain') ---------- */
 @keyframes sponsorArtFloat {
-  0%, 100% { transform: scale(1) translateY(0); }
-  50% { transform: scale(1.035) translateY(-2px); }
+  0%, 100% { transform: translateY(0) scale(1.02); }
+  50% { transform: translateY(-3%) scale(1.04); }
 }
 .animate-sponsor-art {
-  animation: sponsorArtFloat 6s ease-in-out infinite;
+  animation: sponsorArtFloat 5s ease-in-out infinite;
   will-change: transform;
 }
 @keyframes sponsorSheenPass {
   0%, 55% { transform: translateX(0) skewX(-18deg); opacity: 0; }
   62% { opacity: 1; }
-  100% { transform: translateX(520%) skewX(-18deg); opacity: 0; }
+  100% { transform: translateX(560%) skewX(-18deg); opacity: 0; }
 }
 .animate-sponsor-sheen {
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
   animation: sponsorSheenPass 6s ease-in-out infinite;
   will-change: transform, opacity;
 }
+@keyframes sponsorCaretBlink {
+  50% { opacity: 0; }
+}
+.animate-sponsor-caret {
+  animation: sponsorCaretBlink 0.8s steps(1) infinite;
+}
 @media (prefers-reduced-motion: reduce) {
-  .animate-sponsor-art, .animate-sponsor-sheen { animation: none; }
+  .animate-sponsor-art, .animate-sponsor-sheen, .animate-sponsor-caret { animation: none; }
 }

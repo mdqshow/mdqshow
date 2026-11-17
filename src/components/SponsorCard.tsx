@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { Sponsor, SponsorEffectType } from '../types';
 import { trackBannerClick } from '../services/metricsService';
@@ -17,6 +17,148 @@ const AVAILABLE_EFFECTS: SponsorEffectType[] = [
   'retro-bounce',
   'float-glow',
 ];
+
+// Dirección escrita a máquina: se escribe, queda unos segundos, se borra y vuelve a empezar.
+// El texto completo se reserva (invisible) para que no se mueva mientras se escribe.
+const TypedAddress: React.FC<{ text: string }> = ({ text }) => {
+  const [shown, setShown] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    const reduce = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setReduceMotion(reduce);
+    if (reduce) {
+      setShown(text.length);
+      return;
+    }
+    let cancelled = false;
+    let timer: number | undefined;
+    let i = 0;
+    let typing = true;
+    const tick = () => {
+      if (cancelled) return;
+      if (typing) {
+        i += 1;
+        setShown(i);
+        if (i >= text.length) {
+          typing = false;
+          timer = window.setTimeout(tick, 3800);
+          return;
+        }
+        timer = window.setTimeout(tick, 70);
+      } else {
+        i -= 1;
+        setShown(i);
+        if (i <= 0) {
+          typing = true;
+          timer = window.setTimeout(tick, 700);
+          return;
+        }
+        timer = window.setTimeout(tick, 22);
+      }
+    };
+    setShown(0);
+    timer = window.setTimeout(tick, 600);
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [text]);
+
+  return (
+    <span className="relative inline-block">
+      <span className="invisible">{text}</span>
+      <span className="absolute left-0 top-0 whitespace-nowrap">
+        {text.slice(0, shown)}
+        {!reduceMotion && (
+          <span
+            aria-hidden="true"
+            className="animate-sponsor-caret inline-block bg-current ml-[2px]"
+            style={{ width: '0.09em', height: '1em', verticalAlign: '-0.12em' }}
+          />
+        )}
+      </span>
+    </span>
+  );
+};
+
+// Sponsor con imagen completa: encuadre (zoom y desplazamiento), flote suave, brillo y dirección a máquina.
+const SponsorArt: React.FC<{ sponsor: Sponsor }> = ({ sponsor }) => {
+  const [ratio, setRatio] = useState<number | null>(null);
+  const address = (sponsor.address || '').trim();
+  const showTyped = !!sponsor.typeAddress && address.length > 0;
+
+  return (
+    <div className="relative w-full h-full bg-[#dfd3c5] overflow-hidden">
+      {/* Fondo: la misma imagen desenfocada para que los costados se vean parejos */}
+      <img
+        src={sponsor.image}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover scale-125 blur-xl opacity-80"
+        referrerPolicy="no-referrer"
+      />
+      {/* Encuadre elegido en el admin: zoom y desplazamiento (en % del marco, sirve para cualquier tamaño de tarjeta) */}
+      <div
+        className="absolute inset-0 flex items-center justify-center"
+        style={{
+          containerType: 'size',
+          transform: `translate(${sponsor.imageOffsetX ?? 0}%, ${sponsor.imageOffsetY ?? 0}%) scale(${sponsor.imageZoom ?? 1})`,
+          transformOrigin: 'center',
+        }}
+      >
+        {/* Caja con la proporción real de la imagen: así la dirección queda siempre sobre el mismo lugar del arte */}
+        <div
+          className="relative"
+          style={
+            ratio
+              ? { containerType: 'inline-size', aspectRatio: String(ratio), width: `min(100cqw, calc(100cqh * ${ratio}))` }
+              : { width: '100%', height: '100%' }
+          }
+        >
+          <img
+            src={sponsor.image}
+            alt={sponsor.name}
+            draggable={false}
+            onLoad={(e) => {
+              const { naturalWidth, naturalHeight } = e.currentTarget;
+              if (naturalWidth && naturalHeight) setRatio(naturalWidth / naturalHeight);
+            }}
+            className="absolute inset-0 w-full h-full object-contain animate-sponsor-art"
+            referrerPolicy="no-referrer"
+          />
+          {showTyped && ratio && (
+            <div
+              className="absolute left-0 right-0 text-center uppercase pointer-events-none"
+              style={{
+                top: '79%',
+                lineHeight: 1,
+                fontFamily: 'Verdana, Geneva, sans-serif',
+                fontWeight: 700,
+                letterSpacing: '0.03em',
+                color: '#1d1a17',
+                fontSize: 'max(10px, 2.6cqw)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <TypedAddress text={address} />
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Brillo dorado que cruza de costado */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="animate-sponsor-sheen absolute top-0 -left-[30%] h-full w-[22%]" />
+      </div>
+      {sponsor.link && (
+        <span className="absolute bottom-1.5 right-2 z-10 p-1 px-1.5 rounded-lg bg-black/55 backdrop-blur-md text-amber-300 border border-amber-500/40 text-[10px] font-bold flex items-center gap-1 group-hover:bg-amber-500 group-hover:text-black transition-colors">
+          <span>Ver</span>
+          <ExternalLink className="w-3 h-3" />
+        </span>
+      )}
+    </div>
+  );
+};
 
 interface SponsorCardProps {
   sponsor: Sponsor;
@@ -130,43 +272,7 @@ export const SponsorCard: React.FC<SponsorCardProps> = ({
           )}
         </div>
       ) : isImageSponsor && sponsor.imageFit === 'contain' ? (
-        /* Imagen completa (sin recortar) con animación suave: el arte del sponsor ya trae su nombre */
-        <div className="relative w-full h-full bg-[#f6f1e7] overflow-hidden">
-          {/* Fondo: la misma imagen desenfocada para que los costados se vean parejos */}
-          <img
-            src={sponsor.image}
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-cover scale-125 blur-xl opacity-80"
-            referrerPolicy="no-referrer"
-          />
-          {/* Encuadre elegido en el admin: zoom y desplazamiento (en % del marco, así sirve para cualquier tamaño de tarjeta) */}
-          <div
-            className="absolute inset-0"
-            style={{
-              transform: `translate(${sponsor.imageOffsetX ?? 0}%, ${sponsor.imageOffsetY ?? 0}%) scale(${sponsor.imageZoom ?? 1})`,
-              transformOrigin: 'center',
-            }}
-          >
-            <img
-              src={sponsor.image}
-              alt={sponsor.name}
-              draggable={false}
-              className="w-full h-full object-contain object-center animate-sponsor-art"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-          {/* Brillo suave que pasa de costado */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="animate-sponsor-sheen absolute top-0 -left-1/3 h-full w-1/4" />
-          </div>
-          {sponsor.link && (
-            <span className="absolute bottom-1.5 right-2 z-10 p-1 px-1.5 rounded-lg bg-black/55 backdrop-blur-md text-amber-300 border border-amber-500/40 text-[10px] font-bold flex items-center gap-1 group-hover:bg-amber-500 group-hover:text-black transition-colors">
-              <span>Ver</span>
-              <ExternalLink className="w-3 h-3" />
-            </span>
-          )}
-        </div>
+        <SponsorArt sponsor={sponsor} />
       ) : isImageSponsor ? (
         <div className="relative w-full h-full">
           <img
