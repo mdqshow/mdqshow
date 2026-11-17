@@ -460,20 +460,6 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                     Link directo del video (.mp4 o .webm):
                   </label>
 
-                  {formData.imageFit === 'contain' && (
-                    <label className="flex items-start gap-2 text-xs text-slate-300 cursor-pointer pt-1">
-                      <input
-                        type="checkbox"
-                        checked={formData.typeAddress === true}
-                        onChange={(e) => setFormData(prev => ({ ...prev, typeAddress: e.target.checked }))}
-                        className="mt-0.5 accent-amber-500"
-                      />
-                      <span>
-                        <span className="font-bold text-amber-300">Escribir la dirección a máquina sobre la imagen</span>
-                        <span className="block text-slate-500">Toma el texto del campo "Dirección o bajada" y lo escribe y borra en bucle, en el lugar libre debajo del nombre. La imagen tiene que dejar ese espacio vacío.</span>
-                      </span>
-                    </label>
-                  )}
                   <input
                     type="url"
                     placeholder="https://mdqshow.com.ar/ads/mi-video.mp4"
@@ -555,6 +541,20 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                       <span className="block text-slate-500">Sin recortar, con animación suave, y podés moverla y hacerle zoom en la vista previa de abajo. Ideal para logos o artes que ya traen el nombre del negocio.</span>
                     </span>
                   </label>
+                  {formData.imageFit === 'contain' && (
+                    <label className="flex items-start gap-2 text-xs text-slate-300 cursor-pointer pt-1">
+                      <input
+                        type="checkbox"
+                        checked={formData.typeAddress === true}
+                        onChange={(e) => setFormData(prev => ({ ...prev, typeAddress: e.target.checked }))}
+                        className="mt-0.5 accent-amber-500"
+                      />
+                      <span>
+                        <span className="font-bold text-amber-300">Escribir la dirección a máquina sobre la imagen</span>
+                        <span className="block text-slate-500">Toma el texto del campo "Dirección o bajada" y lo escribe y borra en bucle, en el lugar libre debajo del nombre. La imagen tiene que dejar ese espacio vacío.</span>
+                      </span>
+                    </label>
+                  )}
                 </div>
               )}
 
