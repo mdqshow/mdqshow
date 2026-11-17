@@ -57,7 +57,7 @@ const PRESET_BACKGROUNDS = [
   { name: 'Neón Rock (Abbey Road)', bg: 'bg-gradient-to-br from-[#121214] via-[#1c1917] to-[#0c0a09]', text: 'text-amber-400', subtext: 'text-orange-300/90' },
   { name: 'Océano Marino (Mute)', bg: 'bg-gradient-to-br from-[#032b30] via-[#064249] to-[#011a1d]', text: 'text-emerald-300', subtext: 'text-teal-200/90' },
   { name: 'Azul Arena (Arena MDP)', bg: 'bg-gradient-to-br from-[#071c30] via-[#0c2e4e] to-[#041221]', text: 'text-cyan-200', subtext: 'text-sky-200/90' },
-  { name: 'Borgoña Carmesí (Plaza Música)', bg: 'bg-gradient-to-br from-[#2a0813] via-[#1a050c] to-[#3b0d1b]', text: 'text-rose-200', subtext: 'text-rose-300/90' },
+  { name: 'Borgoña Carmesí (GAP)', bg: 'bg-gradient-to-br from-[#2a0813] via-[#1a050c] to-[#3b0d1b]', text: 'text-rose-200', subtext: 'text-rose-300/90' },
   { name: 'Marquesina Broadway (Radio City)', bg: 'bg-gradient-to-br from-[#23093b] via-[#150426] to-[#300c4f]', text: 'text-fuchsia-200', subtext: 'text-pink-300/90' },
   { name: 'Cyber Noche', bg: 'bg-gradient-to-br from-[#051329] via-[#020b18] to-black', text: 'text-cyan-300', subtext: 'text-pink-300' },
 ];
@@ -713,7 +713,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                     <option value="abbey-road">Abbey Road (Destello Neón Rock Retro)</option>
                     <option value="bendu">Bendu Arena (Balanceo 3D con resplandor dorado áureo)</option>
                     <option value="arena-mdp">Arena Mar del Plata (Expansión y contracción tracking de letras)</option>
-                    <option value="plaza-musica">Plaza de la Música (Pulso rítmico musical ecualizador)</option>
+                    <option value="plaza-musica">GAP (Pulso rítmico musical ecualizador)</option>
                     <option value="mute">Mute (Ola marina oceánica y destello turquesa)</option>
                     <option value="radio-city">Teatro Radio City (Marquesina teatral Broadway)</option>
                     <option value="cyber-neon">Cyber Neón (Pulso eléctrico cyan y fucsia)</option>

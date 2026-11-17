@@ -92,7 +92,7 @@ export const PRESET_VENUES: PresetVenue[] = [
     ticketUrl: 'https://www.passline.com'
   },
   { 
-    name: 'Plaza de la Música Mar del Plata', 
+    name: 'GAP', 
     address: 'Av. Constitución 5780', 
     defaultTicketPortal: 'Articket',
     ticketUrl: 'https://www.articket.com.ar'
@@ -142,7 +142,7 @@ export const LA_FELIZ_VENUES: string[] = [
   'Brew House',
   'Club Tri',
   'Mute',
-  'Plaza de la Música',
+  'GAP',
   'Polideportivo',
   'Radio City',
   'Teatro Tronador',

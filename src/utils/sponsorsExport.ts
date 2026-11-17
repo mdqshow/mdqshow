@@ -12,7 +12,7 @@ const EFFECT_LABELS: Record<string, string> = {
   'abbey-road': 'Abbey Road',
   bendu: 'Bendu Arena',
   'arena-mdp': 'Arena Mar del Plata',
-  'plaza-musica': 'Plaza de la Música',
+  'plaza-musica': 'GAP',
   mute: 'Mute',
   'radio-city': 'Teatro Radio City',
   'cyber-neon': 'Cyber Neón',

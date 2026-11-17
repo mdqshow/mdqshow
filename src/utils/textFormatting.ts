@@ -50,9 +50,12 @@ const KNOWN_CANONICAL: Record<string, string> = {
   'once unidos': 'Once Unidos',
   'estadio jose maria minella': 'Estadio José María Minella',
   'estadio josé maría minella': 'Estadio José María Minella',
-  'plaza de la musica': 'Plaza de la Música',
-  'plaza de la música': 'Plaza de la Música',
-  'plaza de la música mar del plata': 'Plaza de la Música Mar del Plata',
+  // La Plaza de la Música ahora se llama GAP: los shows ya cargados con el nombre viejo se ven con el nombre nuevo
+  'gap': 'GAP',
+  'plaza de la musica': 'GAP',
+  'plaza de la música': 'GAP',
+  'plaza de la musica mar del plata': 'GAP',
+  'plaza de la música mar del plata': 'GAP',
 };
 
 /**

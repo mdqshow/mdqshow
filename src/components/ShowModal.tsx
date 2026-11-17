@@ -537,7 +537,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                 { label: '🔥 Bendu Arena', name: 'Bendu Arena' },
                 { label: '⭐ Once Unidos', name: 'Once Unidos' },
                 { label: '⚽ Estadio Minella', name: 'Estadio José María Minella' },
-                { label: '🎸 Plaza de la Música', name: 'Plaza de la Música Mar del Plata' },
+                { label: '🎸 GAP', name: 'GAP' },
                 { label: '🏀 Polideportivo', name: 'Polideportivo Islas Malvinas' },
                 { label: '🏛️ Auditorium', name: 'Auditorium (Centro Provincial de las Artes)' },
                 { label: '🎭 Teatro Colón', name: 'Teatro Colón Mar del Plata' },
@@ -597,7 +597,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                 required
                 value={venue}
                 onChange={(e) => setVenue(e.target.value)}
-                placeholder="Ej: Arena Mar del Plata, Plaza de la Música, Polideportivo..."
+                placeholder="Ej: Arena Mar del Plata, GAP, Polideportivo..."
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
               />
             </div>
