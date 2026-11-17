@@ -1,0 +1,1087 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  X, 
+  Plus, 
+  Trash2, 
+  Edit3, 
+  Sparkles, 
+  Upload, 
+  Image as ImageIcon, 
+  Type, 
+  Film,
+  ExternalLink, 
+  Check, 
+  Eye, 
+  CheckSquare, 
+  Square,
+  AlertCircle,
+  Megaphone,
+  Play,
+  RotateCcw,
+  AppWindow,
+  PanelTop,
+  LayoutList,
+  ZoomIn,
+  ZoomOut
+} from 'lucide-react';
+import { Sponsor, SponsorEffectType } from '../types';
+import { SponsorCard } from './SponsorCard';
+import { compressImage } from '../utils/imageCompressor';
+import { normalizeUserUrl } from '../utils/safeUrl';
+import { isSponsorPaused } from '../utils/sponsorStatus';
+
+type PlacementField = 'showInPopup' | 'showInTopBanner' | 'showInFeed';
+
+// Las 3 ubicaciones donde puede salir una publicidad, con su icono
+const PLACEMENTS: { field: PlacementField; label: string; Icon: React.ComponentType<{ className?: string }>; onClass: string }[] = [
+  { field: 'showInPopup', label: 'Pop-up de inicio', Icon: AppWindow, onClass: 'text-amber-400 bg-amber-500/15' },
+  { field: 'showInTopBanner', label: 'Los dos primeros banners', Icon: PanelTop, onClass: 'text-sky-400 bg-sky-500/15' },
+  { field: 'showInFeed', label: 'Resto de la página', Icon: LayoutList, onClass: 'text-violet-400 bg-violet-500/15' },
+];
+
+interface AdminSponsorsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  sponsors: Sponsor[];
+  onSaveSponsor: (sponsor: Sponsor) => Promise<void>;
+  onDeleteSponsor: (sponsorId: string) => Promise<void>;
+  // De dónde viene la lista que se está viendo: la base real ('cloud'), vacía ('empty') o una copia ('local')
+  sponsorsStatus?: { source: 'cloud' | 'empty' | 'local'; error?: string };
+}
+
+const isHexColor = (v?: string) => !!v && /^#[0-9a-fA-F]{6}$/.test(v.trim());
+
+const PRESET_BACKGROUNDS = [
+  { name: 'Negro & Ámbar', bg: 'bg-black', text: 'text-amber-300', subtext: 'text-zinc-300' },
+  { name: 'Noche & Oro (Bendu)', bg: 'bg-gradient-to-br from-[#180e29] via-[#0f071a] to-[#24123d]', text: 'text-amber-300', subtext: 'text-amber-200/90' },
+  { name: 'Neón Rock (Abbey Road)', bg: 'bg-gradient-to-br from-[#121214] via-[#1c1917] to-[#0c0a09]', text: 'text-amber-400', subtext: 'text-orange-300/90' },
+  { name: 'Océano Marino (Mute)', bg: 'bg-gradient-to-br from-[#032b30] via-[#064249] to-[#011a1d]', text: 'text-emerald-300', subtext: 'text-teal-200/90' },
+  { name: 'Azul Arena (Arena MDP)', bg: 'bg-gradient-to-br from-[#071c30] via-[#0c2e4e] to-[#041221]', text: 'text-cyan-200', subtext: 'text-sky-200/90' },
+  { name: 'Borgoña Carmesí (GAP)', bg: 'bg-gradient-to-br from-[#2a0813] via-[#1a050c] to-[#3b0d1b]', text: 'text-rose-200', subtext: 'text-rose-300/90' },
+  { name: 'Marquesina Broadway (Radio City)', bg: 'bg-gradient-to-br from-[#23093b] via-[#150426] to-[#300c4f]', text: 'text-fuchsia-200', subtext: 'text-pink-300/90' },
+  { name: 'Cyber Noche', bg: 'bg-gradient-to-br from-[#051329] via-[#020b18] to-black', text: 'text-cyan-300', subtext: 'text-pink-300' },
+];
+
+export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
+  isOpen,
+  onClose,
+  sponsors,
+  onSaveSponsor,
+  onDeleteSponsor,
+  sponsorsStatus,
+}) => {
+  const [editingSponsor, setEditingSponsor] = useState<Sponsor | null>(null);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Arrastre de la imagen en la vista previa (encuadre del sponsor con imagen completa)
+  const frameDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number; boxW: number; boxH: number } | null>(null);
+  // Mientras se prueba el pop-up el panel se oculta (sin perder lo que se estaba editando) y vuelve al terminar
+  const [isPreviewingPopup, setIsPreviewingPopup] = useState(false);
+  // Sponsor al que se le está cambiando una ubicación desde la lista
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isPreviewingPopup) return;
+    const handleClosed = () => setIsPreviewingPopup(false);
+    window.addEventListener('mdq_ad_popup_closed', handleClosed);
+    // Por las dudas (si el pop-up no llegara a abrirse), el panel vuelve solo a los 12 segundos
+    const safetyTimer = window.setTimeout(() => setIsPreviewingPopup(false), 12000);
+    return () => {
+      window.removeEventListener('mdq_ad_popup_closed', handleClosed);
+      window.clearTimeout(safetyTimer);
+    };
+  }, [isPreviewingPopup]);
+
+  // Form State
+  const [formData, setFormData] = useState<Partial<Sponsor>>({
+    type: 'text',
+    name: '',
+    address: '',
+    link: '',
+    image: '',
+    showInPopup: false,
+    showInTopBanner: false,
+    showInFeed: true,
+    effectType: 'random',
+    bgColor: PRESET_BACKGROUNDS[0].bg,
+    textColor: PRESET_BACKGROUNDS[0].text,
+    subtextColor: PRESET_BACKGROUNDS[0].subtext,
+    isActive: true,
+  });
+
+  if (!isOpen || isPreviewingPopup) return null;
+
+  const handleStartCreate = () => {
+    setIsCreatingNew(true);
+    setEditingSponsor(null);
+    setFormData({
+      id: `sponsor-${Date.now()}`,
+      type: 'text',
+      name: '',
+      address: '',
+      link: '',
+      image: '',
+      showInPopup: false,
+      showInTopBanner: false,
+      showInFeed: true,
+      effectType: 'random',
+      bgColor: PRESET_BACKGROUNDS[0].bg,
+      textColor: PRESET_BACKGROUNDS[0].text,
+      subtextColor: PRESET_BACKGROUNDS[0].subtext,
+      isActive: true,
+    });
+  };
+
+  const handleStartEdit = (s: Sponsor) => {
+    setEditingSponsor(s);
+    setIsCreatingNew(false);
+    setFormData({ ...s });
+  };
+
+  const handleCancelForm = () => {
+    setEditingSponsor(null);
+    setIsCreatingNew(false);
+  };
+
+  // ----- Encuadre de la imagen: arrastrar para mover y barra / botones para el zoom -----
+  const MIN_ART_ZOOM = 0.5;
+  const MAX_ART_ZOOM = 3;
+  const clampArtZoom = (v: number) => Math.round(Math.min(MAX_ART_ZOOM, Math.max(MIN_ART_ZOOM, v)) * 100) / 100;
+  const clampOffset = (v: number) => Math.round(Math.min(100, Math.max(-100, v)) * 10) / 10;
+  const artZoom = formData.imageZoom ?? 1;
+  const artX = formData.imageOffsetX ?? 0;
+  const artY = formData.imageOffsetY ?? 0;
+  const isArtAdjusted = artZoom !== 1 || artX !== 0 || artY !== 0;
+
+  const handleFramePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (formData.type !== 'image' || formData.imageFit !== 'contain') return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    frameDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: artX, baseY: artY, boxW: rect.width, boxH: rect.height };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handleFramePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = frameDragRef.current;
+    if (!drag) return;
+    const nx = clampOffset(drag.baseX + ((e.clientX - drag.startX) / drag.boxW) * 100);
+    const ny = clampOffset(drag.baseY + ((e.clientY - drag.startY) / drag.boxH) * 100);
+    setFormData(prev => ({ ...prev, imageOffsetX: nx, imageOffsetY: ny }));
+  };
+
+  const handleFramePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    frameDragRef.current = null;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleResetFrame = () => setFormData(prev => ({ ...prev, imageZoom: 1, imageOffsetX: 0, imageOffsetY: 0 }));
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      // Comprimir la imagen para que sea ultra ligera y compatible con Firestore
+      const compressedBase64 = await compressImage(file, 900, 450, 0.8);
+      setFormData(prev => ({
+        ...prev,
+        image: compressedBase64,
+        type: 'image',
+        imageFit: prev.imageFit ?? 'contain'
+      }));
+      setFeedbackMsg('Imagen cargada y optimizada con éxito');
+      setTimeout(() => setFeedbackMsg(null), 3000);
+    } catch (err) {
+      console.error('Error al procesar imagen:', err);
+      alert('Error al procesar la imagen. Intenta con un archivo JPG o PNG más pequeño.');
+    }
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name?.trim()) {
+      alert('Por favor ingresá al menos el nombre del sponsor / negocio (Renglón 1).');
+      return;
+    }
+
+    const linkCheck = normalizeUserUrl(formData.link);
+    if (!linkCheck.valid) {
+      alert('El link de destino no es válido. Tiene que ser una dirección web (por ejemplo https://ejemplo.com).');
+      return;
+    }
+    const videoCheck = normalizeUserUrl(formData.video);
+    if (formData.type === 'video' && !videoCheck.valid) {
+      alert('El link del video no es válido. Tiene que ser una dirección web (por ejemplo https://mdqshow.com.ar/ads/video.mp4).');
+      return;
+    }
+
+    if (formData.type === 'video' && !formData.video?.trim()) {
+      alert('Para una publicidad con video ingresá el link directo del video (.mp4 o .webm).');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const sponsorToSave: Sponsor = {
+        id: formData.id || editingSponsor?.id || `sponsor-${Date.now()}`,
+        type: formData.type || 'text',
+        name: formData.name.trim().toUpperCase(),
+        address: (formData.address || '').trim().toUpperCase(),
+        link: linkCheck.url,
+        image: formData.image || '',
+        imageFit: formData.type === 'image' && formData.imageFit === 'contain' ? 'contain' : 'cover',
+        typeAddress: formData.type === 'image' && formData.imageFit === 'contain' && formData.typeAddress === true,
+        imageZoom: formData.type === 'image' && formData.imageFit === 'contain' ? clampArtZoom(artZoom) : 1,
+        imageOffsetX: formData.type === 'image' && formData.imageFit === 'contain' ? clampOffset(artX) : 0,
+        imageOffsetY: formData.type === 'image' && formData.imageFit === 'contain' ? clampOffset(artY) : 0,
+        video: videoCheck.url,
+        showInPopup: Boolean(formData.showInPopup),
+        showInTopBanner: Boolean(formData.showInTopBanner),
+        showInFeed: formData.showInFeed !== false,
+        effectType: formData.effectType || 'random',
+        bgColor: formData.bgColor || PRESET_BACKGROUNDS[0].bg,
+        textColor: formData.textColor || PRESET_BACKGROUNDS[0].text,
+        subtextColor: formData.subtextColor || PRESET_BACKGROUNDS[0].subtext,
+        isActive: formData.isActive !== false,
+        createdAt: formData.createdAt || new Date().toISOString(),
+        notes: formData.notes?.trim() || '',
+      };
+
+      await onSaveSponsor(sponsorToSave);
+      setFeedbackMsg(`Sponsor "${sponsorToSave.name}" guardado exitosamente`);
+      setTimeout(() => setFeedbackMsg(null), 3000);
+      setEditingSponsor(null);
+      setIsCreatingNew(false);
+    } catch (error) {
+      console.error('Error al guardar sponsor:', error);
+      alert('Ocurrió un error al guardar el sponsor en Firestore.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (sponsorId: string, name: string) => {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar permanentemente el sponsor "${name}"?`)) {
+      try {
+        await onDeleteSponsor(sponsorId);
+        if (editingSponsor?.id === sponsorId) {
+          setEditingSponsor(null);
+          setIsCreatingNew(false);
+        }
+      } catch (err) {
+        console.error('Error al eliminar sponsor:', err);
+        alert('Error al eliminar el sponsor.');
+      }
+    }
+  };
+
+  const handleTestPopup = (sponsorId: string) => {
+    // Se oculta el panel (sin cerrarlo) para ver el pop-up sobre la web; cuando el pop-up termina, el panel vuelve
+    setIsPreviewingPopup(true);
+    window.dispatchEvent(new CustomEvent('mdq_trigger_ad_popup', { detail: { sponsorId } }));
+  };
+
+  // Activa o desactiva una ubicación (pop-up / dos primeros / resto de la página) de un sponsor ya cargado
+  const handleTogglePlacement = async (sponsor: Sponsor, field: PlacementField) => {
+    if (togglingId) return;
+    const currentlyOn = field === 'showInFeed' ? sponsor.showInFeed !== false : sponsor[field] === true;
+    setTogglingId(sponsor.id);
+    try {
+      await onSaveSponsor({ ...sponsor, [field]: !currentlyOn });
+      const label = PLACEMENTS.find((p) => p.field === field)?.label || '';
+      setFeedbackMsg(`${sponsor.name}: ${label} ${currentlyOn ? 'desactivado' : 'activado'}`);
+      setTimeout(() => setFeedbackMsg(null), 2500);
+    } catch (err) {
+      console.error('Error al cambiar la ubicación del sponsor:', err);
+      alert('No se pudo cambiar la ubicación del sponsor. Probá de nuevo.');
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const isFormActive = isCreatingNew || editingSponsor !== null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+      <div 
+        className="relative w-full max-w-4xl bg-slate-900 border border-amber-500/40 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-5 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <Megaphone className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
+                <span>Gestión de Publicidades y Sponsors</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  ADMIN
+                </span>
+              </h2>
+              <p className="text-xs text-slate-400">
+                Configurá sponsors con imagen o texto en 2 renglones con transiciones animadas automáticas
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Feedback message banner */}
+        {feedbackMsg && (
+          <div className="px-4 py-2 bg-emerald-950/80 border-b border-emerald-500/50 text-emerald-300 text-xs font-semibold flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{feedbackMsg}</span>
+          </div>
+        )}
+
+        {/* Content Body */}
+        <div className="p-5 overflow-y-auto space-y-6 flex-1">
+          {/* Aviso: la lista no viene de la base de datos real */}
+          {sponsorsStatus && sponsorsStatus.source === 'local' && (
+            <div className="p-3.5 rounded-2xl bg-rose-950/60 border border-rose-500/50 text-rose-100 text-xs" role="alert">
+              <p className="font-bold">
+                ⚠️ No se pudo leer la base de datos: la lista de sponsors que ves es una copia guardada, no la real.
+              </p>
+              <p className="mt-1 text-rose-200/90">
+                Evitá cargar, editar o borrar sponsors hasta que desaparezca este aviso.
+              </p>
+            </div>
+          )}
+          {sponsorsStatus && sponsorsStatus.source === 'empty' && (
+            <div className="p-3.5 rounded-2xl bg-amber-950/50 border border-amber-500/40 text-amber-100 text-xs" role="status">
+              Todavía no hay sponsors cargados en la base de datos. Los banners usan la lista de teatros y estadios por defecto.
+            </div>
+          )}
+
+          {/* Top toolbar */}
+          {!isFormActive && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+              <div>
+                <h3 className="text-sm font-bold text-white">Sponsors Registrados ({sponsors.length})</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Tocá una publicidad para editarla o cargá una nueva:
+                </p>
+              </div>
+
+              <button
+                type="button"
+                id="btn-admin-add-sponsor"
+                onClick={handleStartCreate}
+                className="flex items-center px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm shadow-md shadow-amber-950/40 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4 mr-1.5 shrink-0" />
+                <span>Cargar Nueva Publicidad</span>
+              </button>
+            </div>
+          )}
+
+          {/* Formulario de Alta / Edición */}
+          {isFormActive ? (
+            <form onSubmit={handleSave} className="space-y-6 bg-slate-950/70 p-5 rounded-2xl border border-slate-800">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span>{isCreatingNew ? 'Cargar Nueva Publicidad' : `Editando: ${editingSponsor?.name}`}</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={handleCancelForm}
+                  className="text-xs font-semibold text-slate-400 hover:text-white"
+                >
+                  Cancelar
+                </button>
+              </div>
+
+              {/* Selector de Tipo: Solo Texto vs Con Imagen */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-300 block">
+                  1. ¿Qué tipo de publicidad querés publicar?
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, type: 'text' }))}
+                    className={`p-3.5 rounded-xl border flex items-center justify-center gap-2.5 font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                      formData.type === 'text'
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-md shadow-amber-950/30'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Type className="w-4 h-4" />
+                    <span>Solo Texto (2 Renglones)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, type: 'image' }))}
+                    className={`p-3.5 rounded-xl border flex items-center justify-center gap-2.5 font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                      formData.type === 'image'
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-md shadow-amber-950/30'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    <span>Con Imagen / Banner Gráfico</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, type: 'video' }))}
+                    className={`p-3.5 rounded-xl border flex items-center justify-center gap-2.5 font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                      formData.type === 'video'
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-md shadow-amber-950/30'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Film className="w-4 h-4" />
+                    <span>Con Video</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Si es con video: URL directa del archivo */}
+              {formData.type === 'video' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+                  <label className="text-xs font-bold text-slate-300 block">
+                    Link directo del video (.mp4 o .webm):
+                  </label>
+
+                  <input
+                    type="url"
+                    placeholder="https://mdqshow.com.ar/ads/mi-video.mp4"
+                    value={formData.video || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, video: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    Se reproduce solo, sin sonido y en bucle. Recomendado: video corto (hasta 15 segundos) y liviano (menos de 20 MB).
+                  </p>
+
+                  <label className="text-xs font-bold text-slate-300 block pt-1">
+                    Imagen de portada (opcional, se ve mientras carga el video):
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://ejemplo.com/portada.jpg"
+                    value={formData.image || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              )}
+
+              {/* Si es con imagen: subida o URL */}
+              {formData.type === 'image' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+                  <label className="text-xs font-bold text-slate-300 block">
+                    Subir Imagen del Sponsor:
+                  </label>
+                  
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleImageUpload} 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Upload className="w-4 h-4" />
+                      <span>Subir desde celular / PC</span>
+                    </button>
+
+                    <span className="text-xs text-slate-500">o ingresá una URL directa:</span>
+
+                    <input
+                      type="url"
+                      placeholder="https://ejemplo.com/banner.jpg"
+                      value={formData.image || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
+                      className="flex-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  {formData.image && (
+                    <div className="relative h-28 w-full max-w-sm rounded-xl overflow-hidden border border-amber-500/40 mt-2">
+                      <img 
+                        src={formData.image} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                  )}
+
+                  <label className="flex items-start gap-2 text-xs text-slate-300 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={formData.imageFit === 'contain'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, imageFit: e.target.checked ? 'contain' : 'cover' }))}
+                      className="mt-0.5 accent-amber-500"
+                    />
+                    <span>
+                      <span className="font-bold text-amber-300">Mostrar la imagen completa y ajustar el encuadre</span>
+                      <span className="block text-slate-500">Sin recortar, con animación suave, y podés moverla y hacerle zoom en la vista previa de abajo. Ideal para logos o artes que ya traen el nombre del negocio.</span>
+                    </span>
+                  </label>
+                  {formData.imageFit === 'contain' && (
+                    <label className="flex items-start gap-2 text-xs text-slate-300 cursor-pointer pt-1">
+                      <input
+                        type="checkbox"
+                        checked={formData.typeAddress === true}
+                        onChange={(e) => setFormData(prev => ({ ...prev, typeAddress: e.target.checked }))}
+                        className="mt-0.5 accent-amber-500"
+                      />
+                      <span>
+                        <span className="font-bold text-amber-300">Escribir la dirección a máquina sobre la imagen</span>
+                        <span className="block text-slate-500">Toma el texto del campo "Dirección o bajada" y lo escribe y borra en bucle, en el lugar libre debajo del nombre. La imagen tiene que dejar ese espacio vacío.</span>
+                      </span>
+                    </label>
+                  )}
+                </div>
+              )}
+
+              {/* Renglones de Información */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                    <span>Renglón 1: Nombre del negocio / marca *</span>
+                    <span className="text-[10px] text-amber-400 font-semibold uppercase">MAYÚSCULAS</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ej: BRUTO, HAVANNA, CERVECERÍA ANTARES"
+                    value={formData.name || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 font-bold focus:outline-none focus:border-amber-500 uppercase tracking-wider"
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    Se visualiza como título principal con tipografía destacada.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                    <span>Renglón 2: Dirección o bajada breve</span>
+                    <span className="text-[10px] text-slate-400">DIRECCIÓN O ZONA</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: PLAYA GRANDE, AV. JUAN B. JUSTO 620"
+                    value={formData.address || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 font-medium focus:outline-none focus:border-amber-500 uppercase tracking-wide"
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    Ubicación física en Mar del Plata o eslogan breve.
+                  </p>
+                </div>
+              </div>
+
+              {/* Enlace Web / Red Social */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                  <span>Enlace de destino (Web o Instagram)</span>
+                  <span className="text-[10px] text-slate-400">OPCIONAL</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    placeholder="https://www.instagram.com/negocio o https://negocio.com.ar"
+                    value={formData.link || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, link: e.target.value }))}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  />
+                  <ExternalLink className="w-4 h-4 text-slate-500 absolute left-3 top-3 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Opciones de Ubicación: Pop-up de inicio, Los dos primeros, Resto de la página */}
+              <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-500/30 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Megaphone className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">
+                    ¿Dónde debe mostrarse este sponsor? (Podés marcar una o varias)
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  {/* Opción 1: Pop-up de inicio */}
+                  <label 
+                    onClick={() => setFormData(prev => ({ ...prev, showInPopup: !prev.showInPopup }))}
+                    className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formData.showInPopup 
+                        ? 'bg-amber-500/20 border-amber-500 text-white shadow-xs' 
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <div className="mt-0.5 text-amber-400">
+                      {formData.showInPopup ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <span className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                        <AppWindow className="w-4 h-4 text-amber-400 shrink-0" />
+                        Pop-up de inicio
+                      </span>
+                      <span className="block text-[11px] text-slate-400 mt-0.5 leading-tight">
+                        Ventana emergente de 5s al abrir la web
+                      </span>
+                    </div>
+                  </label>
+
+                  {/* Opción 2: Los dos primeros de la página */}
+                  <label 
+                    onClick={() => setFormData(prev => ({ ...prev, showInTopBanner: !prev.showInTopBanner }))}
+                    className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formData.showInTopBanner 
+                        ? 'bg-amber-500/20 border-amber-500 text-white shadow-xs' 
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <div className="mt-0.5 text-amber-400">
+                      {formData.showInTopBanner ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <span className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                        <PanelTop className="w-4 h-4 text-sky-400 shrink-0" />
+                        Los dos primeros
+                      </span>
+                      <span className="block text-[11px] text-slate-400 mt-0.5 leading-tight">
+                        Banner superior (solo los que marques acá)
+                      </span>
+                    </div>
+                  </label>
+
+                  {/* Opción 3: Resto de la página */}
+                  <label 
+                    onClick={() => setFormData(prev => ({ ...prev, showInFeed: !prev.showInFeed }))}
+                    className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formData.showInFeed 
+                        ? 'bg-amber-500/20 border-amber-500 text-white shadow-xs' 
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <div className="mt-0.5 text-amber-400">
+                      {formData.showInFeed ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <span className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                        <LayoutList className="w-4 h-4 text-violet-400 shrink-0" />
+                        Resto de la página
+                      </span>
+                      <span className="block text-[11px] text-slate-400 mt-0.5 leading-tight">
+                        Alternando cada 6 recitales en la cartelera
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                {isSponsorPaused({
+                  showInPopup: formData.showInPopup,
+                  showInTopBanner: formData.showInTopBanner,
+                  showInFeed: formData.showInFeed,
+                }) && (
+                  <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-slate-500 shrink-0" aria-hidden="true" />
+                    Sin ninguna ubicación marcada, este sponsor queda en pausa y no se muestra en la web.
+                  </p>
+                )}
+              </div>
+
+              {/* Configuración de Transición y Efectos para Texto */}
+              {formData.type === 'text' && (
+                <div className="space-y-3 p-4 bg-slate-900 rounded-2xl border border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Efecto de Transición y Animación Dinámica:</span>
+                    </label>
+                    <span className="text-[11px] text-emerald-400 font-semibold">
+                      El texto nunca queda fijo
+                    </span>
+                  </div>
+
+                  <select
+                    value={formData.effectType || 'random'}
+                    onChange={(e) => setFormData(prev => ({ ...prev, effectType: e.target.value as SponsorEffectType }))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer font-semibold"
+                  >
+                    <option value="random">🎲 Al azar (Automática - cambia al azar)</option>
+                    <option value="bruto">Bruto (Giro 3D letra por letra + pulso cardíaco en dirección)</option>
+                    <option value="abbey-road">Abbey Road (Destello Neón Rock Retro)</option>
+                    <option value="bendu">Bendu Arena (Balanceo 3D con resplandor dorado áureo)</option>
+                    <option value="arena-mdp">Arena Mar del Plata (Expansión y contracción tracking de letras)</option>
+                    <option value="plaza-musica">GAP (Pulso rítmico musical ecualizador)</option>
+                    <option value="mute">Mute (Ola marina oceánica y destello turquesa)</option>
+                    <option value="radio-city">Teatro Radio City (Marquesina teatral Broadway)</option>
+                    <option value="cyber-neon">Cyber Neón (Pulso eléctrico cyan y fucsia)</option>
+                    <option value="golden-shimmer">Golden Shimmer (Brillo dorado de gala)</option>
+                    <option value="retro-bounce">Retro Bounce (Rebote cinético rítmico)</option>
+                    <option value="float-glow">Float Glow (Flotación mística con aura)</option>
+                  </select>
+
+                  {/* Paleta de colores de fondo */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[11px] font-semibold text-slate-400 block">
+                      Esquema visual de colores:
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {PRESET_BACKGROUNDS.map((preset) => {
+                        const isSelected = formData.bgColor === preset.bg;
+                        return (
+                          <button
+                            key={preset.name}
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                bgColor: preset.bg,
+                                textColor: preset.text,
+                                subtextColor: preset.subtext
+                              }));
+                            }}
+                            className={`p-2 rounded-xl text-left border text-[11px] font-bold transition-all cursor-pointer ${
+                              isSelected
+                                ? 'border-amber-400 ring-2 ring-amber-400/30'
+                                : 'border-slate-800 hover:border-slate-700'
+                            } ${preset.bg}`}
+                          >
+                            <span className={preset.text}>{preset.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Colores personalizados */}
+                  <div className="space-y-2.5 pt-3 border-t border-slate-800">
+                    <span className="text-[11px] font-semibold text-slate-400 block">
+                      O elegí tus propios colores (elegí colores que contrasten bien):
+                    </span>
+                    {(() => {
+                      const customBg = (formData.bgColor || '').startsWith('#');
+                      const parts = customBg ? (formData.bgColor || '').split('|') : [];
+                      const bgA = isHexColor(parts[0]) ? parts[0] : '#0f172a';
+                      const bgB = isHexColor(parts[1]) ? parts[1] : '';
+                      const titleHex = isHexColor(formData.textColor) ? (formData.textColor as string) : '#fcd34d';
+                      const subtitleHex = isHexColor(formData.subtextColor) ? (formData.subtextColor as string) : '#fde68a';
+
+                      const setBg = (from: string, to: string) =>
+                        setFormData(prev => ({ ...prev, bgColor: to ? `${from}|${to}` : from }));
+
+                      const fieldClass = 'flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl p-2';
+                      const pickerClass = 'w-9 h-9 rounded-lg border-0 bg-transparent cursor-pointer p-0';
+
+                      return (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <label className={fieldClass}>
+                            <input
+                              type="color"
+                              value={bgA}
+                              onChange={(e) => setBg(e.target.value, bgB)}
+                              className={pickerClass}
+                            />
+                            <span className="text-[11px] text-slate-300 font-semibold">Fondo (color principal)</span>
+                          </label>
+
+                          {bgB ? (
+                            <div className={fieldClass}>
+                              <input
+                                type="color"
+                                value={bgB}
+                                onChange={(e) => setBg(bgA, e.target.value)}
+                                className={pickerClass}
+                              />
+                              <span className="text-[11px] text-slate-300 font-semibold flex-1">Fondo (segundo color)</span>
+                              <button
+                                type="button"
+                                onClick={() => setBg(bgA, '')}
+                                className="text-[10px] font-bold text-rose-400 hover:text-rose-300 cursor-pointer"
+                              >
+                                Quitar degradado
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setBg(bgA, '#1e293b')}
+                              className="flex items-center justify-center gap-2 bg-slate-950 border border-dashed border-slate-700 hover:border-amber-500 rounded-xl p-2 text-[11px] font-bold text-slate-300 cursor-pointer"
+                            >
+                              + Agregar degradado de fondo
+                            </button>
+                          )}
+
+                          <label className={fieldClass}>
+                            <input
+                              type="color"
+                              value={titleHex}
+                              onChange={(e) => setFormData(prev => ({ ...prev, textColor: e.target.value }))}
+                              className={pickerClass}
+                            />
+                            <span className="text-[11px] text-slate-300 font-semibold">Renglón 1 (nombre)</span>
+                          </label>
+
+                          <label className={fieldClass}>
+                            <input
+                              type="color"
+                              value={subtitleHex}
+                              onChange={(e) => setFormData(prev => ({ ...prev, subtextColor: e.target.value }))}
+                              className={pickerClass}
+                            />
+                            <span className="text-[11px] text-slate-300 font-semibold">Renglón 2 (dirección)</span>
+                          </label>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Vista previa en tiempo real */}
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Vista Previa en Vivo:</span>
+                </span>
+                <div
+                  className={`max-w-lg mx-auto select-none ${
+                    formData.type === 'image' && formData.imageFit === 'contain' ? 'touch-none cursor-grab active:cursor-grabbing' : ''
+                  }`}
+                  onPointerDown={handleFramePointerDown}
+                  onPointerMove={handleFramePointerMove}
+                  onPointerUp={handleFramePointerUp}
+                  onPointerCancel={handleFramePointerUp}
+                >
+                  <SponsorCard
+                    sponsor={{
+                      id: 'preview',
+                      type: formData.type || 'text',
+                      name: formData.name || 'NOMBRE DEL NEGOCIO',
+                      address: formData.address || 'DIRECCIÓN O BAJADA',
+                      image: formData.image,
+                      imageFit: formData.imageFit,
+                      typeAddress: formData.typeAddress,
+                      imageZoom: formData.imageZoom,
+                      imageOffsetX: formData.imageOffsetX,
+                      imageOffsetY: formData.imageOffsetY,
+                      video: formData.video,
+                      link: formData.link,
+                      effectType: formData.effectType || 'random',
+                      bgColor: formData.bgColor,
+                      textColor: formData.textColor,
+                      subtextColor: formData.subtextColor,
+                    }}
+                    heightClass="h-28 sm:h-32"
+                    showBadge={true}
+                    variant="preview"
+                  />
+                </div>
+
+                {/* Encuadre: zoom con barra o botones; para mover, se arrastra la imagen en la vista previa */}
+                {formData.type === 'image' && formData.imageFit === 'contain' && (
+                  <div className="max-w-lg mx-auto space-y-1.5">
+                    <p className="text-[10px] text-slate-500 text-center">
+                      Arrastrá la imagen para moverla · usá la barra para el zoom (no hace falta guardar para probar)
+                    </p>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, imageZoom: clampArtZoom((prev.imageZoom ?? 1) - 0.1) }))}
+                        disabled={artZoom <= MIN_ART_ZOOM}
+                        className="p-1.5 rounded-md border border-slate-800 bg-slate-950 text-slate-300 hover:text-white disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                        title="Alejar"
+                        aria-label="Alejar"
+                      >
+                        <ZoomOut className="w-4 h-4" />
+                      </button>
+                      <input
+                        type="range"
+                        min={MIN_ART_ZOOM}
+                        max={MAX_ART_ZOOM}
+                        step={0.05}
+                        value={artZoom}
+                        onChange={(e) => setFormData(prev => ({ ...prev, imageZoom: clampArtZoom(Number(e.target.value)) }))}
+                        className="flex-1 accent-amber-500 cursor-pointer"
+                        aria-label="Zoom de la imagen"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, imageZoom: clampArtZoom((prev.imageZoom ?? 1) + 0.1) }))}
+                        disabled={artZoom >= MAX_ART_ZOOM}
+                        className="p-1.5 rounded-md border border-slate-800 bg-slate-950 text-slate-300 hover:text-white disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                        title="Acercar"
+                        aria-label="Acercar"
+                      >
+                        <ZoomIn className="w-4 h-4" />
+                      </button>
+                      <span className="w-10 text-right text-[11px] font-semibold text-slate-300 tabular-nums">
+                        {Math.round(artZoom * 100)}%
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleResetFrame}
+                        disabled={!isArtAdjusted}
+                        className="px-2 py-1 text-[11px] font-semibold rounded-md border border-slate-800 bg-slate-950 text-slate-300 hover:text-white disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        Restablecer
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                {!isCreatingNew && editingSponsor && (
+                  <div className="flex items-center gap-2 mr-auto">
+                    <button
+                      type="button"
+                      onClick={() => handleTestPopup(editingSponsor.id)}
+                      className="flex items-center gap-1 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[11px] font-bold cursor-pointer"
+                      title="Probar cómo se ve en el popup de inicio de 5 segundos"
+                    >
+                      <Play className="w-3 h-3" />
+                      <span>Probar popup</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(editingSponsor.id, editingSponsor.name)}
+                      className="flex items-center gap-1 px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[11px] font-bold cursor-pointer"
+                      title="Eliminar esta publicidad"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={handleCancelForm}
+                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm shadow-md shadow-amber-950/40 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {isSaving ? 'Guardando en la nube...' : isCreatingNew ? 'Guardar y Publicar' : 'Actualizar Sponsor'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* Lista de Sponsors existentes */
+            <div className="space-y-4">
+              {sponsors.length === 0 ? (
+                <div className="text-center py-12 bg-slate-950/50 rounded-2xl border border-slate-800 p-6 space-y-3">
+                  <Megaphone className="w-10 h-10 text-slate-600 mx-auto" />
+                  <h4 className="text-sm font-bold text-white">No hay sponsors cargados todavía</h4>
+                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                    Cargá el primer sponsor para comenzar a monetizar y mostrar marcas locales.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleStartCreate}
+                    className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 text-xs font-black"
+                  >
+                    Crear Primer Sponsor
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-[11px] text-slate-400">
+                    Tocá una publicidad para editarla:
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {sponsors.map((sponsor) => {
+                      // Sin ninguna de las 3 ubicaciones elegidas = en pausa
+                      const isActive = !isSponsorPaused(sponsor);
+                      return (
+                        <div
+                          key={sponsor.id}
+                          className={`flex items-center gap-1 max-w-full pl-3 pr-1.5 py-1 rounded-full text-xs font-semibold bg-slate-800/90 border border-slate-700/60 hover:border-amber-500/60 transition-colors ${
+                            isActive ? 'text-slate-200' : 'text-slate-500'
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(sponsor)}
+                            title={`Editar: ${sponsor.name}${isActive ? '' : ' (en pausa: sin ubicación elegida)'}`}
+                            className="flex items-center gap-1.5 min-w-0 cursor-pointer hover:text-white active:scale-95 transition-all"
+                          >
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${isActive ? 'bg-emerald-400' : 'bg-slate-600'}`}
+                              aria-hidden="true"
+                            />
+                            <span className="truncate max-w-[160px]">{sponsor.name || 'Sin nombre'}</span>
+                            <span className="shrink-0 text-[11px] leading-none" aria-hidden="true">
+                              {sponsor.type === 'image' ? '🖼️' : sponsor.type === 'video' ? '🎬' : ''}
+                            </span>
+                          </button>
+
+                          {/* Las 3 ubicaciones: tocá un icono para activarla o desactivarla sin abrir el sponsor */}
+                          <span className="flex items-center gap-0.5 ml-1 shrink-0">
+                            {PLACEMENTS.map(({ field, label, Icon, onClass }) => {
+                              const on = field === 'showInFeed' ? sponsor.showInFeed !== false : sponsor[field] === true;
+                              return (
+                                <button
+                                  key={field}
+                                  type="button"
+                                  onClick={() => handleTogglePlacement(sponsor, field)}
+                                  disabled={togglingId !== null}
+                                  aria-pressed={on}
+                                  title={`${label}: ${on ? 'activado (tocá para desactivar)' : 'desactivado (tocá para activar)'}`}
+                                  className={`p-1.5 rounded-full transition-colors cursor-pointer disabled:cursor-wait disabled:opacity-60 ${
+                                    on ? onClass : 'text-slate-600 hover:text-slate-300 hover:bg-slate-700'
+                                  }`}
+                                >
+                                  <Icon className="w-3.5 h-3.5" />
+                                </button>
+                              );
+                            })}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-500">
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> activo</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-600" /> en pausa (sin ubicación)</span>
+                      <span className="flex items-center gap-1"><AppWindow className="w-3.5 h-3.5 text-amber-400" /> pop-up</span>
+                      <span className="flex items-center gap-1"><PanelTop className="w-3.5 h-3.5 text-sky-400" /> dos primeros</span>
+                      <span className="flex items-center gap-1"><LayoutList className="w-3.5 h-3.5 text-violet-400" /> resto de la página</span>
+                      <span>🖼️ imagen · 🎬 video</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500">
+                      Icono de color = ubicación activada · gris = desactivada. Tocá un icono para cambiarla sin abrir el sponsor.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
