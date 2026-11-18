@@ -85,19 +85,24 @@ const TypedAddress: React.FC<{ text: string }> = ({ text }) => {
 // Sponsor con imagen completa: encuadre (zoom y desplazamiento), flote suave, brillo y dirección a máquina.
 const SponsorArt: React.FC<{ sponsor: Sponsor }> = ({ sponsor }) => {
   const [ratio, setRatio] = useState<number | null>(null);
+  // Color de fondo del arte (si la imagen tiene el fondo liso, se usa ese mismo color para rellenar los costados)
+  const [bgColor, setBgColor] = useState<string | null>(null);
+  const [bgChecked, setBgChecked] = useState(false);
   const address = (sponsor.address || '').trim();
   const showTyped = !!sponsor.typeAddress && address.length > 0;
 
   return (
-    <div className="relative w-full h-full bg-[#dfd3c5] overflow-hidden">
-      {/* Fondo: la misma imagen desenfocada para que los costados se vean parejos */}
-      <img
-        src={sponsor.image}
-        alt=""
-        aria-hidden="true"
-        className="absolute inset-0 w-full h-full object-cover scale-125 blur-xl opacity-80"
-        referrerPolicy="no-referrer"
-      />
+    <div className="relative w-full h-full overflow-hidden" style={{ backgroundColor: bgColor ?? '#dfd3c5' }}>
+      {/* Si el fondo de la imagen no es liso, se rellena con la misma imagen desenfocada */}
+      {bgChecked && !bgColor && (
+        <img
+          src={sponsor.image}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover scale-125 blur-xl opacity-80"
+          referrerPolicy="no-referrer"
+        />
+      )}
       {/* Encuadre elegido en el admin: zoom y desplazamiento (en % del marco, sirve para cualquier tamaño de tarjeta) */}
       <div
         className="absolute inset-0 flex items-center justify-center"
@@ -121,8 +126,32 @@ const SponsorArt: React.FC<{ sponsor: Sponsor }> = ({ sponsor }) => {
             alt={sponsor.name}
             draggable={false}
             onLoad={(e) => {
-              const { naturalWidth, naturalHeight } = e.currentTarget;
+              const img = e.currentTarget;
+              const { naturalWidth, naturalHeight } = img;
               if (naturalWidth && naturalHeight) setRatio(naturalWidth / naturalHeight);
+              setBgChecked(true);
+              // Lee el color de las 4 esquinas de la imagen: si son parecidas, el fondo es liso y se usa ese color
+              try {
+                const N = 32;
+                const canvas = document.createElement('canvas');
+                canvas.width = N;
+                canvas.height = N;
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                if (!ctx) return;
+                ctx.drawImage(img, 0, 0, N, N);
+                const corners = [
+                  ctx.getImageData(0, 0, 1, 1).data,
+                  ctx.getImageData(N - 1, 0, 1, 1).data,
+                  ctx.getImageData(0, N - 1, 1, 1).data,
+                  ctx.getImageData(N - 1, N - 1, 1, 1).data,
+                ];
+                const avg = [0, 1, 2].map(i => Math.round(corners.reduce((sum, c) => sum + c[i], 0) / 4));
+                const similar = corners.every(c => [0, 1, 2].every(i => Math.abs(c[i] - avg[i]) <= 12) && c[3] === 255);
+                setBgColor(similar ? `rgb(${avg[0]}, ${avg[1]}, ${avg[2]})` : null);
+              } catch {
+                // Imagen de otro sitio que no permite leer sus píxeles: queda el fondo desenfocado
+                setBgColor(null);
+              }
             }}
             className="absolute inset-0 w-full h-full object-contain animate-sponsor-art"
             referrerPolicy="no-referrer"
