@@ -87,7 +87,6 @@ const SponsorArt: React.FC<{ sponsor: Sponsor }> = ({ sponsor }) => {
   const [ratio, setRatio] = useState<number | null>(null);
   // Color de fondo del arte (si la imagen tiene el fondo liso, se usa ese mismo color para rellenar los costados)
   const [bgColor, setBgColor] = useState<string | null>(null);
-  const [bgChecked, setBgChecked] = useState(false);
   // Color elegido a mano en el admin (#rrggbb): si existe, manda sobre la detección automática
   const manualBg = /^#[0-9a-fA-F]{6}$/.test(sponsor.imageBg ?? '') ? (sponsor.imageBg as string) : null;
   const fillColor = manualBg ?? bgColor;
@@ -96,14 +95,18 @@ const SponsorArt: React.FC<{ sponsor: Sponsor }> = ({ sponsor }) => {
 
   return (
     <div className="relative w-full h-full overflow-hidden" style={{ backgroundColor: fillColor ?? '#dfd3c5' }}>
-      {/* Si el fondo de la imagen no es liso, se rellena con la misma imagen desenfocada */}
-      {!manualBg && bgChecked && !bgColor && (
-        <img
-          src={sponsor.image}
-          alt=""
+      {/* Sin color elegido ni detectado: se rellena con el color de la esquina superior izquierda de la propia imagen
+          (se amplía esa esquina hasta cubrir todo; es CSS puro y no depende de leer los píxeles) */}
+      {!fillColor && (
+        <div
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover scale-125 blur-xl opacity-80"
-          referrerPolicy="no-referrer"
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `url(${JSON.stringify(sponsor.image)})`,
+            backgroundSize: '2500% 2500%',
+            backgroundPosition: '0% 0%',
+            backgroundRepeat: 'no-repeat',
+          }}
         />
       )}
       {/* Encuadre elegido en el admin: zoom y desplazamiento (en % del marco, sirve para cualquier tamaño de tarjeta) */}
@@ -132,7 +135,6 @@ const SponsorArt: React.FC<{ sponsor: Sponsor }> = ({ sponsor }) => {
               const img = e.currentTarget;
               const { naturalWidth, naturalHeight } = img;
               if (naturalWidth && naturalHeight) setRatio(naturalWidth / naturalHeight);
-              setBgChecked(true);
               // Lee el color de las 4 esquinas de la imagen: si son parecidas, el fondo es liso y se usa ese color
               try {
                 const N = 32;
