@@ -88,13 +88,16 @@ const SponsorArt: React.FC<{ sponsor: Sponsor }> = ({ sponsor }) => {
   // Color de fondo del arte (si la imagen tiene el fondo liso, se usa ese mismo color para rellenar los costados)
   const [bgColor, setBgColor] = useState<string | null>(null);
   const [bgChecked, setBgChecked] = useState(false);
+  // Color elegido a mano en el admin (#rrggbb): si existe, manda sobre la detección automática
+  const manualBg = /^#[0-9a-fA-F]{6}$/.test(sponsor.imageBg ?? '') ? (sponsor.imageBg as string) : null;
+  const fillColor = manualBg ?? bgColor;
   const address = (sponsor.address || '').trim();
   const showTyped = !!sponsor.typeAddress && address.length > 0;
 
   return (
-    <div className="relative w-full h-full overflow-hidden" style={{ backgroundColor: bgColor ?? '#dfd3c5' }}>
+    <div className="relative w-full h-full overflow-hidden" style={{ backgroundColor: fillColor ?? '#dfd3c5' }}>
       {/* Si el fondo de la imagen no es liso, se rellena con la misma imagen desenfocada */}
-      {bgChecked && !bgColor && (
+      {!manualBg && bgChecked && !bgColor && (
         <img
           src={sponsor.image}
           alt=""

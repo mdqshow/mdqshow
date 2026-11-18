@@ -236,6 +236,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
         image: formData.image || '',
         imageFit: formData.type === 'image' && formData.imageFit === 'contain' ? 'contain' : 'cover',
         typeAddress: formData.type === 'image' && formData.imageFit === 'contain' && formData.typeAddress === true,
+        imageBg: formData.type === 'image' && formData.imageFit === 'contain' && /^#[0-9a-fA-F]{6}$/.test(formData.imageBg ?? '') ? (formData.imageBg as string) : '',
         imageZoom: formData.type === 'image' && formData.imageFit === 'contain' ? clampArtZoom(artZoom) : 1,
         imageOffsetX: formData.type === 'image' && formData.imageFit === 'contain' ? clampOffset(artX) : 0,
         imageOffsetY: formData.type === 'image' && formData.imageFit === 'contain' ? clampOffset(artY) : 0,
@@ -554,6 +555,40 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                         <span className="block text-slate-500">Toma el texto del campo "Dirección o bajada" y lo escribe y borra en bucle, en el lugar libre debajo del nombre. La imagen tiene que dejar ese espacio vacío.</span>
                       </span>
                     </label>
+                  )}
+
+                  {formData.imageFit === 'contain' && (
+                    <div className="pt-1 space-y-1.5">
+                      <p className="text-xs">
+                        <span className="font-bold text-amber-300">Color de fondo del banner</span>
+                        <span className="text-slate-500"> (opcional). Si se nota una franja de otro color arriba o abajo de la imagen, poné acá el color de fondo de tu arte.</span>
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={/^#[0-9a-fA-F]{6}$/.test(formData.imageBg ?? '') ? (formData.imageBg as string) : '#dfd3c5'}
+                          onChange={(e) => setFormData(prev => ({ ...prev, imageBg: e.target.value }))}
+                          className="h-9 w-12 rounded-md border border-slate-800 bg-slate-950 cursor-pointer"
+                          aria-label="Elegir color de fondo"
+                        />
+                        <input
+                          type="text"
+                          value={formData.imageBg ?? ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, imageBg: e.target.value.trim() }))}
+                          placeholder="#dfd3c5"
+                          maxLength={7}
+                          className="w-28 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, imageBg: '' }))}
+                          disabled={!formData.imageBg}
+                          className="px-2 py-1 text-[11px] font-semibold rounded-md border border-slate-800 bg-slate-950 text-slate-300 hover:text-white disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                        >
+                          Automático
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
@@ -879,6 +914,7 @@ export const AdminSponsorsModal: React.FC<AdminSponsorsModalProps> = ({
                       image: formData.image,
                       imageFit: formData.imageFit,
                       typeAddress: formData.typeAddress,
+                      imageBg: formData.imageBg,
                       imageZoom: formData.imageZoom,
                       imageOffsetX: formData.imageOffsetX,
                       imageOffsetY: formData.imageOffsetY,

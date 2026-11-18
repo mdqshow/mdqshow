@@ -65,6 +65,7 @@ export interface Sponsor {
   address: string;           // Renglón 2: Dirección, zona o bajada breve
   image?: string;            // Imagen subida o URL (en tipo video se usa como portada opcional)
   imageFit?: 'cover' | 'contain'; // 'contain' = muestra la imagen completa (sin recortar) con animación suave
+  imageBg?: string;          // Solo con imageFit 'contain': color de fondo del banner en hex (#rrggbb). Vacío = se detecta solo
   typeAddress?: boolean;     // Solo con imageFit 'contain': escribe la dirección a máquina sobre la imagen
   imageZoom?: number;        // Solo con imageFit 'contain': zoom de la imagen (1 = entera, hasta 3 para acercar)
   imageOffsetX?: number;     // Solo con imageFit 'contain': desplazamiento horizontal en % del marco (se arrastra en el admin)
